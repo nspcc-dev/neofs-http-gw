@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/labstack/echo/v4 v4.1.11
 	github.com/nspcc-dev/hrw v1.0.9 // indirect
-	github.com/nspcc-dev/neofs-proto v0.0.0-20191101093315-0d5a92f60568
+	github.com/nspcc-dev/neofs-proto v0.1.0
 	github.com/pkg/errors v0.8.1
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.5.0

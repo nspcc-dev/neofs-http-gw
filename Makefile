@@ -12,15 +12,15 @@ version:
 	@echo $(VERSION)
 
 # Make sure that all files added to commit
-vendor:
+deps:
 	@printf "${B}${G}⇒ Ensure vendor${R}: "
-	@GOPRIVATE=bitbucket.org/nspcc-dev go mod tidy -v && echo OK || (echo fail && exit 2)
+	@go mod tidy -v && echo OK || (echo fail && exit 2)
 	@printf "${B}${G}⇒ Download requirements${R}: "
-	@GOPRIVATE=bitbucket.org/nspcc-dev go mod download && echo OK || (echo fail && exit 2)
+	@go mod download && echo OK || (echo fail && exit 2)
 	@printf "${B}${G}⇒ Store vendor localy${R}: "
-	@GOPRIVATE=bitbucket.org/nspcc-dev go mod vendor && echo OK || (echo fail && exit 2)
+	@go mod vendor && echo OK || (echo fail && exit 2)
 
-image: vendor
+image: deps
 	@echo "${B}${G}⇒ Build GW docker-image ${R}"
 	@docker build \
 		--build-arg REPO=$(REPO) \
