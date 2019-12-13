@@ -1,4 +1,3 @@
-REPO ?= $(shell go list -m)
 VERSION ?= "$(shell git describe --tags 2>/dev/null | sed 's/^v//')"
 
 HUB_IMAGE=nspccdev/neofs
@@ -23,7 +22,6 @@ deps:
 image: deps
 	@echo "${B}${G}⇒ Build GW docker-image ${R}"
 	@docker build \
-		--build-arg REPO=$(REPO) \
 		--build-arg VERSION=$(VERSION) \
 		 -f Dockerfile \
 		 -t $(HUB_IMAGE)-http-gate:$(VERSION) .
