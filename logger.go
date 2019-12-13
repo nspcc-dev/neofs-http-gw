@@ -3,10 +3,16 @@ package main
 import (
 	"strings"
 
+	"google.golang.org/grpc/grpclog"
+
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
+
+type zapLogger struct {
+	log *zap.Logger
+}
 
 const (
 	formatJSON    = "json"
@@ -15,6 +21,14 @@ const (
 	defaultSamplingInitial    = 100
 	defaultSamplingThereafter = 100
 )
+
+func gRPCLogger(l *zap.Logger) grpclog.LoggerV2 {
+	return &zapLogger{
+		log: l.WithOptions(
+			// skip gRPCLog + zapLogger in caller
+			zap.AddCallerSkip(2)),
+	}
+}
 
 func safeLevel(lvl string) zap.AtomicLevel {
 	switch strings.ToLower(lvl) {
@@ -87,3 +101,53 @@ func newLogger(v *viper.Viper) (*zap.Logger, error) {
 		zap.String("app_name", name),
 		zap.String("app_version", version)), nil
 }
+
+func (z *zapLogger) Info(args ...interface{}) {
+	z.log.Sugar().Info(args...)
+}
+
+func (z *zapLogger) Infoln(args ...interface{}) {
+	z.log.Sugar().Info(args...)
+}
+
+func (z *zapLogger) Infof(format string, args ...interface{}) {
+	z.log.Sugar().Infof(format, args...)
+}
+
+func (z *zapLogger) Warning(args ...interface{}) {
+	z.log.Sugar().Warn(args...)
+}
+
+func (z *zapLogger) Warningln(args ...interface{}) {
+	z.log.Sugar().Warn(args...)
+}
+
+func (z *zapLogger) Warningf(format string, args ...interface{}) {
+	z.log.Sugar().Warnf(format, args...)
+}
+
+func (z *zapLogger) Error(args ...interface{}) {
+	z.log.Sugar().Error(args...)
+}
+
+func (z *zapLogger) Errorln(args ...interface{}) {
+	z.log.Sugar().Error(args...)
+}
+
+func (z *zapLogger) Errorf(format string, args ...interface{}) {
+	z.log.Sugar().Errorf(format, args...)
+}
+
+func (z *zapLogger) Fatal(args ...interface{}) {
+	z.log.Sugar().Fatal(args...)
+}
+
+func (z *zapLogger) Fatalln(args ...interface{}) {
+	z.log.Sugar().Fatal(args...)
+}
+
+func (z *zapLogger) Fatalf(format string, args ...interface{}) {
+	z.log.Sugar().Fatalf(format, args...)
+}
+
+func (z *zapLogger) V(int) bool { return z.log.Core().Enabled(zapcore.DebugLevel) }

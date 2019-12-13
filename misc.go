@@ -2,4 +2,7 @@ package main
 
 const DropInFilenameHeader = "drop-in-filename"
 
-var Version = "dev"
+var (
+	Build   = "now"
+	Version = "dev"
+)
