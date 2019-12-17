@@ -14,7 +14,7 @@ You can download files from NeoFS Network using NeoFS Gateway.
 
   -h, --help                       show help
   -v, --version                    show version
-      --key string                 "gen" to generate key, path to private key file, hex string or wif (default "gen")
+      --key string                 "generated" to generate key, path to private key file, hex string or wif (default "generated")
       --verbose                    debug gRPC connections
       --request_timeout duration   gRPC request timeout (default 5s)
       --connect_timeout duration   gRPC connect timeout (default 30s)
@@ -23,7 +23,7 @@ You can download files from NeoFS Network using NeoFS Gateway.
 
 # Environments:
 
-GW_KEY=stirng                           - "gen" to generate key, path to private key file, hex string or wif (default "gen")
+GW_KEY=stirng                           - "generated" to generate key, path to private key file, hex string or wif (default "generated")
 GW_REQUEST_TIMEOUT=Duration             - timeout for request
 GW_CONNECT_TIMEOUT=Duration             - timeout for connection
 GW_LISTEN_ADDRESS=host:port             - address to listen connections

@@ -20,15 +20,15 @@ import (
 type empty int
 
 const (
-	devNull  = empty(0)
-	generate = "gen"
+	devNull   = empty(0)
+	generated = "generated"
 )
 
 func (empty) Read([]byte) (int, error) { return 0, io.EOF }
 
 func fetchKey(l *zap.Logger, v *viper.Viper) *ecdsa.PrivateKey {
 	switch val := v.GetString("key"); val {
-	case generate:
+	case generated:
 		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
 			l.Fatal("could not generate private key", zap.Error(err))
@@ -67,7 +67,7 @@ func settings() *viper.Viper {
 	help := flags.BoolP("help", "h", false, "show help")
 	version := flags.BoolP("version", "v", false, "show version")
 
-	flags.String("key", "gen", `"gen" to generate key, path to private key file, hex string or wif`)
+	flags.String("key", generated, `"`+generated+`" to generate key, path to private key file, hex string or wif`)
 
 	flags.Bool("verbose", false, "debug gRPC connections")
 	flags.Duration("request_timeout", time.Second*5, "gRPC request timeout")
