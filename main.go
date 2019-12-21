@@ -3,114 +3,93 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
+	"net/http"
+	_ "net/http/pprof"
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/nspcc-dev/neofs-proto/object"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/grpclog"
-	"google.golang.org/grpc/keepalive"
 )
 
-type config struct {
+type router struct {
+	pool    *Pool
 	log     *zap.Logger
 	timeout time.Duration
 	key     *ecdsa.PrivateKey
-	cli     object.ServiceClient
 }
 
 func main() {
-	v := settings()
-
-	log, err := newLogger(v)
-	if err != nil {
-		panic(err)
-	}
-
-	log.Info("running application", zap.String("version", v.GetString("app.version")))
-
 	var (
-		cfg   = new(config)
-		grace = newGracefulContext(log)
+		v = settings()
+		l = newLogger(v)
+		g = newGracefulContext(l)
 	)
 
 	if v.GetBool("verbose") {
-		grpclog.SetLoggerV2(
-			gRPCLogger(log))
+		grpclog.SetLoggerV2(gRPCLogger(l))
 	}
 
-	cfg.log = log
-	cfg.key = fetchKey(log, v)
-	cfg.timeout = v.GetDuration("request_timeout")
-
-	ctx, cancel := context.WithTimeout(grace, v.GetDuration("connect_timeout"))
-	defer cancel()
-
-	conn, err := grpc.DialContext(ctx, v.GetString("neofs_address"),
-		grpc.WithBlock(),
-		grpc.WithInsecure(),
-		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time:                v.GetDuration("keepalive.time"),
-			Timeout:             v.GetDuration("keepalive.timeout"),
-			PermitWithoutStream: v.GetBool("keepalive.permit_without_stream"),
-		}),
-	)
-	if err != nil {
-		log.Panic("could not connect to neofs-node",
-			zap.String("neofs-node", v.GetString("neofs_node_addr")),
-			zap.Error(err))
+	r := &router{
+		log:     l,
+		key:     fetchKey(l, v),
+		pool:    newPool(g, l, v),
+		timeout: v.GetDuration("request_timeout"),
 	}
 
-	ctx, cancel = context.WithCancel(grace)
-	defer cancel()
-
-	go checkConnection(ctx, conn, log)
-	cfg.cli = object.NewServiceClient(conn)
+	go checkConnection(g, r.pool)
 
 	e := echo.New()
 	e.Debug = false
 	e.HidePort = true
 	e.HideBanner = true
 
-	e.GET("/:cid/:oid", cfg.receiveFile)
+	e.GET("/:cid/:oid", r.receiveFile)
+
+	// enable metrics
+	if v.GetBool("metrics") {
+		l.Info("enabled /metrics")
+		e.GET("/metrics", echo.WrapHandler(promhttp.Handler()))
+	}
+
+	// enable pprof
+	if v.GetBool("pprof") {
+		l.Info("enabled /debug/pprof")
+		e.Any("/debug/pprof*", echo.WrapHandler(http.DefaultServeMux))
+	}
 
 	go func() {
-		log.Info("run gateway server",
+		l.Info("run gateway server",
 			zap.String("address", v.GetString("listen_address")))
 
 		if err := e.Start(v.GetString("listen_address")); err != nil {
-			log.Panic("could not start server", zap.Error(err))
+			l.Panic("could not start server", zap.Error(err))
 		}
 	}()
 
-	<-ctx.Done()
+	<-g.Done()
 
-	ctx, cancel = context.WithTimeout(context.TODO(), time.Second*30)
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second*30)
 	defer cancel()
 
-	log.Info("stopping server", zap.Error(e.Shutdown(ctx)))
+	l.Info("stopping server", zap.Error(e.Shutdown(ctx)))
 }
 
-func checkConnection(ctx context.Context, conn *grpc.ClientConn, log *zap.Logger) {
-	tick := time.NewTicker(time.Second)
+func checkConnection(ctx context.Context, p *Pool) {
+	tick := time.NewTicker(time.Second * 15)
+
 loop:
 	for {
 		select {
 		case <-ctx.Done():
 			break loop
 		case <-tick.C:
-			switch state := conn.GetState(); state {
-			case connectivity.Idle, connectivity.Connecting, connectivity.Ready:
-				// It's ok..
-			default:
-				log.Error("could not establish connection",
-					zap.Stringer("state", state),
-					zap.Any("connection", conn.Target()))
-			}
+			p.reBalance(ctx)
 		}
 	}
 
 	tick.Stop()
+
+	p.log.Info("stop connection worker")
 }

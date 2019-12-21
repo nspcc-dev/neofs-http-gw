@@ -16,33 +16,33 @@ import (
 	"go.uber.org/zap"
 )
 
-func (cfg *config) receiveFile(c echo.Context) error {
+func (r *router) receiveFile(c echo.Context) error {
 	var (
 		cid      refs.CID
 		oid      refs.ObjectID
 		obj      *object.Object
 		download = c.QueryParam("download") != ""
+		con, err = r.pool.getConnection()
 	)
 
-	cfg.log.Debug("try to fetch object from network",
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	log := r.log.With(
+		zap.String("node", con.Target()),
 		zap.String("cid", c.Param("cid")),
 		zap.String("oid", c.Param("oid")))
 
 	if err := cid.Parse(c.Param("cid")); err != nil {
-		cfg.log.Error("wrong container id",
-			zap.String("cid", c.Param("cid")),
-			zap.String("oid", c.Param("oid")),
-			zap.Error(err))
+		log.Error("wrong container id", zap.Error(err))
 
 		return echo.NewHTTPError(
 			http.StatusBadRequest,
 			errors.Wrap(err, "wrong container id").Error(),
 		)
 	} else if err := oid.Parse(c.Param("oid")); err != nil {
-		cfg.log.Error("wrong object id",
-			zap.Stringer("cid", cid),
-			zap.String("oid", c.Param("oid")),
-			zap.Error(err))
+		log.Error("wrong object id", zap.Error(err))
 
 		return echo.NewHTTPError(
 			http.StatusBadRequest,
@@ -50,39 +50,29 @@ func (cfg *config) receiveFile(c echo.Context) error {
 		)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
 	defer cancel()
 
 	req := &object.GetRequest{Address: refs.Address{ObjectID: oid, CID: cid}}
 	req.SetTTL(service.SingleForwardingTTL)
 
-	if err := service.SignRequestHeader(cfg.key, req); err != nil {
-		cfg.log.Error("could not sign request",
-			zap.Stringer("cid", cid),
-			zap.Stringer("oid", oid),
-			zap.Error(err))
-
+	if err := service.SignRequestHeader(r.key, req); err != nil {
+		log.Error("could not sign request", zap.Error(err))
 		return echo.NewHTTPError(
 			http.StatusBadRequest,
 			errors.Wrap(err, "could not sign request").Error())
 	}
 
-	cli, err := cfg.cli.Get(ctx, req)
+	cli, err := object.NewServiceClient(con).Get(ctx, req)
 	if err != nil {
-		cfg.log.Error("could not prepare connection",
-			zap.Stringer("cid", cid),
-			zap.Stringer("oid", oid),
-			zap.Error(err))
+		log.Error("could not prepare connection", zap.Error(err))
 
 		return echo.NewHTTPError(
 			http.StatusBadRequest,
 			errors.Wrap(err, "could not prepare connection").Error(),
 		)
 	} else if obj, err = receiveObject(cli); err != nil {
-		cfg.log.Error("could not receive object",
-			zap.Stringer("cid", cid),
-			zap.Stringer("oid", oid),
-			zap.Error(err))
+		log.Error("could not receive object", zap.Error(err))
 
 		switch {
 		case strings.Contains(err.Error(), object.ErrNotFound.Error()),
@@ -96,9 +86,7 @@ func (cfg *config) receiveFile(c echo.Context) error {
 		}
 	}
 
-	cfg.log.Info("object fetched successfully",
-		zap.Stringer("cid", cid),
-		zap.Stringer("oid", oid))
+	log.Info("object fetched successfully")
 
 	c.Response().Header().Set("Content-Length", strconv.FormatUint(obj.SystemHeader.PayloadLength, 10))
 	c.Response().Header().Set("x-object-id", obj.SystemHeader.ID.String())

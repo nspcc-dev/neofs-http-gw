@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -61,8 +62,11 @@ func settings() *viper.Viper {
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	// flags setup:
-	flags := pflag.NewFlagSet("comandline", pflag.ExitOnError)
+	flags := pflag.NewFlagSet("commandline", pflag.ExitOnError)
 	flags.SortFlags = false
+
+	flags.Bool("pprof", false, "enable pprof")
+	flags.Bool("metrics", false, "enable prometheus")
 
 	help := flags.BoolP("help", "h", false, "show help")
 	version := flags.BoolP("version", "v", false, "show version")
@@ -74,7 +78,7 @@ func settings() *viper.Viper {
 	flags.Duration("connect_timeout", time.Second*30, "gRPC connect timeout")
 
 	flags.String("listen_address", "0.0.0.0:8082", "HTTP Gateway listen address")
-	flags.String("neofs_address", "0.0.0.0:8080", "NeoFS Node address for proxying requests")
+	peers := flags.StringArrayP("peers", "p", nil, "NeoFS nodes")
 
 	// set prefers:
 	v.Set("app.name", "neofs-gw")
@@ -115,6 +119,13 @@ func settings() *viper.Viper {
 	case version != nil && *version:
 		fmt.Printf("NeoFS HTTP Gateway %s (%s)\n", Version, Build)
 		os.Exit(0)
+	}
+
+	if peers != nil && len(*peers) > 0 {
+		for i := range *peers {
+			v.SetDefault("peers."+strconv.Itoa(i)+".address", (*peers)[i])
+			v.SetDefault("peers."+strconv.Itoa(i)+".weight", 1)
+		}
 	}
 
 	return v

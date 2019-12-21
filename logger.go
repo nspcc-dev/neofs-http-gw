@@ -47,7 +47,7 @@ func safeLevel(lvl string) zap.AtomicLevel {
 	}
 }
 
-func newLogger(v *viper.Viper) (*zap.Logger, error) {
+func newLogger(v *viper.Viper) *zap.Logger {
 	c := zap.NewProductionConfig()
 
 	c.OutputPaths = []string{"stdout"}
@@ -87,11 +87,11 @@ func newLogger(v *viper.Viper) (*zap.Logger, error) {
 		// enable trace only for current log-level
 		zap.AddStacktrace(traceLvl))
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 
 	if v.GetBool("logger.no_disclaimer") {
-		return l, nil
+		return l
 	}
 
 	name := v.GetString("app.name")
@@ -99,7 +99,7 @@ func newLogger(v *viper.Viper) (*zap.Logger, error) {
 
 	return l.With(
 		zap.String("app_name", name),
-		zap.String("app_version", version)), nil
+		zap.String("app_version", version))
 }
 
 func (z *zapLogger) Info(args ...interface{}) {

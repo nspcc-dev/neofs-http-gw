@@ -12,7 +12,7 @@ WORKDIR /src
 
 COPY . /src
 
-RUN go build -v -mod=vendor -ldflags "${LDFLAGS} -X main.Build=$(date -u +%s%N)" -o /go/bin/neofs-gw ./
+RUN go build -v -mod=vendor -trimpath -ldflags "${LDFLAGS} -X main.Build=$(date -u +%s%N)" -o /go/bin/neofs-gw ./
 
 # Executable image
 FROM scratch
