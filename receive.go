@@ -97,7 +97,7 @@ func (r *router) receiveFile(c echo.Context) error {
 		if hdr := obj.Headers[i].GetUserHeader(); hdr != nil {
 			c.Response().Header().Set("x-"+hdr.Key, hdr.Value)
 
-			if hdr.Key == DropInFilenameHeader && download {
+			if hdr.Key == object.FilenameHeader && download {
 				c.Response().Header().Set("Content-Disposition", "attachment; filename="+hdr.Value)
 			}
 		}
