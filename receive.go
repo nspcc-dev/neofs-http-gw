@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"path"
 	"strconv"
 	"strings"
 
@@ -98,7 +99,8 @@ func (r *router) receiveFile(c echo.Context) error {
 			c.Response().Header().Set("x-"+hdr.Key, hdr.Value)
 
 			if hdr.Key == object.FilenameHeader && download {
-				c.Response().Header().Set("Content-Disposition", "attachment; filename="+hdr.Value)
+				// NOTE: we use path.Base because hdr.Value can be something like `/path/to/filename.ext`
+				c.Response().Header().Set("Content-Disposition", "attachment; filename="+path.Base(hdr.Value))
 			}
 		}
 	}
