@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	"github.com/nspcc-dev/neofs-proto/container"
-	"github.com/nspcc-dev/neofs-proto/object"
-	"github.com/nspcc-dev/neofs-proto/refs"
-	"github.com/nspcc-dev/neofs-proto/service"
+	"github.com/nspcc-dev/neofs-api/container"
+	"github.com/nspcc-dev/neofs-api/object"
+	"github.com/nspcc-dev/neofs-api/refs"
+	"github.com/nspcc-dev/neofs-api/service"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )

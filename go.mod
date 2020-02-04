@@ -4,8 +4,8 @@ go 1.13
 
 require (
 	github.com/labstack/echo/v4 v4.1.11
+	github.com/nspcc-dev/neofs-api v0.2.13
 	github.com/nspcc-dev/neofs-crypto v0.2.3
-	github.com/nspcc-dev/neofs-proto v0.2.11
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.2.1
 	github.com/spf13/pflag v1.0.5
