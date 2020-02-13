@@ -22,8 +22,9 @@ func (r *router) receiveFile(c echo.Context) error {
 		cid      refs.CID
 		oid      refs.ObjectID
 		obj      *object.Object
+		ctx      = c.Request().Context()
+		con, err = r.pool.getConnection(ctx)
 		download = c.QueryParam("download") != ""
-		con, err = r.pool.getConnection()
 	)
 
 	if err != nil {
@@ -51,7 +52,7 @@ func (r *router) receiveFile(c echo.Context) error {
 		)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), r.timeout)
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	req := &object.GetRequest{Address: refs.Address{ObjectID: oid, CID: cid}}

@@ -96,7 +96,7 @@ func settings() *viper.Viper {
 
 	// keepalive:
 	v.SetDefault("keepalive.timeout", time.Second*10)
-	v.SetDefault("keepalive.time", time.Millisecond*100)
+	v.SetDefault("keepalive.time", time.Second*10) // If set below 10s, a minimum value of 10s will be used instead.
 	v.SetDefault("keepalive.permit_without_stream", true)
 
 	if err := v.BindPFlags(flags); err != nil {

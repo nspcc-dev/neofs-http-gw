@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nspcc-dev/neofs-api/state"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -105,7 +106,7 @@ func newPool(ctx context.Context, l *zap.Logger, v *viper.Viper) *Pool {
 
 	p.reBalance(ctx)
 
-	cur, err := p.getConnection()
+	cur, err := p.getConnection(ctx)
 	if err != nil {
 		l.Panic("could get connection", zap.Error(err))
 	}
@@ -196,6 +197,14 @@ func (p *Pool) reBalance(ctx context.Context) {
 				// remove from connections
 				p.conns[weight] = append(p.conns[weight][:idx], p.conns[weight][idx+1:]...)
 			}
+
+			if err := conn.Close(); err != nil {
+				p.log.Warn("could not close bad connection", zap.Error(err))
+			}
+
+			if p.nodes[i].conn != nil {
+				p.nodes[i].conn = nil
+			}
 		}
 	}
 
@@ -209,11 +218,11 @@ func (p *Pool) reBalance(ctx context.Context) {
 	})
 }
 
-func (p *Pool) getConnection() (*grpc.ClientConn, error) {
+func (p *Pool) getConnection(ctx context.Context) (*grpc.ClientConn, error) {
 	p.RLock()
 	defer p.RUnlock()
 
-	if p.cur != nil && isAlive(p.cur) {
+	if p.cur != nil && isAlive(ctx, p.log, p.cur) {
 		return p.cur, nil
 	}
 
@@ -234,10 +243,17 @@ func (p *Pool) getConnection() (*grpc.ClientConn, error) {
 	return nil, errNoHealthyConnections
 }
 
-func isAlive(cur *grpc.ClientConn) bool {
+func isAlive(ctx context.Context, log *zap.Logger, cur *grpc.ClientConn) bool {
 	switch st := cur.GetState(); st {
 	case connectivity.Idle, connectivity.Ready, connectivity.Connecting:
-		return true
+		res, err := state.NewStatusClient(cur).HealthCheck(ctx, new(state.HealthRequest))
+		if err != nil {
+			log.Warn("could not fetch health-check", zap.Error(err))
+
+			return false
+		}
+
+		return res.Healthy
 	default:
 		return false
 	}
