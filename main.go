@@ -78,7 +78,8 @@ func main() {
 }
 
 func checkConnection(ctx context.Context, p *Pool) {
-	tick := time.NewTicker(time.Second * 15)
+	dur := time.Second * 15
+	tick := time.NewTimer(dur)
 
 loop:
 	for {
@@ -87,6 +88,7 @@ loop:
 			break loop
 		case <-tick.C:
 			p.reBalance(ctx)
+			tick.Reset(dur)
 		}
 	}
 
