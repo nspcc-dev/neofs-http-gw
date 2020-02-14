@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nspcc-dev/neofs-api/service"
 	"github.com/nspcc-dev/neofs-api/state"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -246,7 +247,10 @@ func (p *Pool) getConnection(ctx context.Context) (*grpc.ClientConn, error) {
 func isAlive(ctx context.Context, log *zap.Logger, cur *grpc.ClientConn) bool {
 	switch st := cur.GetState(); st {
 	case connectivity.Idle, connectivity.Ready, connectivity.Connecting:
-		res, err := state.NewStatusClient(cur).HealthCheck(ctx, new(state.HealthRequest))
+		req := new(state.HealthRequest)
+		req.SetTTL(service.NonForwardingTTL)
+
+		res, err := state.NewStatusClient(cur).HealthCheck(ctx, req)
 		if err != nil {
 			log.Warn("could not fetch health-check", zap.Error(err))
 
