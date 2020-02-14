@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
+	"errors"
 	"net/http"
 	_ "net/http/pprof"
 	"time"
@@ -63,7 +64,7 @@ func main() {
 		l.Info("run gateway server",
 			zap.String("address", v.GetString("listen_address")))
 
-		if err := e.Start(v.GetString("listen_address")); err != nil {
+		if err := e.Start(v.GetString("listen_address")); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			l.Panic("could not start server", zap.Error(err))
 		}
 	}()
