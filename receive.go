@@ -7,6 +7,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/nspcc-dev/neofs-api/container"
@@ -22,6 +23,7 @@ func (r *router) receiveFile(c echo.Context) error {
 		cid      refs.CID
 		oid      refs.ObjectID
 		obj      *object.Object
+		start    = time.Now()
 		ctx      = c.Request().Context()
 		con, err = r.pool.getConnection(ctx)
 		download = c.QueryParam("download") != ""
@@ -74,7 +76,9 @@ func (r *router) receiveFile(c echo.Context) error {
 			errors.Wrap(err, "could not prepare connection").Error(),
 		)
 	} else if obj, err = receiveObject(cli); err != nil {
-		log.Error("could not receive object", zap.Error(err))
+		log.Error("could not receive object",
+			zap.Duration("elapsed", time.Since(start)),
+			zap.Error(err))
 
 		switch {
 		case strings.Contains(err.Error(), object.ErrNotFound.Error()),
