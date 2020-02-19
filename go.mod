@@ -10,6 +10,7 @@ require (
 	github.com/prometheus/client_golang v1.4.1 // v1.2.1 => v1.4.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.6.2 // v1.6.1 => v1.6.2
+	go.uber.org/atomic v1.5.0
 	go.uber.org/zap v1.13.0
 	google.golang.org/grpc v1.27.1 // v1.25.1 => v1.27.1
 )
