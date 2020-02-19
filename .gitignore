@@ -4,5 +4,6 @@ cmd/test
 /plugins/
 /vendor/
 
+*.log
 testfile
 .neofs-cli.yml
