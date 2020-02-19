@@ -23,6 +23,16 @@ type empty int
 const (
 	devNull   = empty(0)
 	generated = "generated"
+
+	minimumTTLInMinutes = 5
+
+	defaultTTL = minimumTTLInMinutes * time.Minute
+
+	defaultRequestTimeout = 15 * time.Second
+	defaultConnectTimeout = 30 * time.Second
+
+	defaultKeepaliveTime    = 10 * time.Second
+	defaultKeepaliveTimeout = 10 * time.Second
 )
 
 func (empty) Read([]byte) (int, error) { return 0, io.EOF }
@@ -74,8 +84,9 @@ func settings() *viper.Viper {
 	flags.String("key", generated, `"`+generated+`" to generate key, path to private key file, hex string or wif`)
 
 	flags.Bool("verbose", false, "debug gRPC connections")
-	flags.Duration("request_timeout", time.Second*5, "gRPC request timeout")
-	flags.Duration("connect_timeout", time.Second*30, "gRPC connect timeout")
+	flags.Duration("request_timeout", defaultRequestTimeout, "gRPC request timeout")
+	flags.Duration("connect_timeout", defaultConnectTimeout, "gRPC connect timeout")
+	ttl := flags.DurationP("conn_ttl", "t", defaultTTL, "gRPC connection time to live")
 
 	flags.String("listen_address", "0.0.0.0:8082", "HTTP Gateway listen address")
 	peers := flags.StringArrayP("peers", "p", nil, "NeoFS nodes")
@@ -95,8 +106,9 @@ func settings() *viper.Viper {
 	v.SetDefault("logger.sampling.thereafter", 1000)
 
 	// keepalive:
-	v.SetDefault("keepalive.timeout", time.Second*10)
-	v.SetDefault("keepalive.time", time.Second*10) // If set below 10s, a minimum value of 10s will be used instead.
+	// If set below 10s, a minimum value of 10s will be used instead.
+	v.SetDefault("keepalive.time", defaultKeepaliveTime)
+	v.SetDefault("keepalive.timeout", defaultKeepaliveTimeout)
 	v.SetDefault("keepalive.permit_without_stream", true)
 
 	if err := v.BindPFlags(flags); err != nil {
@@ -119,6 +131,8 @@ func settings() *viper.Viper {
 	case version != nil && *version:
 		fmt.Printf("NeoFS HTTP Gateway %s (%s)\n", Version, Build)
 		os.Exit(0)
+	case ttl != nil && ttl.Minutes() < minimumTTLInMinutes:
+		fmt.Printf("connection ttl should not be less than %s", defaultTTL)
 	}
 
 	if peers != nil && len(*peers) > 0 {
