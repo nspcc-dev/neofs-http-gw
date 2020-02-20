@@ -17,3 +17,6 @@ require (
 
 // Temporary, before we move repo to github:
 // replace github.com/nspcc-dev/neofs-proto => ../neofs-proto
+
+// For debug reasons
+replace google.golang.org/grpc => ../grpc-go
