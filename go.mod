@@ -12,13 +12,14 @@ require (
 	github.com/spf13/viper v1.6.2 // v1.6.1 => v1.6.2
 	go.uber.org/atomic v1.5.0
 	go.uber.org/zap v1.13.0
-	google.golang.org/grpc v1.24.0
+	google.golang.org/grpc v1.27.1
 )
 
 // Temporary, before we move repo to github:
 // replace github.com/nspcc-dev/neofs-proto => ../neofs-proto
 
 // For debug reasons
-replace google.golang.org/grpc => ../grpc-go
-
-replace github.com/nspcc-dev/neofs-api => ../neofs-api
+replace (
+	github.com/nspcc-dev/neofs-api => ../neofs-api
+	google.golang.org/grpc => ../grpc-go
+)
