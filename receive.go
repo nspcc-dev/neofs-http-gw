@@ -28,6 +28,7 @@ func (r *router) receiveFile(c echo.Context) error {
 		start    = time.Now()
 		con      *grpc.ClientConn
 		ctx      = c.Request().Context()
+		cli      object.Service_GetClient
 		download = c.QueryParam("download") != ""
 	)
 
@@ -36,14 +37,14 @@ func (r *router) receiveFile(c echo.Context) error {
 		zap.String("cid", c.Param("cid")),
 		zap.String("oid", c.Param("oid")))
 
-	if err := cid.Parse(c.Param("cid")); err != nil {
+	if err = cid.Parse(c.Param("cid")); err != nil {
 		log.Error("wrong container id", zap.Error(err))
 
 		return echo.NewHTTPError(
 			http.StatusBadRequest,
 			errors.Wrap(err, "wrong container id").Error(),
 		)
-	} else if err := oid.Parse(c.Param("oid")); err != nil {
+	} else if err = oid.Parse(c.Param("oid")); err != nil {
 		log.Error("wrong object id", zap.Error(err))
 
 		return echo.NewHTTPError(
@@ -57,6 +58,7 @@ func (r *router) receiveFile(c echo.Context) error {
 		defer cancel()
 
 		if con, err = r.pool.getConnection(ctx); err != nil {
+			log.Error("getConnection timeout", zap.Error(err))
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 	}
@@ -66,18 +68,25 @@ func (r *router) receiveFile(c echo.Context) error {
 
 	log = log.With(zap.String("node", con.Target()))
 
+	defer func() {
+		if err != nil {
+			return
+		}
+
+		log.Error("object sent to client", zap.Stringer("elapsed", time.Since(start)))
+	}()
+
 	req := &object.GetRequest{Address: refs.Address{ObjectID: oid, CID: cid}}
 	req.SetTTL(service.SingleForwardingTTL)
 
-	if err := service.SignRequestHeader(r.key, req); err != nil {
+	if err = service.SignRequestHeader(r.key, req); err != nil {
 		log.Error("could not sign request", zap.Error(err))
 		return echo.NewHTTPError(
 			http.StatusBadRequest,
 			errors.Wrap(err, "could not sign request").Error())
 	}
 
-	cli, err := object.NewServiceClient(con).Get(ctx, req)
-	if err != nil {
+	if cli, err = object.NewServiceClient(con).Get(ctx, req); err != nil {
 		log.Error("could not prepare connection", zap.Error(err))
 
 		return echo.NewHTTPError(
@@ -86,7 +95,7 @@ func (r *router) receiveFile(c echo.Context) error {
 		)
 	} else if obj, err = receiveObject(cli); err != nil {
 		log.Error("could not receive object",
-			zap.Duration("elapsed", time.Since(start)),
+			zap.Stringer("elapsed", time.Since(start)),
 			zap.Error(err))
 
 		switch {

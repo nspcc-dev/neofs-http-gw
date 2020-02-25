@@ -54,7 +54,7 @@ var (
 	errNoHealthyConnections = errors.New("no active connections")
 )
 
-func newPool(ctx context.Context, l *zap.Logger, v *viper.Viper) *Pool {
+func newPool(ctx context.Context, l *zap.Logger, v *viper.Viper) (*Pool, error) {
 	p := &Pool{
 		log:   l,
 		Mutex: new(sync.Mutex),
@@ -128,11 +128,9 @@ func newPool(ctx context.Context, l *zap.Logger, v *viper.Viper) *Pool {
 
 	p.reBalance(ctx)
 
-	if _, err := p.getConnection(ctx); err != nil {
-		l.Panic("could get connection", zap.Error(err))
-	}
+	_, err := p.getConnection(ctx)
 
-	return p
+	return p, err
 }
 
 func (p *Pool) close() {
@@ -168,6 +166,12 @@ func (p *Pool) reBalance(ctx context.Context) {
 			weight = p.nodes[i].weight
 		)
 
+		if ctx.Err() != nil {
+			p.log.Warn("something went wrong", zap.Error(ctx.Err()))
+
+			return
+		}
+
 		if conn == nil {
 			p.log.Warn("empty connection, try to connect",
 				zap.String("address", p.nodes[i].address))
@@ -182,7 +186,7 @@ func (p *Pool) reBalance(ctx context.Context) {
 			if err != nil || conn == nil {
 				p.log.Warn("skip, could not connect to node",
 					zap.String("address", p.nodes[i].address),
-					zap.Duration("elapsed", time.Since(start)),
+					zap.Stringer("elapsed", time.Since(start)),
 					zap.Error(err))
 				continue
 			}
@@ -206,7 +210,7 @@ func (p *Pool) reBalance(ctx context.Context) {
 		if err = p.isAlive(ctx, conn); err != nil || usedAt > p.ttl {
 			p.log.Warn("connection not alive",
 				zap.String("address", p.nodes[i].address),
-				zap.Duration("used_at", usedAt),
+				zap.Stringer("used_at", usedAt),
 				zap.Error(err))
 
 			if exists {
@@ -217,7 +221,7 @@ func (p *Pool) reBalance(ctx context.Context) {
 			if err = conn.Close(); err != nil {
 				p.log.Warn("could not close bad connection",
 					zap.String("address", p.nodes[i].address),
-					zap.Duration("used_at", usedAt),
+					zap.Stringer("used_at", usedAt),
 					zap.Error(err))
 			}
 
@@ -231,7 +235,7 @@ func (p *Pool) reBalance(ctx context.Context) {
 
 		p.log.Info("connection alive",
 			zap.String("address", p.nodes[i].address),
-			zap.Duration("used_at", usedAt))
+			zap.Stringer("used_at", usedAt))
 
 		if !exists {
 			p.conns[weight] = append(p.conns[weight], p.nodes[i])
@@ -280,6 +284,10 @@ func (p *Pool) getConnection(ctx context.Context) (*grpc.ClientConn, error) {
 
 	p.currentConn = nil
 	p.currentIdx.Store(-1)
+
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 
 	return nil, errNoHealthyConnections
 }

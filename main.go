@@ -23,6 +23,9 @@ type router struct {
 
 func main() {
 	var (
+		err  error
+		pool *Pool
+
 		v = settings()
 		l = newLogger(v)
 		g = newGracefulContext(l)
@@ -32,10 +35,21 @@ func main() {
 		grpclog.SetLoggerV2(gRPCLogger(l))
 	}
 
+	switch pool, err = newPool(g, l, v); {
+	case err == nil:
+		// ignore
+	case errors.Is(err, context.Canceled):
+		l.Info("close application")
+		return
+	default:
+		l.Error("could get connection", zap.Error(err))
+		return
+	}
+
 	r := &router{
 		log:     l,
+		pool:    pool,
 		key:     fetchKey(l, v),
-		pool:    newPool(g, l, v),
 		timeout: v.GetDuration("request_timeout"),
 	}
 
