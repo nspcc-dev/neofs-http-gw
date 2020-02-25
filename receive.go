@@ -16,25 +16,23 @@ import (
 	"github.com/nspcc-dev/neofs-api/service"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 )
 
 func (r *router) receiveFile(c echo.Context) error {
 	var (
+		err      error
 		cid      refs.CID
 		oid      refs.ObjectID
 		obj      *object.Object
 		start    = time.Now()
+		con      *grpc.ClientConn
 		ctx      = c.Request().Context()
-		con, err = r.pool.getConnection(ctx)
 		download = c.QueryParam("download") != ""
 	)
 
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-	}
-
 	log := r.log.With(
-		zap.String("node", con.Target()),
+		// zap.String("node", con.Target()),
 		zap.String("cid", c.Param("cid")),
 		zap.String("oid", c.Param("oid")))
 
@@ -54,8 +52,19 @@ func (r *router) receiveFile(c echo.Context) error {
 		)
 	}
 
+	{ // try to connect or throw http error:
+		ctx, cancel := context.WithTimeout(ctx, r.timeout)
+		defer cancel()
+
+		if con, err = r.pool.getConnection(ctx); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+	}
+
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
+
+	log = log.With(zap.String("node", con.Target()))
 
 	req := &object.GetRequest{Address: refs.Address{ObjectID: oid, CID: cid}}
 	req.SetTTL(service.SingleForwardingTTL)
