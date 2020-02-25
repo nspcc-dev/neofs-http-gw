@@ -6,16 +6,17 @@ ARG REPO=github.com/nspcc-dev/neofs-gw
 
 ENV GOGC off
 ENV CGO_ENABLED 0
-ENV LDFLAGS "-w -s -X main.Version=${VERSION}"
+# add later -w -s
+ENV LDFLAGS " -X main.Version=${VERSION} -compressdwarf=false"
 
 WORKDIR /src
 
 COPY . /src
 
-RUN go build -v -mod=vendor -trimpath -ldflags "${LDFLAGS} -X main.Build=$(date -u +%s%N)" -o /go/bin/neofs-gw ./
+RUN go build -v -mod=vendor -trimpath -gcflags=all="-N -l" -ldflags "${LDFLAGS} -X main.Build=$(date -u +%s%N)" -o /go/bin/neofs-gw ./
 
 # Executable image
-FROM scratch
+FROM alpine
 
 WORKDIR /
 
