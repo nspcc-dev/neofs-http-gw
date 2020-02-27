@@ -28,6 +28,7 @@ const (
 
 	defaultTTL = minimumTTLInMinutes * time.Minute
 
+	defaultRebalanceTimer = 15 * time.Second
 	defaultRequestTimeout = 15 * time.Second
 	defaultConnectTimeout = 30 * time.Second
 
@@ -86,6 +87,8 @@ func settings() *viper.Viper {
 	flags.Bool("verbose", false, "debug gRPC connections")
 	flags.Duration("request_timeout", defaultRequestTimeout, "gRPC request timeout")
 	flags.Duration("connect_timeout", defaultConnectTimeout, "gRPC connect timeout")
+	flags.Duration("rebalance_timer", defaultRebalanceTimer, "gRPC connection rebalance timer")
+
 	ttl := flags.DurationP("conn_ttl", "t", defaultTTL, "gRPC connection time to live")
 
 	flags.String("listen_address", "0.0.0.0:8082", "HTTP Gateway listen address")

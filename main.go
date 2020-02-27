@@ -29,6 +29,7 @@ func main() {
 		v = settings()
 		l = newLogger(v)
 		g = newGracefulContext(l)
+		d = v.GetDuration("rebalance_timer")
 	)
 
 	if v.GetBool("verbose") {
@@ -53,7 +54,7 @@ func main() {
 		timeout: v.GetDuration("request_timeout"),
 	}
 
-	go checkConnection(g, r.pool)
+	go checkConnection(g, d, r.pool)
 
 	e := echo.New()
 	e.Debug = false
@@ -91,8 +92,7 @@ func main() {
 	l.Info("stopping server", zap.Error(e.Shutdown(ctx)))
 }
 
-func checkConnection(ctx context.Context, p *Pool) {
-	dur := time.Second * 15
+func checkConnection(ctx context.Context, dur time.Duration, p *Pool) {
 	tick := time.NewTimer(dur)
 
 loop:
