@@ -73,7 +73,7 @@ func (r *router) receiveFile(c echo.Context) error {
 			return
 		}
 
-		log.Error("object sent to client", zap.Stringer("elapsed", time.Since(start)))
+		log.Info("object sent to client", zap.Stringer("elapsed", time.Since(start)))
 	}()
 
 	req := &object.GetRequest{Address: refs.Address{ObjectID: oid, CID: cid}}
