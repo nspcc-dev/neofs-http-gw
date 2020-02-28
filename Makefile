@@ -10,7 +10,7 @@ R=\033[0m
 
 # Show current version
 version:
-	@echo $(VERSION)-$(GRPC_VERSION)
+	@echo "Current version: $(VERSION)-$(GRPC_VERSION)"
 
 # Make sure that all files added to commit
 deps:
@@ -21,13 +21,13 @@ deps:
 	@printf "${B}${G}⇒ Store vendor localy${R}: "
 	@go mod vendor && echo OK || (echo fail && exit 2)
 
-image: GRPC_VERSION?=
+image: VERSION?=
 image: deps
 	@echo "${B}${G}⇒ Build GW docker-image with $(GRPC_VERSION) ${R}"
 	@docker build \
-		--build-arg VERSION=$(VERSION)-$(GRPC_VERSION) \
+		--build-arg VERSION=$(VERSION) \
 		 -f Dockerfile \
-		 -t $(HUB_IMAGE)-http-gate:$(VERSION)-$(GRPC_VERSION) .
+		 -t $(HUB_IMAGE)-http-gate:$(VERSION) .
 
 .PHONY: dev
 
@@ -45,6 +45,7 @@ dev:
   		go get google.golang.org/grpc@$${v}; \
   		cd $${curdir}; \
   		git checkout go.{sum,mod}; \
+  		cp  go_dev.mod go.sum; \
   		go get google.golang.org/grpc@$${v}; \
-  		make image GRPC_VERSION=$${v}; \
+  		make image VERSION=$(VERSION)-$${v}; \
 	done
