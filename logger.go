@@ -114,6 +114,14 @@ func (z *zapLogger) Infof(format string, args ...interface{}) {
 	z.log.Sugar().Infof(format, args...)
 }
 
+func (z *zapLogger) Println(args ...interface{}) {
+	z.log.Sugar().Info(args...)
+}
+
+func (z *zapLogger) Printf(format string, args ...interface{}) {
+	z.log.Sugar().Infof(format, args...)
+}
+
 func (z *zapLogger) Warning(args ...interface{}) {
 	z.log.Sugar().Warn(args...)
 }
