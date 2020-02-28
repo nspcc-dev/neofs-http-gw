@@ -7,4 +7,5 @@ cmd/test
 *.log
 test.sh
 testfile
+.blast.yml
 .neofs-cli.yml
