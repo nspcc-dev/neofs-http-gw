@@ -44,8 +44,8 @@ dev:
   		git checkout go.{sum,mod}; \
   		go get google.golang.org/grpc@$${v}; \
   		cd $${curdir}; \
-  		git checkout go.{sum,mod}; \
   		cp  go_dev.mod go.sum; \
   		go get google.golang.org/grpc@$${v}; \
   		make image VERSION=$(VERSION)-$${v}; \
+  		git checkout go.{sum,mod}; \
 	done
