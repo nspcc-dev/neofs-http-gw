@@ -9,61 +9,57 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labstack/echo/v4"
 	"github.com/nspcc-dev/neofs-api/container"
 	"github.com/nspcc-dev/neofs-api/object"
 	"github.com/nspcc-dev/neofs-api/refs"
 	"github.com/nspcc-dev/neofs-api/service"
-	"github.com/pkg/errors"
+	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
 
-func (r *router) receiveFile(c echo.Context) error {
+func (a *app) receiveFile(c *fasthttp.RequestCtx) {
 	var (
-		err      error
-		cid      refs.CID
-		oid      refs.ObjectID
-		obj      *object.Object
-		start    = time.Now()
-		con      *grpc.ClientConn
-		ctx      = c.Request().Context()
-		cli      object.Service_GetClient
-		download = c.QueryParam("download") != ""
+		err     error
+		cid     refs.CID
+		oid     refs.ObjectID
+		start   = time.Now()
+		con     *grpc.ClientConn
+		cli     object.Service_GetClient
+		ctx     context.Context
+		sCID, _ = c.UserValue("cid").(string)
+		sOID, _ = c.UserValue("oid").(string)
 	)
 
-	log := r.log.With(
+	log := a.log.With(
 		// zap.String("node", con.Target()),
-		zap.String("cid", c.Param("cid")),
-		zap.String("oid", c.Param("oid")))
+		zap.String("cid", sCID),
+		zap.String("oid", sOID))
 
-	if err = cid.Parse(c.Param("cid")); err != nil {
+	if err = cid.Parse(sCID); err != nil {
 		log.Error("wrong container id", zap.Error(err))
 
-		return echo.NewHTTPError(
-			http.StatusBadRequest,
-			errors.Wrap(err, "wrong container id").Error(),
-		)
-	} else if err = oid.Parse(c.Param("oid")); err != nil {
+		c.Error("wrong container id", fasthttp.StatusBadRequest)
+		return
+	} else if err = oid.Parse(sOID); err != nil {
 		log.Error("wrong object id", zap.Error(err))
 
-		return echo.NewHTTPError(
-			http.StatusBadRequest,
-			errors.Wrap(err, "wrong object id").Error(),
-		)
+		c.Error("wrong object id", fasthttp.StatusBadRequest)
+		return
 	}
 
 	{ // try to connect or throw http error:
-		ctx, cancel := context.WithTimeout(ctx, r.timeout)
+		ctx, cancel := context.WithTimeout(c, a.timeout)
 		defer cancel()
 
-		if con, err = r.pool.getConnection(ctx); err != nil {
+		if con, err = a.pool.getConnection(ctx); err != nil {
 			log.Error("getConnection timeout", zap.Error(err))
-			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+			c.Error("could not get alive connection", fasthttp.StatusBadRequest)
+			return
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, r.timeout)
+	ctx, cancel := context.WithTimeout(c, a.timeout)
 	defer cancel()
 
 	log = log.With(zap.String("node", con.Target()))
@@ -79,21 +75,18 @@ func (r *router) receiveFile(c echo.Context) error {
 	req := &object.GetRequest{Address: refs.Address{ObjectID: oid, CID: cid}}
 	req.SetTTL(service.SingleForwardingTTL)
 
-	if err = service.SignRequestHeader(r.key, req); err != nil {
+	if err = service.SignRequestHeader(a.key, req); err != nil {
 		log.Error("could not sign request", zap.Error(err))
-		return echo.NewHTTPError(
-			http.StatusBadRequest,
-			errors.Wrap(err, "could not sign request").Error())
+		c.Error("could not sign request", fasthttp.StatusBadRequest)
+		return
 	}
 
 	if cli, err = object.NewServiceClient(con).Get(ctx, req); err != nil {
 		log.Error("could not prepare connection", zap.Error(err))
 
-		return echo.NewHTTPError(
-			http.StatusBadRequest,
-			errors.Wrap(err, "could not prepare connection").Error(),
-		)
-	} else if obj, err = receiveObject(cli); err != nil {
+		c.Error("could not prepare connection", fasthttp.StatusBadRequest)
+		return
+	} else if err = receiveObject(c, cli); err != nil {
 		log.Error("could not receive object",
 			zap.Stringer("elapsed", time.Since(start)),
 			zap.Error(err))
@@ -101,52 +94,68 @@ func (r *router) receiveFile(c echo.Context) error {
 		switch {
 		case strings.Contains(err.Error(), object.ErrNotFound.Error()),
 			strings.Contains(err.Error(), container.ErrNotFound.Error()):
-			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+			c.Error("object not found", fasthttp.StatusNotFound)
 		default:
-			return echo.NewHTTPError(
-				http.StatusBadRequest,
-				errors.Wrap(err, "could not receive object").Error(),
-			)
+			c.Error("could not receive object", fasthttp.StatusBadRequest)
 		}
+
+		return
 	}
-
-	log.Info("object fetched successfully")
-
-	c.Response().Header().Set("Content-Length", strconv.FormatUint(obj.SystemHeader.PayloadLength, 10))
-	c.Response().Header().Set("x-object-id", obj.SystemHeader.ID.String())
-	c.Response().Header().Set("x-owner-id", obj.SystemHeader.OwnerID.String())
-	c.Response().Header().Set("x-container-id", obj.SystemHeader.CID.String())
-
-	for i := range obj.Headers {
-		if hdr := obj.Headers[i].GetUserHeader(); hdr != nil {
-			c.Response().Header().Set("x-"+hdr.Key, hdr.Value)
-
-			if hdr.Key == object.FilenameHeader && download {
-				// NOTE: we use path.Base because hdr.Value can be something like `/path/to/filename.ext`
-				c.Response().Header().Set("Content-Disposition", "attachment; filename="+path.Base(hdr.Value))
-			}
-		}
-	}
-
-	return c.Blob(http.StatusOK,
-		http.DetectContentType(obj.Payload),
-		obj.Payload)
 }
 
-func receiveObject(cli object.Service_GetClient) (*object.Object, error) {
-	var obj *object.Object
+func receiveObject(c *fasthttp.RequestCtx, cli object.Service_GetClient) error {
+	var (
+		typ string
+		put = c.Request.URI().QueryArgs().GetBool("download")
+	)
+
 	for {
 		resp, err := cli.Recv()
 		if err != nil {
 			if err == io.EOF {
 				break
 			}
-			return nil, err
-		} else if obj == nil {
-			obj = resp.GetObject()
+			return err
 		}
 
-		obj.Payload = append(obj.Payload, resp.GetChunk()...)
+		switch o := resp.R.(type) {
+		case *object.GetResponse_Object:
+			obj := o.Object
+
+			c.Response.Header.Set("Content-Length", strconv.FormatUint(obj.SystemHeader.PayloadLength, 10))
+			c.Response.Header.Set("x-object-id", obj.SystemHeader.ID.String())
+			c.Response.Header.Set("x-owner-id", obj.SystemHeader.OwnerID.String())
+			c.Response.Header.Set("x-container-id", obj.SystemHeader.CID.String())
+
+			for i := range obj.Headers {
+				if hdr := obj.Headers[i].GetUserHeader(); hdr != nil {
+					c.Response.Header.Set("x-"+hdr.Key, hdr.Value)
+
+					if hdr.Key == object.FilenameHeader && put {
+						// NOTE: we use path.Base because hdr.Value can be something like `/path/to/filename.ext`
+						c.Response.Header.Set("Content-Disposition", "attachment; filename="+path.Base(hdr.Value))
+					}
+				}
+			}
+
+			typ = http.DetectContentType(obj.Payload)
+
+			if _, err = c.Write(obj.Payload); err != nil {
+				return err
+			}
+
+		case *object.GetResponse_Chunk:
+			if typ == "" {
+				typ = http.DetectContentType(o.Chunk)
+			}
+
+			if _, err = c.Write(o.Chunk); err != nil {
+				return err
+			}
+		}
 	}
-	return obj, nil
+
+	c.SetContentType(typ)
+
+	return nil
 }
