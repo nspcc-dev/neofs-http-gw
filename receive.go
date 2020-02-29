@@ -138,7 +138,9 @@ func receiveObject(c *fasthttp.RequestCtx, cli object.Service_GetClient) error {
 				}
 			}
 
-			typ = http.DetectContentType(obj.Payload)
+			if len(obj.Payload) > 0 {
+				typ = http.DetectContentType(obj.Payload)
+			}
 
 			if _, err = c.Write(obj.Payload); err != nil {
 				return err
