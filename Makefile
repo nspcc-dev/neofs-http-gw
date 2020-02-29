@@ -35,6 +35,7 @@ image: deps
 dev: VERSIONS?=$(GRPC_VERSION)
 dev:
 	@echo "=> Build multiple images for $(VERSIONS)"; \
+	git checkout go.{sum,mod}; \
 	for v in $(VERSIONS); do \
   		curdir=$$(pwd); \
   		echo "=> Checkout gRPC to $${v}"; \
@@ -44,7 +45,7 @@ dev:
   		git checkout go.{sum,mod}; \
   		go get google.golang.org/grpc@$${v}; \
   		cd $${curdir}; \
-  		cp  go_dev.mod go.sum; \
+  		cp  go_dev.mod go.mod; \
   		go get google.golang.org/grpc@$${v}; \
   		make image VERSION=$(VERSION)-$${v}; \
   		git checkout go.{sum,mod}; \
