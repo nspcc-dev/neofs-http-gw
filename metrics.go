@@ -101,7 +101,6 @@ func metricsHandler(reg prometheus.Gatherer, opts promhttp.HandlerOpts) fasthttp
 		}
 
 		for _, mf := range mfs {
-			fmt.Println(*mf.Name)
 			if handleError(enc.Encode(mf)) {
 				return
 			}
