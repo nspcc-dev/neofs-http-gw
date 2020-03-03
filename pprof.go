@@ -4,9 +4,15 @@ import (
 	"net/http/pprof"
 	rtp "runtime/pprof"
 
+	"github.com/fasthttp/router"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
 )
+
+func attachProfiler(r *router.Router) {
+	r.GET("/debug/pprof/", pprofHandler())
+	r.GET("/debug/pprof/:name", pprofHandler())
+}
 
 func pprofHandler() fasthttp.RequestHandler {
 	items := rtp.Profiles()
