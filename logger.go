@@ -10,10 +10,17 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type zapLogger struct {
-	zapcore.Core
-	log *zap.SugaredLogger
-}
+type (
+	zapLogger struct {
+		zapcore.Core
+		log *zap.SugaredLogger
+	}
+
+	logger interface {
+		grpclog.LoggerV2
+		Println(v ...interface{})
+	}
+)
 
 const (
 	formatJSON    = "json"
@@ -23,7 +30,7 @@ const (
 	defaultSamplingThereafter = 100
 )
 
-func gRPCLogger(l *zap.Logger) grpclog.LoggerV2 {
+func gRPCLogger(l *zap.Logger) logger {
 	log := l.WithOptions(
 		// skip gRPCLog + zapLogger in caller
 		zap.AddCallerSkip(2))
