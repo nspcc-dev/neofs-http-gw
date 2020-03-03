@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/fasthttp/router"
-	"github.com/prometheus/client_golang/prometheus"
-	http "github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/grpclog"
@@ -20,11 +18,6 @@ type app struct {
 	timeout time.Duration
 	key     *ecdsa.PrivateKey
 }
-
-const (
-	defaultHealthyMsg  = "NeoFS HTTP Gateway is "
-	defaultContentType = "text/plain; charset=utf-8"
-)
 
 func main() {
 	var (
@@ -52,45 +45,19 @@ func main() {
 	r.RedirectTrailingSlash = true
 	r.GET("/get/:cid/:oid", a.receiveFile)
 
-	r.GET("/-/ready", func(ctx *fasthttp.RequestCtx) {
-		ctx.SetStatusCode(fasthttp.StatusOK)
-		ctx.SetBodyString("NeoFS HTTP Gateway is ready")
-	})
-
-	r.GET("/-/healthy", func(c *fasthttp.RequestCtx) {
-		code := fasthttp.StatusOK
-		msg := "healthy"
-
-		if err := a.pool.unhealthy.Load(); err != nil {
-			msg = "unhealthy: " + err.Error()
-			code = fasthttp.StatusBadRequest
-		}
-
-		c.Response.Reset()
-		c.SetStatusCode(code)
-		c.SetContentType(defaultContentType)
-		c.SetBodyString(defaultHealthyMsg + msg)
-	})
+	// attaching /-/(ready,healthy)
+	attachHealthy(r, a.pool.unhealthy)
 
 	// enable metrics
 	if v.GetBool("metrics") {
 		l.Info("enabled /metrics")
-		r.GET("/metrics/", metricsHandler(prometheus.DefaultGatherer, http.HandlerOpts{
-			ErrorLog: z.(http.Logger),
-			//ErrorHandling:       0,
-			//Registry:            nil,
-			//DisableCompression:  false,
-			//MaxRequestsInFlight: 0,
-			//Timeout:             0,
-			//EnableOpenMetrics:   false,
-		}))
+		attachMetrics(r, z)
 	}
 
 	// enable pprof
 	if v.GetBool("pprof") {
 		l.Info("enabled /debug/pprof")
-		r.GET("/debug/pprof/", pprofHandler())
-		r.GET("/debug/pprof/:name", pprofHandler())
+		attachProfiler(r)
 	}
 
 	en := &fasthttp.Server{
