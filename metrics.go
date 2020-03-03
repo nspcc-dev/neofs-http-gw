@@ -3,11 +3,24 @@ package main
 import (
 	"fmt"
 
+	"github.com/fasthttp/router"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/expfmt"
 	"github.com/valyala/fasthttp"
 )
+
+func attachMetrics(r *router.Router, z promhttp.Logger) {
+	r.GET("/metrics/", metricsHandler(prometheus.DefaultGatherer, promhttp.HandlerOpts{
+		ErrorLog: z,
+		//ErrorHandling:       0,
+		//Registry:            nil,
+		//DisableCompression:  false,
+		//MaxRequestsInFlight: 0,
+		//Timeout:             0,
+		//EnableOpenMetrics:   false,
+	}))
+}
 
 func metricsHandler(reg prometheus.Gatherer, opts promhttp.HandlerOpts) fasthttp.RequestHandler {
 	var (
