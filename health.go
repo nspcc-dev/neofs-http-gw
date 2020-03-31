@@ -12,12 +12,12 @@ const (
 )
 
 func attachHealthy(r *router.Router, e *atomic.Error) {
-	r.GET("/-/ready", func(ctx *fasthttp.RequestCtx) {
+	r.GET("/-/ready/", func(ctx *fasthttp.RequestCtx) {
 		ctx.SetStatusCode(fasthttp.StatusOK)
 		ctx.SetBodyString(healthyState + "ready")
 	})
 
-	r.GET("/-/healthy", func(c *fasthttp.RequestCtx) {
+	r.GET("/-/healthy/", func(c *fasthttp.RequestCtx) {
 		code := fasthttp.StatusOK
 		msg := "healthy"
 

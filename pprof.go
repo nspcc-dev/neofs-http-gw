@@ -11,7 +11,7 @@ import (
 
 func attachProfiler(r *router.Router) {
 	r.GET("/debug/pprof/", pprofHandler())
-	r.GET("/debug/pprof/:name", pprofHandler())
+	r.GET("/debug/pprof/:name/", pprofHandler())
 }
 
 func pprofHandler() fasthttp.RequestHandler {

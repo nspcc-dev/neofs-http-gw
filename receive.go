@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nspcc-dev/neofs-api/container"
-	"github.com/nspcc-dev/neofs-api/object"
-	"github.com/nspcc-dev/neofs-api/refs"
-	"github.com/nspcc-dev/neofs-api/service"
+	"github.com/nspcc-dev/neofs-api-go/container"
+	"github.com/nspcc-dev/neofs-api-go/object"
+	"github.com/nspcc-dev/neofs-api-go/refs"
+	"github.com/nspcc-dev/neofs-api-go/service"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -49,7 +49,7 @@ func (a *app) receiveFile(c *fasthttp.RequestCtx) {
 	}
 
 	{ // try to connect or throw http error:
-		ctx, cancel := context.WithTimeout(c, a.timeout)
+		ctx, cancel := context.WithTimeout(c, a.reqTimeout)
 		defer cancel()
 
 		if con, err = a.pool.getConnection(ctx); err != nil {
@@ -59,7 +59,7 @@ func (a *app) receiveFile(c *fasthttp.RequestCtx) {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(c, a.timeout)
+	ctx, cancel := context.WithTimeout(c, a.reqTimeout)
 	defer cancel()
 
 	log = log.With(zap.String("node", con.Target()))

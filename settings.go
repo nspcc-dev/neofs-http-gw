@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nspcc-dev/neofs-api/refs"
+	"github.com/nspcc-dev/neofs-api-go/refs"
 	crypto "github.com/nspcc-dev/neofs-crypto"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"

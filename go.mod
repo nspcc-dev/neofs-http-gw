@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/fasthttp/router v0.6.1
-	github.com/nspcc-dev/neofs-api v0.4.1
+	github.com/nspcc-dev/neofs-api-go v0.5.0
 	github.com/nspcc-dev/neofs-crypto v0.3.0
 	github.com/prometheus/client_golang v1.5.0
 	github.com/prometheus/common v0.9.1

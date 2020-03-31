@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nspcc-dev/neofs-api/service"
-	"github.com/nspcc-dev/neofs-api/state"
+	"github.com/nspcc-dev/neofs-api-go/service"
+	"github.com/nspcc-dev/neofs-api-go/state"
 	"github.com/spf13/viper"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
@@ -147,6 +147,29 @@ func (p *Pool) close() {
 			zap.String("address", p.nodes[i].address),
 			zap.Error(p.nodes[i].conn.Close()))
 	}
+}
+
+func (a *app) checkHealth(ctx context.Context, conn *grpc.ClientConn) error {
+	//a.log.Info("try to fetch node health status",
+	//	zap.String("node", conn.Target()),
+	//	zap.Stringer("timeout", a.reqTimeout))
+
+	ctx, cancel := context.WithTimeout(ctx, a.reqTimeout)
+	result, err := state.NewStatusClient(conn).HealthCheck(ctx, a.reqHealth)
+	cancel()
+
+	if err != nil {
+		result = &state.HealthResponse{Status: err.Error()}
+	} else if !result.Healthy {
+		err = errors.New(result.Status)
+	}
+
+	a.log.Debug("received node health status",
+		zap.String("node", conn.Target()),
+		zap.String("status", result.Status),
+		zap.Error(err))
+
+	return err
 }
 
 func (p *Pool) reBalance(ctx context.Context) {
