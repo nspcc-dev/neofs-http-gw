@@ -1,22 +1,24 @@
-FROM golang:1-alpine as builder
+FROM golang:1 as builder
 
-ARG BUILD=now
-ARG VERSION=dev
-ARG REPO=github.com/nspcc-dev/neofs-gw
 
 ENV GOGC off
 ENV CGO_ENABLED 0
-# add later -w -s
-ENV LDFLAGS " -X main.Version=${VERSION} -compressdwarf=false"
+
+RUN set -x \
+    && apt update \
+    && apt install -y upx-ucl
 
 WORKDIR /src
-
 COPY . /src
 
-RUN go build -v -mod=vendor -trimpath -gcflags=all="-N -l" -ldflags "${LDFLAGS} -X main.Build=$(date -u +%s%N)" -o /go/bin/neofs-gw ./
+ARG VERSION=dev
+ENV LDFLAGS "-w -s -X main.Version=${VERSION}"
+RUN set -x \
+    && go build -v -mod=vendor -trimpath -ldflags "${LDFLAGS} -X main.Build=$(date -u +%s%N)" -o /go/bin/neofs-gw ./ \
+    && upx -3 /go/bin/neofs-gw
 
 # Executable image
-FROM alpine
+FROM scratch
 
 WORKDIR /
 
