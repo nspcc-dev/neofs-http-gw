@@ -114,6 +114,13 @@ func settings() *viper.Viper {
 	v.SetDefault("keepalive.timeout", defaultKeepaliveTimeout)
 	v.SetDefault("keepalive.permit_without_stream", true)
 
+	// web-server:
+	v.SetDefault("web.read_buffer_size", 4096)
+	v.SetDefault("web.write_buffer_size", 4096)
+	v.SetDefault("web.read_timeout", time.Second*15)
+	v.SetDefault("web.write_timeout", time.Minute)
+	v.SetDefault("web.connection_per_host", 10)
+
 	if err := v.BindPFlags(flags); err != nil {
 		panic(err)
 	}
