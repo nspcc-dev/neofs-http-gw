@@ -6,16 +6,17 @@ import (
 	"net/http"
 	"path"
 	"strconv"
-	"strings"
 	"time"
 
-	"github.com/nspcc-dev/neofs-api-go/container"
 	"github.com/nspcc-dev/neofs-api-go/object"
 	"github.com/nspcc-dev/neofs-api-go/refs"
 	"github.com/nspcc-dev/neofs-api-go/service"
+	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func (a *app) receiveFile(c *fasthttp.RequestCtx) {
@@ -91,14 +92,20 @@ func (a *app) receiveFile(c *fasthttp.RequestCtx) {
 			zap.Stringer("elapsed", time.Since(start)),
 			zap.Error(err))
 
-		switch {
-		case strings.Contains(err.Error(), object.ErrNotFound.Error()),
-			strings.Contains(err.Error(), container.ErrNotFound.Error()):
-			c.Error("object not found", fasthttp.StatusNotFound)
-		default:
-			c.Error("could not receive object", fasthttp.StatusBadRequest)
+		var (
+			msg  = errors.Wrap(err, "could not receive object").Error()
+			code = fasthttp.StatusBadRequest
+		)
+
+		if st, ok := status.FromError(errors.Cause(err)); ok && st != nil {
+			if st.Code() == codes.NotFound {
+				code = fasthttp.StatusNotFound
+			}
+
+			msg = st.Message()
 		}
 
+		c.Error(msg, code)
 		return
 	}
 }

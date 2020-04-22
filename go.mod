@@ -6,6 +6,7 @@ require (
 	github.com/fasthttp/router v1.0.2
 	github.com/nspcc-dev/neofs-api-go v0.7.1
 	github.com/nspcc-dev/neofs-crypto v0.3.0
+	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.5.1
 	github.com/prometheus/common v0.9.1
 	github.com/spf13/pflag v1.0.5
