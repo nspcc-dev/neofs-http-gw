@@ -179,7 +179,9 @@ func (a *app) Serve(ctx context.Context) {
 
 	r := router.New()
 	r.RedirectTrailingSlash = true
-	r.GET("/get/{cid}/{oid}/", a.receiveFile)
+
+	a.log.Info("enabled /get/{cid}/{oid}")
+	r.GET("/get/{cid}/{oid}", a.receiveFile)
 
 	// attaching /-/(ready,healthy)
 	attachHealthy(r, a.pool.unhealthy)
