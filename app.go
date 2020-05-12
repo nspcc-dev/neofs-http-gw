@@ -188,13 +188,13 @@ func (a *app) Serve(ctx context.Context) {
 
 	// enable metrics
 	if a.cfg.GetBool("metrics") {
-		a.log.Info("enabled /metrics")
+		a.log.Info("enabled /metrics/")
 		attachMetrics(r, a.wlog)
 	}
 
 	// enable pprof
 	if a.cfg.GetBool("pprof") {
-		a.log.Info("enabled /debug/pprof")
+		a.log.Info("enabled /debug/pprof/")
 		attachProfiler(r)
 	}
 
