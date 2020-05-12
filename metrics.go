@@ -13,12 +13,12 @@ import (
 func attachMetrics(r *router.Router, z promhttp.Logger) {
 	r.GET("/metrics/", metricsHandler(prometheus.DefaultGatherer, promhttp.HandlerOpts{
 		ErrorLog: z,
-		//ErrorHandling:       0,
-		//Registry:            nil,
-		//DisableCompression:  false,
-		//MaxRequestsInFlight: 0,
-		//Timeout:             0,
-		//EnableOpenMetrics:   false,
+		// ErrorHandling:       0,
+		// Registry:            nil,
+		// DisableCompression:  false,
+		// MaxRequestsInFlight: 0,
+		// Timeout:             0,
+		// EnableOpenMetrics:   false,
 	}))
 }
 
