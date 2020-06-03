@@ -108,14 +108,14 @@ func newApp(opt ...Option) App {
 	a.reqHealth = new(state.HealthRequest)
 	a.reqHealth.SetTTL(service.NonForwardingTTL)
 
-	if err := service.SignRequestHeader(a.key, a.reqHealth); err != nil {
+	if err := service.SignDataWithSessionToken(a.key, a.reqHealth); err != nil {
 		a.log.Fatal("could not sign `HealthRequest`", zap.Error(err))
 	}
 
 	a.reqNetmap = new(state.NetmapRequest)
 	a.reqNetmap.SetTTL(service.SingleForwardingTTL)
 
-	if err := service.SignRequestHeader(a.key, a.reqNetmap); err != nil {
+	if err := service.SignDataWithSessionToken(a.key, a.reqNetmap); err != nil {
 		a.log.Fatal("could not sign `NetmapRequest`", zap.Error(err))
 	}
 

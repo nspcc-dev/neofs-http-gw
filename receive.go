@@ -76,7 +76,7 @@ func (a *app) receiveFile(c *fasthttp.RequestCtx) {
 	req := &object.GetRequest{Address: refs.Address{ObjectID: oid, CID: cid}}
 	req.SetTTL(service.SingleForwardingTTL)
 
-	if err = service.SignRequestHeader(a.key, req); err != nil {
+	if err = service.SignDataWithSessionToken(a.key, req); err != nil {
 		log.Error("could not sign request", zap.Error(err))
 		c.Error("could not sign request", fasthttp.StatusBadRequest)
 		return
