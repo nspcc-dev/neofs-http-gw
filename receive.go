@@ -142,7 +142,10 @@ func receiveObject(c *fasthttp.RequestCtx, cli object.Service_GetClient) error {
 					if hdr.Key == object.FilenameHeader {
 						if put { 
 							content_disp_type = "attachment" 
-						} else { content_disp_type = "inline"}
+						} 
+						else { 
+							content_disp_type = "inline"
+						}
 						// NOTE: we use path.Base because hdr.Value can be something like `/path/to/filename.ext`
 						c.Response.Header.Set("Content-Disposition", content_disp_type+"; filename="+path.Base(hdr.Value))
 					}
