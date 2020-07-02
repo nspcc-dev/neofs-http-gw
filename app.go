@@ -7,14 +7,10 @@ import (
 	"time"
 
 	"github.com/fasthttp/router"
-
-	"google.golang.org/grpc/grpclog"
-
-	"github.com/nspcc-dev/neofs-api-go/service"
-	"github.com/nspcc-dev/neofs-api-go/state"
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/grpclog"
 )
 
 type (
@@ -33,9 +29,6 @@ type (
 		rebalanceTimer time.Duration
 
 		nodes []string
-
-		reqHealth *state.HealthRequest
-		reqNetmap *state.NetmapRequest
 
 		conTimeout time.Duration
 		reqTimeout time.Duration
@@ -105,21 +98,7 @@ func newApp(opt ...Option) App {
 	a.web.NoDefaultContentType = true
 	// -- -- -- -- -- -- -- -- -- --
 
-	a.reqHealth = new(state.HealthRequest)
-	a.reqHealth.SetTTL(service.NonForwardingTTL)
-
-	if err := service.SignDataWithSessionToken(a.key, a.reqHealth); err != nil {
-		a.log.Fatal("could not sign `HealthRequest`", zap.Error(err))
-	}
-
-	a.reqNetmap = new(state.NetmapRequest)
-	a.reqNetmap.SetTTL(service.SingleForwardingTTL)
-
-	if err := service.SignDataWithSessionToken(a.key, a.reqNetmap); err != nil {
-		a.log.Fatal("could not sign `NetmapRequest`", zap.Error(err))
-	}
-
-	a.pool = newPool(a.log, a.cfg)
+	a.pool = newPool(a.log, a.cfg, a.key)
 
 	return a
 }
