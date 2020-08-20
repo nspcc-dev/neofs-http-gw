@@ -1,11 +1,11 @@
-# NeoFS HTTP Gateway
+# NeoFS HTTP Gate
 
-NeoFS HTTP Gateway is example of tool that provides basic interactions with NeoFS.
-You can download files from NeoFS Network using NeoFS Gateway. 
+NeoFS HTTP Gate is example of tool that provides basic interactions with NeoFS.
+You can download files from NeoFS Network using NeoFS Gate. 
 
 ## Install
 
-```go get -u github.com/nspcc-dev/neofs-gw```
+```go get -u github.com/nspcc-dev/neofs-http-gate```
 
 ## Configuration
 
@@ -19,7 +19,7 @@ You can download files from NeoFS Network using NeoFS Gateway.
       --verbose                    debug gRPC connections
       --request_timeout duration   gRPC request timeout (default 5s)
       --connect_timeout duration   gRPC connect timeout (default 30s)
-      --listen_address string      HTTP Gateway listen address (default "0.0.0.0:8082")
+      --listen_address string      HTTP Gate listen address (default "0.0.0.0:8082")
   -p, --peers stringArray          NeoFS nodes
 
 # Environments:
