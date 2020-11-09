@@ -1,9 +1,6 @@
 package main
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"fmt"
 	"io"
 	"os"
@@ -11,11 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nspcc-dev/neofs-api-go/refs"
-	crypto "github.com/nspcc-dev/neofs-crypto"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 type empty int
@@ -37,33 +31,6 @@ const (
 )
 
 func (empty) Read([]byte) (int, error) { return 0, io.EOF }
-
-func fetchKey(l *zap.Logger, v *viper.Viper) *ecdsa.PrivateKey {
-	switch val := v.GetString("key"); val {
-	case generated:
-		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-		if err != nil {
-			l.Fatal("could not generate private key", zap.Error(err))
-		}
-
-		id, err := refs.NewOwnerID(&key.PublicKey)
-		l.Info("generate new key",
-			zap.Stringer("key", id),
-			zap.Error(err))
-
-		return key
-
-	default:
-		key, err := crypto.LoadPrivateKey(val)
-		if err != nil {
-			l.Fatal("could not load private key",
-				zap.String("key", v.GetString("key")),
-				zap.Error(err))
-		}
-
-		return key
-	}
-}
 
 func settings() *viper.Viper {
 	v := viper.New()
@@ -104,6 +71,7 @@ func settings() *viper.Viper {
 	v.SetDefault("logger.level", "debug")
 	v.SetDefault("logger.format", "console")
 	v.SetDefault("logger.trace_level", "fatal")
+	v.SetDefault("logger.no_caller", false)
 	v.SetDefault("logger.no_disclaimer", true)
 	v.SetDefault("logger.sampling.initial", 1000)
 	v.SetDefault("logger.sampling.thereafter", 1000)
