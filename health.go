@@ -3,15 +3,16 @@ package main
 import (
 	"github.com/fasthttp/router"
 	"github.com/valyala/fasthttp"
-	"go.uber.org/atomic"
 )
+
+type stater func() error
 
 const (
 	healthyState       = "NeoFS HTTP Gateway is "
 	defaultContentType = "text/plain; charset=utf-8"
 )
 
-func attachHealthy(r *router.Router, e *atomic.Error) {
+func attachHealthy(r *router.Router, e stater) {
 	r.GET("/-/ready/", func(ctx *fasthttp.RequestCtx) {
 		ctx.SetStatusCode(fasthttp.StatusOK)
 		ctx.SetBodyString(healthyState + "ready")
@@ -21,7 +22,7 @@ func attachHealthy(r *router.Router, e *atomic.Error) {
 		code := fasthttp.StatusOK
 		msg := "healthy"
 
-		if err := e.Load(); err != nil {
+		if err := e(); err != nil {
 			msg = "unhealthy: " + err.Error()
 			code = fasthttp.StatusBadRequest
 		}
