@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/fasthttp/router v1.1.6
-	github.com/nspcc-dev/cdn-neofs-sdk v0.0.0-20201110112919-ed1430a93074
+	github.com/nspcc-dev/cdn-neofs-sdk v0.0.0-20201113175725-f448ffe8047c
 	github.com/nspcc-dev/neofs-api-go v0.0.0-20201029071528-352e99d9b91a
 	github.com/nspcc-dev/neofs-crypto v0.3.0
 	github.com/pkg/errors v0.9.1
