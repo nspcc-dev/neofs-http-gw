@@ -39,3 +39,6 @@ of Timeout and if no activity is seen even after that the connection is closed
 GW_KEEPALIVE_PERMIT_WITHOUT_STREAM=Bool - if true, client sends keepalive pings even with no active RPCs.
 If false, when there are no active RPCs, Time and Timeout will be ignored and no keepalive pings will be sent.
 ```
+
+### WARNING
+`generated` value for `GW_KEY` or `--key` is deprecated, you should use pre-generated keys.
