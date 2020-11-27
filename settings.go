@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -28,14 +29,46 @@ const (
 
 	defaultKeepaliveTime    = 10 * time.Second
 	defaultKeepaliveTimeout = 10 * time.Second
+
+	// Logger:
+	cfgLoggerLevel              = "logger.level"
+	cfgLoggerFormat             = "logger.format"
+	cfgLoggerTraceLevel         = "logger.trace_level"
+	cfgLoggerNoCaller           = "logger.no_caller"
+	cfgLoggerNoDisclaimer       = "logger.no_disclaimer"
+	cfgLoggerSamplingInitial    = "logger.sampling.initial"
+	cfgLoggerSamplingThereafter = "logger.sampling.thereafter"
+
+	// Peers
+	cfgPeers = "peers"
+
+	// Application
+	cfgApplicationName      = "app.name"
+	cfgApplicationVersion   = "app.version"
+	cfgApplicationBuildTime = "app.build_time"
+
+	// command line args
+	cmdHelp    = "help"
+	cmdVersion = "version"
 )
+
+var ignore = map[string]struct{}{
+	cfgApplicationName:      {},
+	cfgApplicationVersion:   {},
+	cfgApplicationBuildTime: {},
+
+	cfgPeers: {},
+
+	cmdHelp:    {},
+	cmdVersion: {},
+}
 
 func (empty) Read([]byte) (int, error) { return 0, io.EOF }
 
 func settings() *viper.Viper {
 	v := viper.New()
 	v.AutomaticEnv()
-	v.SetEnvPrefix("GW")
+	v.SetEnvPrefix(Prefix)
 	v.SetConfigType("yaml")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
@@ -46,8 +79,8 @@ func settings() *viper.Viper {
 	flags.Bool("pprof", false, "enable pprof")
 	flags.Bool("metrics", false, "enable prometheus")
 
-	help := flags.BoolP("help", "h", false, "show help")
-	version := flags.BoolP("version", "v", false, "show version")
+	help := flags.BoolP(cmdHelp, "h", false, "show help")
+	version := flags.BoolP(cmdVersion, "v", false, "show version")
 
 	flags.String("key", generated, `"`+generated+`" to generate key, path to private key file, hex string or wif`)
 
@@ -62,19 +95,19 @@ func settings() *viper.Viper {
 	peers := flags.StringArrayP("peers", "p", nil, "NeoFS nodes")
 
 	// set prefers:
-	v.Set("app.name", "neofs-gw")
-	v.Set("app.version", Version)
+	v.Set(cfgApplicationName, "neofs-http-gw")
+	v.Set(cfgApplicationVersion, Version)
 
 	// set defaults:
 
 	// logger:
-	v.SetDefault("logger.level", "debug")
-	v.SetDefault("logger.format", "console")
-	v.SetDefault("logger.trace_level", "fatal")
-	v.SetDefault("logger.no_caller", false)
-	v.SetDefault("logger.no_disclaimer", true)
-	v.SetDefault("logger.sampling.initial", 1000)
-	v.SetDefault("logger.sampling.thereafter", 1000)
+	v.SetDefault(cfgLoggerLevel, "debug")
+	v.SetDefault(cfgLoggerFormat, "console")
+	v.SetDefault(cfgLoggerTraceLevel, "panic")
+	v.SetDefault(cfgLoggerNoCaller, false)
+	v.SetDefault(cfgLoggerNoDisclaimer, true)
+	v.SetDefault(cfgLoggerSamplingInitial, 1000)
+	v.SetDefault(cfgLoggerSamplingThereafter, 1000)
 
 	// keepalive:
 	// If set below 10s, a minimum value of 10s will be used instead.
@@ -105,6 +138,29 @@ func settings() *viper.Viper {
 	case help != nil && *help:
 		fmt.Printf("NeoFS HTTP Gateway %s (%s)\n", Version, Build)
 		flags.PrintDefaults()
+
+		fmt.Println()
+		fmt.Println("Default environments:")
+		fmt.Println()
+		keys := v.AllKeys()
+		sort.Strings(keys)
+
+		for i := range keys {
+			if _, ok := ignore[keys[i]]; ok {
+				continue
+			}
+
+			k := strings.Replace(keys[i], ".", "_", -1)
+			fmt.Printf("%s_%s = %v\n", Prefix, strings.ToUpper(k), v.Get(keys[i]))
+		}
+
+		fmt.Println()
+		fmt.Println("Peers preset:")
+		fmt.Println()
+
+		fmt.Printf("%s_%s_[N]_ADDRESS = string\n", Prefix, strings.ToUpper(cfgPeers))
+		fmt.Printf("%s_%s_[N]_WEIGHT = 0..1 (float)\n", Prefix, strings.ToUpper(cfgPeers))
+
 		os.Exit(0)
 	case version != nil && *version:
 		fmt.Printf("NeoFS HTTP Gateway %s (%s)\n", Version, Build)
@@ -115,8 +171,8 @@ func settings() *viper.Viper {
 
 	if peers != nil && len(*peers) > 0 {
 		for i := range *peers {
-			v.SetDefault("peers."+strconv.Itoa(i)+".address", (*peers)[i])
-			v.SetDefault("peers."+strconv.Itoa(i)+".weight", 1)
+			v.SetDefault(cfgPeers+"."+strconv.Itoa(i)+".address", (*peers)[i])
+			v.SetDefault(cfgPeers+"."+strconv.Itoa(i)+".weight", 1)
 		}
 	}
 
