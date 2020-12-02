@@ -18,7 +18,7 @@ RUN set -x \
       -v \
       -mod=vendor \
       -trimpath \
-      -ldflags "${LDFLAGS} -X main.Build=$(date -u +%s%N) -X main.Prefix=HTTP_GW" \
+      -ldflags "${LDFLAGS} -X main.Build=$(date -u +%s%N)" \
       -o /go/bin/neofs-gw ./ \
     && upx -3 /go/bin/neofs-gw
 

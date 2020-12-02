@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/fasthttp/router v1.3.3
-	github.com/nspcc-dev/cdn-neofs-sdk v0.0.0
+	github.com/nspcc-dev/cdn-neofs-sdk v0.1.0
 	github.com/nspcc-dev/neofs-api-go v1.20.3
 	github.com/nspcc-dev/neofs-crypto v0.3.0
 	github.com/pkg/errors v0.9.1
@@ -16,5 +16,3 @@ require (
 	go.uber.org/zap v1.16.0
 	google.golang.org/grpc v1.33.2
 )
-
-replace github.com/nspcc-dev/cdn-neofs-sdk => ../sdk
