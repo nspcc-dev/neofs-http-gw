@@ -6,7 +6,6 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"strconv"
-	"time"
 
 	"github.com/fasthttp/router"
 	sdk "github.com/nspcc-dev/cdn-neofs-sdk"
@@ -35,9 +34,6 @@ type (
 
 		jobDone chan struct{}
 		webDone chan struct{}
-
-		conTimeout time.Duration
-		reqTimeout time.Duration
 	}
 
 	App interface {
@@ -87,8 +83,9 @@ func newApp(ctx context.Context, opt ...Option) App {
 		grpclog.SetLoggerV2(a.wlog)
 	}
 
-	a.conTimeout = a.cfg.GetDuration("connect_timeout")
-	a.reqTimeout = a.cfg.GetDuration("request_timeout")
+	conTimeout := a.cfg.GetDuration("connect_timeout")
+	reqTimeout := a.cfg.GetDuration("request_timeout")
+	tckTimeout := a.cfg.GetDuration("rebalance_timer")
 
 	// -- setup FastHTTP server: --
 	a.web.Name = "neofs-http-gate"
@@ -111,6 +108,9 @@ func newApp(ctx context.Context, opt ...Option) App {
 		}
 
 		connections[address] = weight
+		a.log.Info("add connection peer",
+			zap.String("address", address),
+			zap.Float64("weight", weight))
 	}
 
 	cred, err := prepareCredentials(a.cfg.GetString("key"), a.log)
@@ -122,6 +122,10 @@ func newApp(ctx context.Context, opt ...Option) App {
 		pool.WithLogger(a.log),
 		pool.WithCredentials(cred),
 		pool.WithWeightPool(connections),
+		pool.WithTickerTimeout(tckTimeout),
+		pool.WithConnectTimeout(conTimeout),
+		pool.WithRequestTimeout(reqTimeout),
+		pool.WithAPIPreparer(sdk.APIPreparer),
 		pool.WithGRPCOptions(
 			grpc.WithBlock(),
 			grpc.WithInsecure(),
@@ -138,7 +142,8 @@ func newApp(ctx context.Context, opt ...Option) App {
 	a.cli, err = sdk.New(ctx,
 		sdk.WithLogger(a.log),
 		sdk.WithCredentials(cred),
-		sdk.WithConnectionPool(a.pool))
+		sdk.WithConnectionPool(a.pool),
+		sdk.WithAPIPreparer(sdk.APIPreparer))
 	if err != nil {
 		a.log.Fatal("could not prepare sdk client", zap.Error(err))
 	}
@@ -148,6 +153,8 @@ func newApp(ctx context.Context, opt ...Option) App {
 
 func prepareCredentials(key string, log *zap.Logger) (neofs.Credentials, error) {
 	if key == generated {
+		log.Fatal("Don't use generated key, deprecated")
+
 		sk, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
 			return nil, err

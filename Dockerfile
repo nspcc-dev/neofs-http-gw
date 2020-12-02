@@ -14,7 +14,12 @@ COPY . /src
 ARG VERSION=dev
 ENV LDFLAGS "-w -s -X main.Version=${VERSION}"
 RUN set -x \
-    && go build -v -mod=vendor -trimpath -ldflags "${LDFLAGS} -X main.Build=$(date -u +%s%N)" -o /go/bin/neofs-gw ./ \
+    && go build \
+      -v \
+      -mod=vendor \
+      -trimpath \
+      -ldflags "${LDFLAGS} -X main.Build=$(date -u +%s%N) -X main.Prefix=HTTP_GW" \
+      -o /go/bin/neofs-gw ./ \
     && upx -3 /go/bin/neofs-gw
 
 # Executable image

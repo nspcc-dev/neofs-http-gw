@@ -89,19 +89,34 @@ func (a *app) receiveFile(c *fasthttp.RequestCtx) {
 		disp = "attachment"
 	}
 
-	c.Response.Header.Set("Content-Length", strconv.FormatUint(obj.GetPayloadSize(), 10))
-	c.Response.Header.Set("x-object-id", obj.GetID().String())
-	c.Response.Header.Set("x-owner-id", obj.GetOwnerID().String())
-	c.Response.Header.Set("x-container-id", obj.GetContainerID().String())
+	c.Response.Header.Set("Content-Length", strconv.FormatUint(obj.PayloadSize(), 10))
+	c.Response.Header.Set("x-object-id", obj.ID().String())
+	c.Response.Header.Set("x-owner-id", obj.OwnerID().String())
+	c.Response.Header.Set("x-container-id", obj.ContainerID().String())
 
-	for _, attr := range obj.GetAttributes() {
-		key := attr.GetKey()
-		val := attr.GetValue()
-		if key == object.AttributeFileName {
-			filename = val
-		}
+	for _, attr := range obj.Attributes() {
+		key := attr.Key()
+		val := attr.Value()
 
 		c.Response.Header.Set("x-"+key, val)
+
+		switch key {
+		case object.AttributeFileName:
+			filename = val
+		case object.AttributeTimestamp:
+			value, err := strconv.ParseInt(val, 10, 64)
+			if err != nil {
+				a.log.Info("couldn't parse creation date",
+					zap.String("key", key),
+					zap.String("val", val),
+					zap.Error(err))
+				continue
+			}
+
+			c.Response.Header.Set("Last-Modified",
+				time.Unix(value, 0).Format(time.RFC1123))
+		}
+
 	}
 
 	c.SetContentType(writer.contentType)
