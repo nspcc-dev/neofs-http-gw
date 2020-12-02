@@ -19,16 +19,31 @@ const (
 	devNull   = empty(0)
 	generated = "generated"
 
-	minimumTTLInMinutes = 5
-
-	defaultTTL = minimumTTLInMinutes * time.Minute
-
 	defaultRebalanceTimer = 15 * time.Second
 	defaultRequestTimeout = 15 * time.Second
 	defaultConnectTimeout = 30 * time.Second
 
 	defaultKeepaliveTime    = 10 * time.Second
 	defaultKeepaliveTimeout = 10 * time.Second
+
+	cfgListenAddress = "listen_address"
+
+	// KeepAlive
+	cfgKeepaliveTime                = "keepalive.time"
+	cfgKeepaliveTimeout             = "keepalive.timeout"
+	cfgKeepalivePermitWithoutStream = "keepalive.permit_without_stream"
+
+	// Web
+	cfgWebReadBufferSize    = "web.read_buffer_size"
+	cfgWebWriteBufferSize   = "web.write_buffer_size"
+	cfgWebReadTimeout       = "web.read_timeout"
+	cfgWebWriteTimeout      = "web.write_timeout"
+	cfgWebConnectionPerHost = "web.connection_per_host"
+
+	// Timeouts
+	cfgConTimeout = "connect_timeout"
+	cfgReqTimeout = "request_timeout"
+	cfgRebalance  = "rebalance_timer"
 
 	// Logger:
 	cfgLoggerLevel              = "logger.level"
@@ -48,8 +63,12 @@ const (
 	cfgApplicationBuildTime = "app.build_time"
 
 	// command line args
-	cmdHelp    = "help"
-	cmdVersion = "version"
+	cmdHelp     = "help"
+	cmdVersion  = "version"
+	cmdVerbose  = "verbose"
+	cmdPprof    = "pprof"
+	cmdMetrics  = "metrics"
+	cmdNeoFSKey = "key"
 )
 
 var ignore = map[string]struct{}{
@@ -74,25 +93,24 @@ func settings() *viper.Viper {
 
 	// flags setup:
 	flags := pflag.NewFlagSet("commandline", pflag.ExitOnError)
+	flags.SetOutput(os.Stdout)
 	flags.SortFlags = false
 
-	flags.Bool("pprof", false, "enable pprof")
-	flags.Bool("metrics", false, "enable prometheus")
+	flags.Bool(cmdPprof, false, "enable pprof")
+	flags.Bool(cmdMetrics, false, "enable prometheus")
 
 	help := flags.BoolP(cmdHelp, "h", false, "show help")
 	version := flags.BoolP(cmdVersion, "v", false, "show version")
 
-	flags.String("key", generated, `"`+generated+`" to generate key, path to private key file, hex string or wif`)
+	flags.String(cmdNeoFSKey, "", `"Path to private key file, hex string or wif`)
 
-	flags.Bool("verbose", false, "debug gRPC connections")
-	flags.Duration("request_timeout", defaultRequestTimeout, "gRPC request timeout")
-	flags.Duration("connect_timeout", defaultConnectTimeout, "gRPC connect timeout")
-	flags.Duration("rebalance_timer", defaultRebalanceTimer, "gRPC connection rebalance timer")
+	flags.Bool(cmdVerbose, false, "debug gRPC connections")
+	flags.Duration(cfgConTimeout, defaultConnectTimeout, "gRPC connect timeout")
+	flags.Duration(cfgReqTimeout, defaultRequestTimeout, "gRPC request timeout")
+	flags.Duration(cfgRebalance, defaultRebalanceTimer, "gRPC connection rebalance timer")
 
-	ttl := flags.DurationP("conn_ttl", "t", defaultTTL, "gRPC connection time to live")
-
-	flags.String("listen_address", "0.0.0.0:8082", "HTTP Gateway listen address")
-	peers := flags.StringArrayP("peers", "p", nil, "NeoFS nodes")
+	flags.String(cfgListenAddress, "0.0.0.0:8082", "HTTP Gateway listen address")
+	peers := flags.StringArrayP(cfgPeers, "p", nil, "NeoFS nodes")
 
 	// set prefers:
 	v.Set(cfgApplicationName, "neofs-http-gw")
@@ -111,16 +129,16 @@ func settings() *viper.Viper {
 
 	// keepalive:
 	// If set below 10s, a minimum value of 10s will be used instead.
-	v.SetDefault("keepalive.time", defaultKeepaliveTime)
-	v.SetDefault("keepalive.timeout", defaultKeepaliveTimeout)
-	v.SetDefault("keepalive.permit_without_stream", true)
+	v.SetDefault(cfgKeepaliveTime, defaultKeepaliveTime)
+	v.SetDefault(cfgKeepaliveTimeout, defaultKeepaliveTimeout)
+	v.SetDefault(cfgKeepalivePermitWithoutStream, true)
 
 	// web-server:
-	v.SetDefault("web.read_buffer_size", 4096)
-	v.SetDefault("web.write_buffer_size", 4096)
-	v.SetDefault("web.read_timeout", time.Second*15)
-	v.SetDefault("web.write_timeout", time.Minute)
-	v.SetDefault("web.connection_per_host", 10)
+	v.SetDefault(cfgWebReadBufferSize, 4096)
+	v.SetDefault(cfgWebWriteBufferSize, 4096)
+	v.SetDefault(cfgWebReadTimeout, time.Second*15)
+	v.SetDefault(cfgWebWriteTimeout, time.Minute)
+	v.SetDefault(cfgWebConnectionPerHost, 10)
 
 	if err := v.BindPFlags(flags); err != nil {
 		panic(err)
@@ -165,8 +183,6 @@ func settings() *viper.Viper {
 	case version != nil && *version:
 		fmt.Printf("NeoFS HTTP Gateway %s (%s)\n", Version, Build)
 		os.Exit(0)
-	case ttl != nil && ttl.Minutes() < minimumTTLInMinutes:
-		fmt.Printf("connection ttl should not be less than %s", defaultTTL)
 	}
 
 	if peers != nil && len(*peers) > 0 {

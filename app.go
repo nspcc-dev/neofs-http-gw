@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"strconv"
 
 	"github.com/fasthttp/router"
@@ -12,7 +10,6 @@ import (
 	"github.com/nspcc-dev/cdn-neofs-sdk/creds/neofs"
 	"github.com/nspcc-dev/cdn-neofs-sdk/logger"
 	"github.com/nspcc-dev/cdn-neofs-sdk/pool"
-	crypto "github.com/nspcc-dev/neofs-crypto"
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
@@ -79,20 +76,20 @@ func newApp(ctx context.Context, opt ...Option) App {
 
 	a.wlog = logger.GRPC(a.log)
 
-	if a.cfg.GetBool("verbose") {
+	if a.cfg.GetBool(cmdVerbose) {
 		grpclog.SetLoggerV2(a.wlog)
 	}
 
-	conTimeout := a.cfg.GetDuration("connect_timeout")
-	reqTimeout := a.cfg.GetDuration("request_timeout")
-	tckTimeout := a.cfg.GetDuration("rebalance_timer")
+	conTimeout := a.cfg.GetDuration(cfgConTimeout)
+	reqTimeout := a.cfg.GetDuration(cfgReqTimeout)
+	tckTimeout := a.cfg.GetDuration(cfgRebalance)
 
 	// -- setup FastHTTP server: --
 	a.web.Name = "neofs-http-gate"
-	a.web.ReadBufferSize = a.cfg.GetInt("web.read_buffer_size")
-	a.web.WriteBufferSize = a.cfg.GetInt("web.write_buffer_size")
-	a.web.ReadTimeout = a.cfg.GetDuration("web.read_timeout")
-	a.web.WriteTimeout = a.cfg.GetDuration("web.write_timeout")
+	a.web.ReadBufferSize = a.cfg.GetInt(cfgWebReadBufferSize)
+	a.web.WriteBufferSize = a.cfg.GetInt(cfgWebWriteBufferSize)
+	a.web.ReadTimeout = a.cfg.GetDuration(cfgWebReadTimeout)
+	a.web.WriteTimeout = a.cfg.GetDuration(cfgWebWriteTimeout)
 	a.web.GetOnly = true
 	a.web.DisableHeaderNamesNormalizing = true
 	a.web.NoDefaultServerHeader = true
@@ -101,8 +98,8 @@ func newApp(ctx context.Context, opt ...Option) App {
 
 	connections := make(map[string]float64)
 	for i := 0; ; i++ {
-		address := a.cfg.GetString("peers." + strconv.Itoa(i) + ".address")
-		weight := a.cfg.GetFloat64("peers." + strconv.Itoa(i) + ".weight")
+		address := a.cfg.GetString(cfgPeers + "." + strconv.Itoa(i) + ".address")
+		weight := a.cfg.GetFloat64(cfgPeers + "." + strconv.Itoa(i) + ".weight")
 		if address == "" {
 			break
 		}
@@ -113,7 +110,7 @@ func newApp(ctx context.Context, opt ...Option) App {
 			zap.Float64("weight", weight))
 	}
 
-	cred, err := prepareCredentials(a.cfg.GetString("key"), a.log)
+	cred, err := neofs.New(a.cfg.GetString(cmdNeoFSKey))
 	if err != nil {
 		a.log.Fatal("could not prepare credentials", zap.Error(err))
 	}
@@ -130,9 +127,9 @@ func newApp(ctx context.Context, opt ...Option) App {
 			grpc.WithBlock(),
 			grpc.WithInsecure(),
 			grpc.WithKeepaliveParams(keepalive.ClientParameters{
-				Time:                a.cfg.GetDuration("keepalive.time"),
-				Timeout:             a.cfg.GetDuration("keepalive.timeout"),
-				PermitWithoutStream: a.cfg.GetBool("keepalive.permit_without_stream"),
+				Time:                a.cfg.GetDuration(cfgKeepaliveTime),
+				Timeout:             a.cfg.GetDuration(cfgKeepaliveTimeout),
+				PermitWithoutStream: a.cfg.GetBool(cfgKeepalivePermitWithoutStream),
 			})))
 
 	if err != nil {
@@ -149,26 +146,6 @@ func newApp(ctx context.Context, opt ...Option) App {
 	}
 
 	return a
-}
-
-func prepareCredentials(key string, log *zap.Logger) (neofs.Credentials, error) {
-	if key == generated {
-		log.Fatal("Don't use generated key, deprecated")
-
-		sk, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-		if err != nil {
-			return nil, err
-		}
-
-		key, err = crypto.WIFEncode(sk)
-		if err != nil {
-			return nil, err
-		}
-
-		log.Info("generate new key", zap.String("wif", key))
-	}
-
-	return neofs.New(key)
 }
 
 func (a *app) Wait() {
@@ -204,18 +181,18 @@ func (a *app) Serve(ctx context.Context) {
 	attachHealthy(r, a.pool.Status)
 
 	// enable metrics
-	if a.cfg.GetBool("metrics") {
+	if a.cfg.GetBool(cmdMetrics) {
 		a.log.Info("enabled /metrics/")
 		attachMetrics(r, a.wlog)
 	}
 
 	// enable pprof
-	if a.cfg.GetBool("pprof") {
+	if a.cfg.GetBool(cmdPprof) {
 		a.log.Info("enabled /debug/pprof/")
 		attachProfiler(r)
 	}
 
-	bind := a.cfg.GetString("listen_address")
+	bind := a.cfg.GetString(cfgListenAddress)
 	a.log.Info("run gateway server",
 		zap.String("address", bind))
 
