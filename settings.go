@@ -41,8 +41,8 @@ const (
 	cfgWebConnectionPerHost = "web.connection_per_host"
 
 	// Timeouts
-	cfgConTimeout = "con_timeout"
-	cfgReqTimeout = "req_timeout"
+	cfgConTimeout = "connect_timeout"
+	cfgReqTimeout = "request_timeout"
 	cfgRebalance  = "rebalance_timer"
 
 	// Logger:
