@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	sdk "github.com/nspcc-dev/cdn-neofs-sdk"
+	sdk "github.com/nspcc-dev/cdn-sdk"
 	"github.com/nspcc-dev/neofs-api-go/pkg/container"
 	"github.com/nspcc-dev/neofs-api-go/pkg/object"
 	"github.com/pkg/errors"
