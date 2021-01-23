@@ -176,8 +176,9 @@ func (a *app) Serve(ctx context.Context) {
 
 	a.log.Info("enabled /get/{cid}/{oid}")
 	r.GET("/get/{cid}/{oid}", a.byAddress)
-	a.log.Info("enabled /get_by_attribute/{cid}/{attr_key}/{attr_val}")
-	r.GET("/get_by_attribute/{cid}/{attr_key}/{attr_val}", a.byAttribute)
+
+	a.log.Info("enabled /get_by_attribute/{cid}/{attr_key}/{attr_val:*}")
+	r.GET("/get_by_attribute/{cid}/{attr_key}/{attr_val:*}", a.byAttribute)
 
 	// attaching /-/(ready,healthy)
 	attachHealthy(r, a.pool.Status)

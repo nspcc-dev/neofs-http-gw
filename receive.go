@@ -183,6 +183,7 @@ func (a *app) byAttribute(c *fasthttp.RequestCtx) {
 		c.Error("something went wrong", fasthttp.StatusBadRequest)
 		return
 	} else if len(ids) == 0 {
+		log.Debug("object not found")
 		c.Error("not found", fasthttp.StatusNotFound)
 		return
 	}
