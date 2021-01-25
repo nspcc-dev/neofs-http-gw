@@ -68,4 +68,9 @@ Peers preset:
 
 HTTP_GW_PEERS_[N]_ADDRESS = string
 HTTP_GW_PEERS_[N]_WEIGHT = 0..1 (float)
+
+Upload Header Table:
+
+HTTP_GW_UPLOADER_HEADER_[N]_KEY = string - HTTP Header attribute name (except `X-Attribute-`)
+HTTP_GW_UPLOADER_HEADER_[N]_VAL = string - NeoFS Object attribute mapping
 ```

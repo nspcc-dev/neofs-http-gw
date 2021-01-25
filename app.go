@@ -26,6 +26,8 @@ type (
 		cfg  *viper.Viper
 		key  *ecdsa.PrivateKey
 
+		hdr HeaderFilter
+
 		wlog logger.Logger
 		web  *fasthttp.Server
 
@@ -74,6 +76,8 @@ func newApp(ctx context.Context, opt ...Option) App {
 		opt[i](a)
 	}
 
+	a.hdr = newHeaderFilter(a.log, a.cfg)
+
 	a.wlog = logger.GRPC(a.log)
 
 	if a.cfg.GetBool(cmdVerbose) {
@@ -90,7 +94,6 @@ func newApp(ctx context.Context, opt ...Option) App {
 	a.web.WriteBufferSize = a.cfg.GetInt(cfgWebWriteBufferSize)
 	a.web.ReadTimeout = a.cfg.GetDuration(cfgWebReadTimeout)
 	a.web.WriteTimeout = a.cfg.GetDuration(cfgWebWriteTimeout)
-	a.web.GetOnly = true
 	a.web.DisableHeaderNamesNormalizing = true
 	a.web.NoDefaultServerHeader = true
 	a.web.NoDefaultContentType = true
@@ -173,6 +176,9 @@ func (a *app) Serve(ctx context.Context) {
 
 	r := router.New()
 	r.RedirectTrailingSlash = true
+
+	a.log.Info("enabled /put/{cid}")
+	r.POST("/put/{cid}", a.upload)
 
 	a.log.Info("enabled /get/{cid}/{oid}")
 	r.GET("/get/{cid}/{oid}", a.byAddress)
