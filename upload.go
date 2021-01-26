@@ -21,6 +21,8 @@ type putResponse struct {
 	CID string `json:"container_id"`
 }
 
+const jsonHeader = "application/json; charset=UTF-8"
+
 func newPutResponse(addr *object.Address) *putResponse {
 	return &putResponse{
 		OID: addr.ObjectID().String(),
@@ -149,4 +151,5 @@ func (a *app) upload(c *fasthttp.RequestCtx) {
 	}
 
 	c.Response.SetStatusCode(fasthttp.StatusOK)
+	c.Response.Header.SetContentType(jsonHeader)
 }
