@@ -33,6 +33,8 @@ type (
 
 		jobDone chan struct{}
 		webDone chan struct{}
+
+		enableDefaultTimestamp bool
 	}
 
 	App interface {
@@ -77,6 +79,8 @@ func newApp(ctx context.Context, opt ...Option) App {
 	}
 
 	a.hdr = newHeaderFilter(a.log, a.cfg)
+
+	a.enableDefaultTimestamp = a.cfg.GetBool(cfgUploaderHeaderEnableDefaultTimestamp)
 
 	a.wlog = logger.GRPC(a.log)
 

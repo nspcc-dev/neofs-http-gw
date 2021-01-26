@@ -22,7 +22,7 @@ type (
 	}
 )
 
-const userAttributeHeader = "X-Attribute-"
+const userAttributeHeaderPrefix = "X-Attribute-"
 
 func newHeaderFilter(l *zap.Logger, v *viper.Viper) HeaderFilter {
 	filter := &headerFilter{
@@ -58,7 +58,7 @@ func newHeaderFilter(l *zap.Logger, v *viper.Viper) HeaderFilter {
 
 func (h *headerFilter) Filter(header *fasthttp.RequestHeader) map[string]string {
 	result := make(map[string]string)
-	prefix := []byte(userAttributeHeader)
+	prefix := []byte(userAttributeHeaderPrefix)
 
 	header.VisitAll(func(key, val []byte) {
 		if len(key) == 0 || len(val) == 0 {

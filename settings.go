@@ -54,9 +54,10 @@ const (
 	cfgLoggerSamplingThereafter = "logger.sampling.thereafter"
 
 	// Uploader Header
-	cfgUploaderHeader    = "uploader_header"
-	cfgUploaderHeaderKey = "key"
-	cfgUploaderHeaderVal = "val"
+	cfgUploaderHeader                       = "uploader_header"
+	cfgUploaderHeaderKey                    = "key"
+	cfgUploaderHeaderVal                    = "val"
+	cfgUploaderHeaderEnableDefaultTimestamp = "upload_header.use_default_timestamp"
 
 	// Peers
 	cfgPeers = "peers"
@@ -143,6 +144,9 @@ func settings() *viper.Viper {
 	v.SetDefault(cfgWebReadTimeout, time.Second*15)
 	v.SetDefault(cfgWebWriteTimeout, time.Minute)
 	v.SetDefault(cfgWebConnectionPerHost, 10)
+
+	// upload header
+	v.SetDefault(cfgUploaderHeaderEnableDefaultTimestamp, false)
 
 	if err := v.BindPFlags(flags); err != nil {
 		panic(err)

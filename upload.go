@@ -124,8 +124,8 @@ func (a *app) upload(c *fasthttp.RequestCtx) {
 		attributes = append(attributes, filename)
 	}
 
-	// Attribute Timestamp wasn't set from header
-	if _, ok := filtered[object.AttributeTimestamp]; ok {
+	// Attribute Timestamp wasn't set from header and enabled by settings
+	if _, ok := filtered[object.AttributeTimestamp]; ok && a.enableDefaultTimestamp {
 		timestamp := object.NewAttribute()
 		timestamp.SetKey(object.AttributeTimestamp)
 		timestamp.SetValue(strconv.FormatInt(time.Now().Unix(), 10))

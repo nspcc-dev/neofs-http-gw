@@ -1,7 +1,9 @@
 # NeoFS HTTP Gate
 
 NeoFS HTTP Gate is example of tool that provides basic interactions with NeoFS.
-You can download files from NeoFS Network using NeoFS Gate. 
+
+- you can download one file per request from NeoFS Network using NeoFS Gate
+- you can upload one file per request into NeoFS Network using NeoFS Gate 
 
 ## Notable make targets
 
@@ -23,6 +25,11 @@ You can download files from NeoFS Network using NeoFS Gate.
 ## Install
 
 ```go get -u github.com/nspcc-dev/neofs-http-gate```
+
+## File uploading behaviors
+
+- you can upload on file per request
+- if `FileName` not provided by Header attributes, multipart/form filename will be used instead
 
 ## Configuration
 
@@ -64,6 +71,8 @@ of Timeout and if no activity is seen even after that the connection is closed
 HTTP_GW_KEEPALIVE_PERMIT_WITHOUT_STREAM=Bool - if true, client sends keepalive pings even with no active RPCs.
 If false, when there are no active RPCs, Time and Timeout will be ignored and no keepalive pings will be sent.
 
+HTTP_GW_UPLOAD_HEADER_USE_DEFAULT_TIMESTAMP=bool - enable/disable adding current timestamp attribute when object uploads
+
 Peers preset:
 
 HTTP_GW_PEERS_[N]_ADDRESS = string
@@ -71,6 +80,10 @@ HTTP_GW_PEERS_[N]_WEIGHT = 0..1 (float)
 
 Upload Header Table:
 
-HTTP_GW_UPLOADER_HEADER_[N]_KEY = string - HTTP Header attribute name (except `X-Attribute-`)
+HTTP_GW_UPLOADER_HEADER_[N]_KEY = string - HTTP Header attribute name prefixed with `X-Attribute-`
 HTTP_GW_UPLOADER_HEADER_[N]_VAL = string - NeoFS Object attribute mapping
+
+# By default we had next headers:
+- FileName - to set object filename attribute
+- Timestamp - to set object timestamp attribute
 ```
