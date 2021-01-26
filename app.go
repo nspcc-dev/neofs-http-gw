@@ -181,8 +181,8 @@ func (a *app) Serve(ctx context.Context) {
 	r := router.New()
 	r.RedirectTrailingSlash = true
 
-	a.log.Info("enabled /put/{cid}")
-	r.POST("/put/{cid}", a.upload)
+	a.log.Info("enabled /upload/{cid}")
+	r.POST("/upload/{cid}", a.upload)
 
 	a.log.Info("enabled /get/{cid}/{oid}")
 	r.GET("/get/{cid}/{oid}", a.byAddress)

@@ -61,13 +61,24 @@ func (h *headerFilter) Filter(header *fasthttp.RequestHeader) map[string]string 
 	prefix := []byte(userAttributeHeaderPrefix)
 
 	header.VisitAll(func(key, val []byte) {
+		// checks that key and val not empty
 		if len(key) == 0 || len(val) == 0 {
 			return
-		} else if !bytes.HasPrefix(key, prefix) {
+		}
+
+		// checks that key has attribute prefix
+		if !bytes.HasPrefix(key, prefix) {
 			return
-		} else if key = bytes.TrimPrefix(key, prefix); len(key) == 0 {
+		}
+
+		// checks that after removing attribute prefix we had not empty key
+		if key = bytes.TrimPrefix(key, prefix); len(key) == 0 {
 			return
-		} else if name, ok := h.mapping[string(key)]; ok {
+		}
+
+		// checks mapping table and if we found record store it
+		// at resulting hashmap
+		if name, ok := h.mapping[string(key)]; ok {
 			result[name] = string(val)
 
 			h.logger.Debug("add attribute to result object",
@@ -77,6 +88,7 @@ func (h *headerFilter) Filter(header *fasthttp.RequestHeader) map[string]string 
 			return
 		}
 
+		// otherwise inform that attribute will be ignored
 		h.logger.Debug("ignore attribute",
 			zap.String("key", string(key)),
 			zap.String("val", string(val)))
