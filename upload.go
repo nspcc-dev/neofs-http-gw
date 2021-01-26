@@ -64,6 +64,12 @@ func (a *app) upload(c *fasthttp.RequestCtx) {
 
 		log.Debug("close temporary file", zap.Error(tmp.Close()))
 		log.Debug("remove temporary file", zap.Error(os.RemoveAll(tmpName)))
+
+		if form == nil {
+			return
+		}
+
+		log.Debug("cleanup multipart form", zap.Error(form.RemoveAll()))
 	}()
 
 	if form, err = c.MultipartForm(); err != nil {
