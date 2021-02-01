@@ -4,8 +4,8 @@ go 1.15
 
 require (
 	github.com/fasthttp/router v1.3.5
-	github.com/nspcc-dev/cdn-sdk v0.3.2
-	github.com/nspcc-dev/neofs-api-go v1.22.1
+	github.com/nspcc-dev/cdn-sdk v0.3.3
+	github.com/nspcc-dev/neofs-api-go v1.22.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.9.0
 	github.com/prometheus/common v0.15.0
