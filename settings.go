@@ -54,9 +54,6 @@ const (
 	cfgLoggerSamplingThereafter = "logger.sampling.thereafter"
 
 	// Uploader Header
-	cfgUploaderHeader                       = "uploader_header"
-	cfgUploaderHeaderKey                    = "key"
-	cfgUploaderHeaderVal                    = "val"
 	cfgUploaderHeaderEnableDefaultTimestamp = "upload_header.use_default_timestamp"
 
 	// Peers
@@ -186,13 +183,6 @@ func settings() *viper.Viper {
 
 		fmt.Printf("%s_%s_[N]_ADDRESS = string\n", Prefix, strings.ToUpper(cfgPeers))
 		fmt.Printf("%s_%s_[N]_WEIGHT = 0..1 (float)\n", Prefix, strings.ToUpper(cfgPeers))
-
-		fmt.Println()
-		fmt.Println("Upload Header Table:")
-		fmt.Println()
-
-		fmt.Printf("%s_%s_[N]_%s = string\n", Prefix, strings.ToUpper(cfgUploaderHeader), strings.ToUpper(cfgUploaderHeaderKey))
-		fmt.Printf("%s_%s_[N]_%s = string\n", Prefix, strings.ToUpper(cfgUploaderHeader), strings.ToUpper(cfgUploaderHeaderVal))
 
 		os.Exit(0)
 	case version != nil && *version:

@@ -103,7 +103,7 @@ func (a *app) upload(c *fasthttp.RequestCtx) {
 		}
 	}
 
-	filtered := a.hdr.Filter(&c.Request.Header)
+	filtered := filterHeaders(a.log, &c.Request.Header)
 	attributes := make([]*object.Attribute, 0, len(filtered))
 
 	// prepares attributes from filtered headers

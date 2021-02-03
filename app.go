@@ -26,8 +26,6 @@ type (
 		cfg  *viper.Viper
 		key  *ecdsa.PrivateKey
 
-		hdr HeaderFilter
-
 		wlog logger.Logger
 		web  *fasthttp.Server
 
@@ -77,8 +75,6 @@ func newApp(ctx context.Context, opt ...Option) App {
 	for i := range opt {
 		opt[i](a)
 	}
-
-	a.hdr = newHeaderFilter(a.log, a.cfg)
 
 	a.enableDefaultTimestamp = a.cfg.GetBool(cfgUploaderHeaderEnableDefaultTimestamp)
 
