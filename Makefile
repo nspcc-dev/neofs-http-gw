@@ -17,7 +17,7 @@ R=\033[0m
 version:
 	@echo "Current version: $(VERSION)-$(GRPC_VERSION)"
 
-# Make sure that all files added to commit
+# Check and ensure dependencies
 deps:
 	@printf "${B}${G}⇒ Ensure vendor${R}: "
 	@go mod tidy -v && echo OK || (echo fail && exit 2)
