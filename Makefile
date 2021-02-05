@@ -1,3 +1,6 @@
+-include .env
+-include help.mk
+
 VERSION ?= "$(shell git describe --tags 2>/dev/null | sed 's/^v//')"
 
 GRPC_VERSION=$(shell go list -m google.golang.org/grpc | cut -d " " -f 2)
@@ -7,6 +10,8 @@ HUB_IMAGE=nspccdev/neofs
 B=\033[0;1m
 G=\033[0;92m
 R=\033[0m
+
+.PHONY: version deps image publish
 
 # Show current version
 version:
@@ -21,6 +26,7 @@ deps:
 	@printf "${B}${G}⇒ Store vendor localy${R}: "
 	@go mod vendor && echo OK || (echo fail && exit 2)
 
+# Build docker image
 image: VERSION?=
 image: deps
 	@echo "${B}${G}⇒ Build GW docker-image with $(GRPC_VERSION) ${R}"
@@ -29,9 +35,14 @@ image: deps
 		 -f Dockerfile \
 		 -t $(HUB_IMAGE)-http-gate:$(VERSION) .
 
+# Publish docker image
+publish:
+	@echo "${B}${G}⇒ publish docker image ${R}"
+	@docker push $(HUB_IMAGE)-http-gate:$(VERSION)
+
 .PHONY: dev
 
-# v1.24.0 v1.25.1 v1.26.0 v1.27.1
+# Build development docker images
 dev: VERSIONS?=$(GRPC_VERSION)
 dev:
 	@echo "=> Build multiple images for $(VERSIONS)"; \
