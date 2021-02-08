@@ -3,6 +3,23 @@
 NeoFS HTTP Gate is example of tool that provides basic interactions with NeoFS.
 You can download files from NeoFS Network using NeoFS Gate. 
 
+## Notable make targets
+
+```
+  Usage:
+
+    make <target>
+
+  Targets:
+
+    deps      Check and ensure dependencies
+    dev       Build development docker images
+    help      Show this help prompt
+    image     Build docker image
+    publish   Publish docker image
+    version   Show current version
+```
+
 ## Install
 
 ```go get -u github.com/nspcc-dev/neofs-http-gate```
