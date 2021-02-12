@@ -55,7 +55,7 @@ func (a *app) upload(c *fasthttp.RequestCtx) {
 
 	defer func() {
 		// if temporary reader can be closed - close it
-		if closer := tmp.(io.Closer); closer != nil {
+		if closer, ok := tmp.(io.Closer); ok && closer != nil {
 			log.Debug("close temporary multipart/form file", zap.Error(closer.Close()))
 		}
 

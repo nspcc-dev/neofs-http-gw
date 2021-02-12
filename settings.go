@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"github.com/valyala/fasthttp"
+	"go.uber.org/zap"
 )
 
 type empty int
@@ -33,11 +36,12 @@ const (
 	cfgKeepalivePermitWithoutStream = "keepalive.permit_without_stream"
 
 	// Web
-	cfgWebReadBufferSize    = "web.read_buffer_size"
-	cfgWebWriteBufferSize   = "web.write_buffer_size"
-	cfgWebReadTimeout       = "web.read_timeout"
-	cfgWebWriteTimeout      = "web.write_timeout"
-	cfgWebConnectionPerHost = "web.connection_per_host"
+	cfgWebReadBufferSize     = "web.read_buffer_size"
+	cfgWebWriteBufferSize    = "web.write_buffer_size"
+	cfgWebReadTimeout        = "web.read_timeout"
+	cfgWebWriteTimeout       = "web.write_timeout"
+	cfgWebStreamRequestBody  = "web.stream_request_body"
+	cfgWebMaxRequestBodySize = "web.max_request_body_size"
 
 	// Timeouts
 	cfgConTimeout = "connect_timeout"
@@ -85,6 +89,26 @@ var ignore = map[string]struct{}{
 }
 
 func (empty) Read([]byte) (int, error) { return 0, io.EOF }
+
+// checkAndEnableStreaming is temporary shim, should be used before
+// `StreamRequestBody` is not merged in fasthttp master
+// TODO should be removed in future
+func checkAndEnableStreaming(l *zap.Logger, v *viper.Viper, i interface{}) {
+	vi := reflect.ValueOf(i)
+
+	if vi.Type().Kind() != reflect.Ptr {
+		return
+	}
+
+	field := vi.Elem().FieldByName("StreamRequestBody")
+	if !field.IsValid() || field.Kind() != reflect.Bool {
+		l.Warn("stream request body not supported")
+
+		return
+	}
+
+	field.SetBool(v.GetBool(cfgWebStreamRequestBody))
+}
 
 func settings() *viper.Viper {
 	v := viper.New()
@@ -140,7 +164,8 @@ func settings() *viper.Viper {
 	v.SetDefault(cfgWebWriteBufferSize, 4096)
 	v.SetDefault(cfgWebReadTimeout, time.Second*15)
 	v.SetDefault(cfgWebWriteTimeout, time.Minute)
-	v.SetDefault(cfgWebConnectionPerHost, 10)
+	v.SetDefault(cfgWebStreamRequestBody, true)
+	v.SetDefault(cfgWebMaxRequestBodySize, fasthttp.DefaultMaxRequestBodySize)
 
 	// upload header
 	v.SetDefault(cfgUploaderHeaderEnableDefaultTimestamp, false)

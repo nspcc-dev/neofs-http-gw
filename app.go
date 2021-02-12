@@ -97,6 +97,17 @@ func newApp(ctx context.Context, opt ...Option) App {
 	a.web.DisableHeaderNamesNormalizing = true
 	a.web.NoDefaultServerHeader = true
 	a.web.NoDefaultContentType = true
+	a.web.MaxRequestBodySize = a.cfg.GetInt(cfgWebMaxRequestBodySize)
+
+	// FIXME don't work with StreamRequestBody,
+	//       some bugs with readMultipartForm
+	// a.web.DisablePreParseMultipartForm = true
+
+	// body streaming
+	// TODO should be replaced in future with
+	//
+	// a.web.StreamRequestBody = v.GetBool(cfgWebStreamRequestBody)
+	checkAndEnableStreaming(a.log, a.cfg, a.web)
 	// -- -- -- -- -- -- -- -- -- --
 
 	connections := make(map[string]float64)

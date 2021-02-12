@@ -73,6 +73,15 @@ If false, when there are no active RPCs, Time and Timeout will be ignored and no
 
 HTTP_GW_UPLOAD_HEADER_USE_DEFAULT_TIMESTAMP=bool - enable/disable adding current timestamp attribute when object uploads
 
+HTTP_GW_WEB_READ_BUFFER_SIZE=4096          - per-connection buffer size for requests' reading
+HTTP_GW_WEB_READ_TIMEOUT=15s               - an amount of time allowed to read the full request including body
+HTTP_GW_WEB_WRITE_BUFFER_SIZE=4096         - per-connection buffer size for responses' writing
+HTTP_GW_WEB_WRITE_TIMEOUT=1m0s             - maximum duration before timing out writes of the response
+HTTP_GW_WEB_STREAM_REQUEST_BODY=true       - enables request body streaming, and calls the handler sooner when given 
+                                             body is larger then the current limit
+HTTP_GW_WEB_MAX_REQUEST_BODY_SIZE=4194304  - maximum request body size, server rejects requests with bodies exceeding
+                                             this limit
+
 Peers preset:
 
 HTTP_GW_PEERS_[N]_ADDRESS = string
