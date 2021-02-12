@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -13,7 +12,6 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
-	"go.uber.org/zap"
 )
 
 type empty int
@@ -89,26 +87,6 @@ var ignore = map[string]struct{}{
 }
 
 func (empty) Read([]byte) (int, error) { return 0, io.EOF }
-
-// checkAndEnableStreaming is temporary shim, should be used before
-// `StreamRequestBody` is not merged in fasthttp master
-// TODO should be removed in future
-func checkAndEnableStreaming(l *zap.Logger, v *viper.Viper, i interface{}) {
-	vi := reflect.ValueOf(i)
-
-	if vi.Type().Kind() != reflect.Ptr {
-		return
-	}
-
-	field := vi.Elem().FieldByName("StreamRequestBody")
-	if !field.IsValid() || field.Kind() != reflect.Bool {
-		l.Warn("stream request body not supported")
-
-		return
-	}
-
-	field.SetBool(v.GetBool(cfgWebStreamRequestBody))
-}
 
 func settings() *viper.Viper {
 	v := viper.New()
