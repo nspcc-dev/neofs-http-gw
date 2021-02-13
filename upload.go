@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"io"
-	"mime/multipart"
 	"strconv"
 	"time"
 
@@ -37,10 +36,8 @@ func (pr *putResponse) Encode(w io.Writer) error {
 func (a *app) upload(c *fasthttp.RequestCtx) {
 	var (
 		err     error
-		name    string
-		tmp     io.Reader
+		file    MultipartFile
 		addr    *object.Address
-		form    *multipart.Form
 		cid     = container.NewID()
 		sCID, _ = c.UserValue("cid").(string)
 
@@ -55,52 +52,22 @@ func (a *app) upload(c *fasthttp.RequestCtx) {
 
 	defer func() {
 		// if temporary reader can be closed - close it
-		if closer, ok := tmp.(io.Closer); ok && closer != nil {
-			log.Debug("close temporary multipart/form file", zap.Error(closer.Close()))
-		}
-
-		if form == nil {
+		if file == nil {
 			return
 		}
 
-		log.Debug("cleanup multipart/form", zap.Error(form.RemoveAll()))
+		log.Debug("close temporary multipart/form file",
+			zap.Stringer("address", addr),
+			zap.String("filename", file.FileName()),
+			zap.Error(file.Close()))
 	}()
 
-	// tries to receive multipart/form or throw error
-	if form, err = c.MultipartForm(); err != nil {
+	boundary := string(c.Request.Header.MultipartFormBoundary())
+	if file, err = fetchMultipartFile(a.log, c.RequestBodyStream(), boundary); err != nil {
 		log.Error("could not receive multipart/form", zap.Error(err))
 		c.Error("could not receive multipart/form: "+err.Error(), fasthttp.StatusBadRequest)
 
 		return
-	}
-
-	// checks that received multipart/form contains only one `file` per request
-	if ln := len(form.File); ln != 1 {
-		log.Error("received multipart/form with more then one file", zap.Int("count", ln))
-		c.Error("received multipart/form with more then one file", fasthttp.StatusBadRequest)
-
-		return
-	}
-
-	for _, file := range form.File {
-		// because multipart/form can contains multiple FileHeader records
-		// we should check that we have only one per request or throw error
-		if ln := len(file); ln != 1 {
-			log.Error("received multipart/form file should contains one record", zap.Int("count", ln))
-			c.Error("received multipart/form file should contains one record", fasthttp.StatusBadRequest)
-
-			return
-		}
-
-		name = file[0].Filename
-
-		// opens multipart/form file to work within or throw error
-		if tmp, err = file[0].Open(); err != nil {
-			log.Error("could not prepare uploaded file", zap.Error(err))
-			c.Error("could not prepare uploaded file", fasthttp.StatusBadRequest)
-
-			return
-		}
 	}
 
 	filtered := filterHeaders(a.log, &c.Request.Header)
@@ -119,7 +86,7 @@ func (a *app) upload(c *fasthttp.RequestCtx) {
 	if _, ok := filtered[object.AttributeFileName]; !ok {
 		filename := object.NewAttribute()
 		filename.SetKey(object.AttributeFileName)
-		filename.SetValue(name)
+		filename.SetValue(file.FileName())
 
 		attributes = append(attributes, filename)
 	}
@@ -140,7 +107,7 @@ func (a *app) upload(c *fasthttp.RequestCtx) {
 	raw.SetAttributes(attributes...)
 
 	// tries to put file into NeoFS or throw error
-	if addr, err = a.cli.Object().Put(c, raw.Object(), sdk.WithPutReader(tmp)); err != nil {
+	if addr, err = a.cli.Object().Put(c, raw.Object(), sdk.WithPutReader(file)); err != nil {
 		log.Error("could not store file in NeoFS", zap.Error(err))
 		c.Error("could not store file in NeoFS", fasthttp.StatusBadRequest)
 

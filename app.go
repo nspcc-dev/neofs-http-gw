@@ -102,7 +102,7 @@ func newApp(ctx context.Context, opt ...Option) App {
 	// FIXME don't work with StreamRequestBody,
 	//       some bugs with readMultipartForm
 	// https://github.com/valyala/fasthttp/issues/968
-	// a.web.DisablePreParseMultipartForm = true
+	a.web.DisablePreParseMultipartForm = true
 
 	a.web.StreamRequestBody = a.cfg.GetBool(cfgWebStreamRequestBody)
 	// -- -- -- -- -- -- -- -- -- --
