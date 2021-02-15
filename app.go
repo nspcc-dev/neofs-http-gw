@@ -31,6 +31,8 @@ type (
 
 		jobDone chan struct{}
 		webDone chan struct{}
+
+		enableDefaultTimestamp bool
 	}
 
 	App interface {
@@ -74,6 +76,8 @@ func newApp(ctx context.Context, opt ...Option) App {
 		opt[i](a)
 	}
 
+	a.enableDefaultTimestamp = a.cfg.GetBool(cfgUploaderHeaderEnableDefaultTimestamp)
+
 	a.wlog = logger.GRPC(a.log)
 
 	if a.cfg.GetBool(cmdVerbose) {
@@ -90,10 +94,17 @@ func newApp(ctx context.Context, opt ...Option) App {
 	a.web.WriteBufferSize = a.cfg.GetInt(cfgWebWriteBufferSize)
 	a.web.ReadTimeout = a.cfg.GetDuration(cfgWebReadTimeout)
 	a.web.WriteTimeout = a.cfg.GetDuration(cfgWebWriteTimeout)
-	a.web.GetOnly = true
 	a.web.DisableHeaderNamesNormalizing = true
 	a.web.NoDefaultServerHeader = true
 	a.web.NoDefaultContentType = true
+	a.web.MaxRequestBodySize = a.cfg.GetInt(cfgWebMaxRequestBodySize)
+
+	// FIXME don't work with StreamRequestBody,
+	//       some bugs with readMultipartForm
+	// https://github.com/valyala/fasthttp/issues/968
+	a.web.DisablePreParseMultipartForm = true
+
+	a.web.StreamRequestBody = a.cfg.GetBool(cfgWebStreamRequestBody)
 	// -- -- -- -- -- -- -- -- -- --
 
 	connections := make(map[string]float64)
@@ -173,6 +184,9 @@ func (a *app) Serve(ctx context.Context) {
 
 	r := router.New()
 	r.RedirectTrailingSlash = true
+
+	a.log.Info("enabled /upload/{cid}")
+	r.POST("/upload/{cid}", a.upload)
 
 	a.log.Info("enabled /get/{cid}/{oid}")
 	r.GET("/get/{cid}/{oid}", a.byAddress)

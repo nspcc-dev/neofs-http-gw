@@ -11,13 +11,13 @@ import (
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"github.com/valyala/fasthttp"
 )
 
 type empty int
 
 const (
-	devNull   = empty(0)
-	generated = "generated"
+	devNull = empty(0)
 
 	defaultRebalanceTimer = 15 * time.Second
 	defaultRequestTimeout = 15 * time.Second
@@ -34,11 +34,12 @@ const (
 	cfgKeepalivePermitWithoutStream = "keepalive.permit_without_stream"
 
 	// Web
-	cfgWebReadBufferSize    = "web.read_buffer_size"
-	cfgWebWriteBufferSize   = "web.write_buffer_size"
-	cfgWebReadTimeout       = "web.read_timeout"
-	cfgWebWriteTimeout      = "web.write_timeout"
-	cfgWebConnectionPerHost = "web.connection_per_host"
+	cfgWebReadBufferSize     = "web.read_buffer_size"
+	cfgWebWriteBufferSize    = "web.write_buffer_size"
+	cfgWebReadTimeout        = "web.read_timeout"
+	cfgWebWriteTimeout       = "web.write_timeout"
+	cfgWebStreamRequestBody  = "web.stream_request_body"
+	cfgWebMaxRequestBodySize = "web.max_request_body_size"
 
 	// Timeouts
 	cfgConTimeout = "connect_timeout"
@@ -53,6 +54,9 @@ const (
 	cfgLoggerNoDisclaimer       = "logger.no_disclaimer"
 	cfgLoggerSamplingInitial    = "logger.sampling.initial"
 	cfgLoggerSamplingThereafter = "logger.sampling.thereafter"
+
+	// Uploader Header
+	cfgUploaderHeaderEnableDefaultTimestamp = "upload_header.use_default_timestamp"
 
 	// Peers
 	cfgPeers = "peers"
@@ -138,7 +142,11 @@ func settings() *viper.Viper {
 	v.SetDefault(cfgWebWriteBufferSize, 4096)
 	v.SetDefault(cfgWebReadTimeout, time.Second*15)
 	v.SetDefault(cfgWebWriteTimeout, time.Minute)
-	v.SetDefault(cfgWebConnectionPerHost, 10)
+	v.SetDefault(cfgWebStreamRequestBody, true)
+	v.SetDefault(cfgWebMaxRequestBodySize, fasthttp.DefaultMaxRequestBodySize)
+
+	// upload header
+	v.SetDefault(cfgUploaderHeaderEnableDefaultTimestamp, false)
 
 	if err := v.BindPFlags(flags); err != nil {
 		panic(err)
