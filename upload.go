@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 	sdk "github.com/nspcc-dev/cdn-sdk"
 	"github.com/nspcc-dev/neofs-api-go/pkg/container"
 	"github.com/nspcc-dev/neofs-api-go/pkg/object"
+	"github.com/nspcc-dev/neofs-api-go/pkg/owner"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
@@ -31,6 +33,14 @@ func (pr *putResponse) Encode(w io.Writer) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "\t")
 	return enc.Encode(pr)
+}
+
+func (a *app) fetchOwner(ctx context.Context) *owner.ID {
+	if tkn, err := sdk.BearerToken(ctx); err == nil && tkn != nil {
+		return tkn.Issuer()
+	}
+
+	return a.cli.Owner()
 }
 
 func (a *app) upload(c *fasthttp.RequestCtx) {
@@ -109,7 +119,7 @@ func (a *app) upload(c *fasthttp.RequestCtx) {
 	// prepares new object and fill it
 	raw := object.NewRaw()
 	raw.SetContainerID(cid)
-	raw.SetOwnerID(a.cli.Owner()) // should be various: from sdk / BearerToken
+	raw.SetOwnerID(a.fetchOwner(c))
 	raw.SetAttributes(attributes...)
 
 	// tries to put file into NeoFS or throw error
