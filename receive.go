@@ -57,6 +57,12 @@ func (r *request) receiveFile(address *object.Address) {
 		filename string
 	)
 
+	if err = checkAndPropagateBearerToken(r.RequestCtx); err != nil {
+		r.log.Error("could not fetch bearer token", zap.Error(err))
+		r.Error("could not fetch bearer token", fasthttp.StatusBadRequest)
+		return
+	}
+
 	writer := newDetector(r.Response.BodyWriter())
 	obj, err := r.obj.Get(r, address, sdk.WithGetWriter(writer))
 	if err != nil {

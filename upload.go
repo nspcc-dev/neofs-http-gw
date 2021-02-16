@@ -44,6 +44,12 @@ func (a *app) upload(c *fasthttp.RequestCtx) {
 		log = a.log.With(zap.String("cid", sCID))
 	)
 
+	if err = checkAndPropagateBearerToken(c); err != nil {
+		log.Error("could not fetch bearer token", zap.Error(err))
+		c.Error("could not fetch bearer token", fasthttp.StatusBadRequest)
+		return
+	}
+
 	if err = cid.Parse(sCID); err != nil {
 		log.Error("wrong container id", zap.Error(err))
 		c.Error("wrong container id", fasthttp.StatusBadRequest)

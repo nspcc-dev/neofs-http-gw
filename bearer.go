@@ -4,32 +4,33 @@ import (
 	"bytes"
 	"encoding/base64"
 
-	"github.com/pkg/errors"
-
 	"github.com/nspcc-dev/neofs-api-go/pkg/token"
+	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"
 )
 
 type fromHandler = func(h *fasthttp.RequestHeader) []byte
 
-const bearerToken = "Bearer"
+const (
+	bearerTokenHdr = "Bearer"
+	bearerTokenKey = "__context_bearer_token_key"
+)
 
 // BearerToken usage:
 //
-// if tkn, err = BearerToken(c); err != nil && tkn == nil {
+// if err = checkAndPropagateBearerToken(ctx); err != nil {
 // 	log.Error("could not fetch bearer token", zap.Error(err))
 // 	c.Error("could not fetch bearer token", fasthttp.StatusBadRequest)
 // 	return
 // }
-var _ = BearerToken
 
 func fromHeader(h *fasthttp.RequestHeader) []byte {
 	auth := h.Peek(fasthttp.HeaderAuthorization)
-	if auth == nil || !bytes.HasPrefix(auth, []byte(bearerToken)) {
+	if auth == nil || !bytes.HasPrefix(auth, []byte(bearerTokenHdr)) {
 		return nil
 	}
 
-	if auth = bytes.TrimPrefix(auth, []byte(bearerToken+" ")); len(auth) == 0 {
+	if auth = bytes.TrimPrefix(auth, []byte(bearerTokenHdr+" ")); len(auth) == 0 {
 		return nil
 	}
 
@@ -37,7 +38,7 @@ func fromHeader(h *fasthttp.RequestHeader) []byte {
 }
 
 func fromCookie(h *fasthttp.RequestHeader) []byte {
-	auth := h.Cookie(bearerToken)
+	auth := h.Cookie(bearerTokenHdr)
 	if len(auth) == 0 {
 		return nil
 	}
@@ -45,10 +46,21 @@ func fromCookie(h *fasthttp.RequestHeader) []byte {
 	return auth
 }
 
-func BearerToken(ctx *fasthttp.RequestCtx) (*token.BearerToken, error) {
+func checkAndPropagateBearerToken(ctx *fasthttp.RequestCtx) error {
+	tkn, err := fetchBearerToken(ctx)
+	if err != nil {
+		return err
+	}
+
+	// This is an analog of context.WithValue.
+	ctx.SetUserValue(bearerTokenKey, tkn)
+
+	return nil
+}
+
+func fetchBearerToken(ctx *fasthttp.RequestCtx) (*token.BearerToken, error) {
 	// ignore empty value
 	if ctx == nil {
-		panic(nil)
 		return nil, nil
 	}
 
