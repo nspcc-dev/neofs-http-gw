@@ -4,24 +4,23 @@ import (
 	"encoding/base64"
 	"testing"
 
+	sdk "github.com/nspcc-dev/cdn-sdk"
 	"github.com/nspcc-dev/neofs-api-go/pkg/owner"
-
 	"github.com/nspcc-dev/neofs-api-go/pkg/token"
-
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
 )
 
 func makeTestCookie(value []byte) *fasthttp.RequestHeader {
 	header := new(fasthttp.RequestHeader)
-	header.SetCookie(bearerToken, string(value))
+	header.SetCookie(bearerTokenHdr, string(value))
 	return header
 }
 
 func makeTestHeader(value []byte) *fasthttp.RequestHeader {
 	header := new(fasthttp.RequestHeader)
 	if value != nil {
-		header.Set(fasthttp.HeaderAuthorization, bearerToken+" "+string(value))
+		header.Set(fasthttp.HeaderAuthorization, bearerTokenHdr+" "+string(value))
 	}
 	return header
 }
@@ -60,7 +59,7 @@ func Test_fromHeader(t *testing.T) {
 	}
 }
 
-func TestBearerToken(t *testing.T) {
+func Test_fetchBearerToken(t *testing.T) {
 	uid := owner.NewID()
 
 	tkn := new(token.BearerToken)
@@ -111,7 +110,7 @@ func TestBearerToken(t *testing.T) {
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := makeTestRequest(tt.cookie, tt.header)
-			actual, err := BearerToken(ctx)
+			actual, err := fetchBearerToken(ctx)
 
 			if tt.error == "" {
 				require.NoError(t, err)
@@ -129,11 +128,34 @@ func makeTestRequest(cookie, header string) *fasthttp.RequestCtx {
 	ctx := new(fasthttp.RequestCtx)
 
 	if cookie != "" {
-		ctx.Request.Header.SetCookie(bearerToken, cookie)
+		ctx.Request.Header.SetCookie(bearerTokenHdr, cookie)
 	}
 
 	if header != "" {
-		ctx.Request.Header.Set(fasthttp.HeaderAuthorization, bearerToken+" "+header)
+		ctx.Request.Header.Set(fasthttp.HeaderAuthorization, bearerTokenHdr+" "+header)
 	}
 	return ctx
+}
+
+func Test_checkAndPropagateBearerToken(t *testing.T) {
+	uid := owner.NewID()
+
+	tkn := new(token.BearerToken)
+	tkn.SetOwner(uid)
+
+	data, err := tkn.Marshal()
+	require.NoError(t, err)
+
+	t64 := base64.StdEncoding.EncodeToString(data)
+	require.NotEmpty(t, t64)
+
+	ctx := makeTestRequest(t64, "")
+
+	// Expect to see the token within the context.
+	require.NoError(t, checkAndPropagateBearerToken(ctx))
+
+	// Expect to see the same token without errors.
+	actual, err := sdk.BearerToken(ctx)
+	require.NoError(t, err)
+	require.Equal(t, tkn, actual)
 }
