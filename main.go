@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/nspcc-dev/cdn-sdk/grace"
 	"github.com/nspcc-dev/cdn-sdk/logger"
+	"github.com/nspcc-dev/neofs-http-gate/global"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -41,15 +41,10 @@ func main() {
 	var (
 		v = settings()
 		l = newLogger(v)
-		g = grace.Context(l)
-
-		a = newApp(g,
-			WithLogger(l),
-			WithConfig(v))
+		g = global.Context()
+		a = newApp(g, WithLogger(l), WithConfig(v))
 	)
-
 	go a.Serve(g)
 	go a.Worker(g)
-
 	a.Wait()
 }
