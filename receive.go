@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	sdk "github.com/nspcc-dev/cdn-sdk"
 	"github.com/nspcc-dev/neofs-api-go/pkg/container"
 	"github.com/nspcc-dev/neofs-api-go/pkg/object"
+	"github.com/nspcc-dev/neofs-http-gate/neofs"
 	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
@@ -31,7 +31,7 @@ type (
 		*fasthttp.RequestCtx
 
 		log *zap.Logger
-		obj sdk.ObjectClient
+		obj neofs.ObjectClient
 	}
 
 	objectIDs []*object.ID
@@ -49,40 +49,38 @@ func (d *detector) Write(data []byte) (int, error) {
 	return d.Writer.Write(data)
 }
 
-func (r *request) receiveFile(address *object.Address) {
+func (r *request) receiveFile(options *neofs.GetOptions) {
 	var (
 		err      error
 		dis      = "inline"
 		start    = time.Now()
 		filename string
 	)
-
-	if err = checkAndPropagateBearerToken(r.RequestCtx); err != nil {
-		r.log.Error("could not fetch bearer token", zap.Error(err))
-		r.Error("could not fetch bearer token", fasthttp.StatusBadRequest)
+	if err = storeBearerToken(r.RequestCtx); err != nil {
+		r.log.Error("could not fetch and store bearer token", zap.Error(err))
+		r.Error("could not fetch and store bearer token", fasthttp.StatusBadRequest)
 		return
 	}
-
 	writer := newDetector(r.Response.BodyWriter())
-	obj, err := r.obj.Get(r, address, sdk.WithGetWriter(writer))
+	// obj, err := r.obj.Get(r, address, sdk.WithGetWriter(writer))
+	options.Writer = writer
+	obj, err := r.obj.Get(r.RequestCtx, options)
 	if err != nil {
-		r.log.Error("could not receive object",
+		r.log.Error(
+			"could not receive object",
 			zap.Stringer("elapsed", time.Since(start)),
-			zap.Error(err))
-
+			zap.Error(err),
+		)
 		var (
 			msg  = errors.Wrap(err, "could not receive object").Error()
 			code = fasthttp.StatusBadRequest
 		)
-
 		if st, ok := status.FromError(errors.Cause(err)); ok && st != nil {
 			if st.Code() == codes.NotFound {
 				code = fasthttp.StatusNotFound
 			}
-
 			msg = st.Message()
 		}
-
 		r.Error(msg, code)
 		return
 	}
@@ -139,68 +137,79 @@ func (a *app) request(ctx *fasthttp.RequestCtx, log *zap.Logger) *request {
 		RequestCtx: ctx,
 
 		log: log,
-		obj: a.cli.Object(),
+		obj: a.plant.Object(),
 	}
 }
 
 func (a *app) byAddress(c *fasthttp.RequestCtx) {
 	var (
-		err    error
-		adr    = object.NewAddress()
-		cid, _ = c.UserValue("cid").(string)
-		oid, _ = c.UserValue("oid").(string)
-		val    = strings.Join([]string{cid, oid}, "/")
-		log    = a.log.With(
-			zap.String("cid", cid),
-			zap.String("oid", oid))
+		err     error
+		address = object.NewAddress()
+		cid, _  = c.UserValue("cid").(string)
+		oid, _  = c.UserValue("oid").(string)
+		val     = strings.Join([]string{cid, oid}, "/")
+		log     = a.log.With(zap.String("cid", cid), zap.String("oid", oid))
 	)
-
-	if err = adr.Parse(val); err != nil {
+	if err = address.Parse(val); err != nil {
 		log.Error("wrong object address", zap.Error(err))
 		c.Error("wrong object address", fasthttp.StatusBadRequest)
 		return
 	}
-
-	a.request(c, log).receiveFile(adr)
+	// TODO: Take this from a sync-pool.
+	getOpts := new(neofs.GetOptions)
+	getOpts.Client = a.getOperations.client
+	getOpts.SessionToken = a.getOperations.sessionToken
+	getOpts.ObjectAddress = address
+	getOpts.Writer = nil
+	a.request(c, log).receiveFile(getOpts)
 }
 
 func (a *app) byAttribute(c *fasthttp.RequestCtx) {
 	var (
 		err     error
-		ids     []*object.ID
-		cid     = container.NewID()
-		adr     = object.NewAddress()
-		sCID, _ = c.UserValue("cid").(string)
+		scid, _ = c.UserValue("cid").(string)
 		key, _  = c.UserValue("attr_key").(string)
 		val, _  = c.UserValue("attr_val").(string)
-
-		log = a.log.With(
-			zap.String("cid", sCID),
-			zap.String("attr_key", key),
-			zap.String("attr_val", val))
+		log     = a.log.With(zap.String("cid", scid), zap.String("attr_key", key), zap.String("attr_val", val))
 	)
-
-	if err = cid.Parse(sCID); err != nil {
+	cid := container.NewID()
+	if err = cid.Parse(scid); err != nil {
 		log.Error("wrong container id", zap.Error(err))
 		c.Error("wrong container id", fasthttp.StatusBadRequest)
 		return
-	} else if ids, err = a.cli.Object().Search(c, cid, sdk.SearchRootObjects(), sdk.SearchByAttribute(key, val)); err != nil {
+		// } else if ids, err = a.cli.Object().Search(c, cid, sdk.SearchRootObjects(), sdk.SearchByAttribute(key, val)); err != nil {
+	}
+	// TODO: Take this from a sync-pool.
+	searchOpts := new(neofs.SearchOptions)
+	searchOpts.Client = a.getOperations.client
+	searchOpts.SessionToken = a.getOperations.sessionToken
+	searchOpts.BearerToken = nil
+	searchOpts.ContainerID = cid
+	searchOpts.Attribute.Key = key
+	searchOpts.Attribute.Value = val
+	var ids []*object.ID
+	if ids, err = a.plant.Object().Search(c, searchOpts); err != nil {
 		log.Error("something went wrong", zap.Error(err))
 		c.Error("something went wrong", fasthttp.StatusBadRequest)
 		return
 	} else if len(ids) == 0 {
 		log.Debug("object not found")
-		c.Error("not found", fasthttp.StatusNotFound)
+		c.Error("object not found", fasthttp.StatusNotFound)
 		return
 	}
-
 	if len(ids) > 1 {
 		log.Debug("found multiple objects",
 			zap.Strings("object_ids", objectIDs(ids).Slice()),
 			zap.Stringer("show_object_id", ids[0]))
 	}
-
-	adr.SetContainerID(cid)
-	adr.SetObjectID(ids[0])
-	a.request(c, log).receiveFile(adr)
+	address := object.NewAddress()
+	address.SetContainerID(cid)
+	address.SetObjectID(ids[0])
+	// TODO: Take this from a sync-pool.
+	getOpts := new(neofs.GetOptions)
+	getOpts.Client = a.getOperations.client
+	getOpts.SessionToken = a.getOperations.sessionToken
+	getOpts.ObjectAddress = address
+	getOpts.Writer = nil
+	a.request(c, log).receiveFile(getOpts)
 }

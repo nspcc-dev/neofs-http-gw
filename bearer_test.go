@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"testing"
 
-	sdk "github.com/nspcc-dev/cdn-sdk"
 	"github.com/nspcc-dev/neofs-api-go/pkg/owner"
 	"github.com/nspcc-dev/neofs-api-go/pkg/token"
 	"github.com/stretchr/testify/require"
@@ -152,10 +151,10 @@ func Test_checkAndPropagateBearerToken(t *testing.T) {
 	ctx := makeTestRequest(t64, "")
 
 	// Expect to see the token within the context.
-	require.NoError(t, checkAndPropagateBearerToken(ctx))
+	require.NoError(t, storeBearerToken(ctx))
 
 	// Expect to see the same token without errors.
-	actual, err := sdk.BearerToken(ctx)
+	actual, err := loadBearerToken(ctx)
 	require.NoError(t, err)
 	require.Equal(t, tkn, actual)
 }
