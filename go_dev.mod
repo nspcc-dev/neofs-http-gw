@@ -1,6 +1,6 @@
 module github.com/nspcc-dev/neofs-http-gate
 
-go 1.13
+go 1.16
 
 require (
     github.com/fasthttp/router v0.6.1

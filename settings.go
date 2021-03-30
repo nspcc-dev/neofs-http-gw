@@ -79,11 +79,9 @@ var ignore = map[string]struct{}{
 	cfgApplicationName:      {},
 	cfgApplicationVersion:   {},
 	cfgApplicationBuildTime: {},
-
-	cfgPeers: {},
-
-	cmdHelp:    {},
-	cmdVersion: {},
+	cfgPeers:                {},
+	cmdHelp:                 {},
+	cmdVersion:              {},
 }
 
 func (empty) Read([]byte) (int, error) { return 0, io.EOF }
@@ -106,14 +104,14 @@ func settings() *viper.Viper {
 	help := flags.BoolP(cmdHelp, "h", false, "show help")
 	version := flags.BoolP(cmdVersion, "v", false, "show version")
 
-	flags.String(cmdNeoFSKey, "", `"Path to private key file, hex string or wif`)
+	flags.String(cmdNeoFSKey, "", `path to private key file, hex string or wif`)
 
 	flags.Bool(cmdVerbose, false, "debug gRPC connections")
 	flags.Duration(cfgConTimeout, defaultConnectTimeout, "gRPC connect timeout")
 	flags.Duration(cfgReqTimeout, defaultRequestTimeout, "gRPC request timeout")
 	flags.Duration(cfgRebalance, defaultRebalanceTimer, "gRPC connection rebalance timer")
 
-	flags.String(cfgListenAddress, "0.0.0.0:8082", "HTTP Gateway listen address")
+	flags.String(cfgListenAddress, "0.0.0.0:8082", "address to listen")
 	peers := flags.StringArrayP(cfgPeers, "p", nil, "NeoFS nodes")
 
 	// set prefers:

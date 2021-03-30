@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 
 	"github.com/nspcc-dev/neofs-api-go/pkg/token"
@@ -18,7 +19,7 @@ const (
 
 // BearerToken usage:
 //
-// if err = checkAndPropagateBearerToken(ctx); err != nil {
+// if err = storeBearerToken(ctx); err != nil {
 // 	log.Error("could not fetch bearer token", zap.Error(err))
 // 	c.Error("could not fetch bearer token", fasthttp.StatusBadRequest)
 // 	return
@@ -46,15 +47,13 @@ func fromCookie(h *fasthttp.RequestHeader) []byte {
 	return auth
 }
 
-func checkAndPropagateBearerToken(ctx *fasthttp.RequestCtx) error {
+func storeBearerToken(ctx *fasthttp.RequestCtx) error {
 	tkn, err := fetchBearerToken(ctx)
 	if err != nil {
 		return err
 	}
-
 	// This is an analog of context.WithValue.
 	ctx.SetUserValue(bearerTokenKey, tkn)
-
 	return nil
 }
 
@@ -63,14 +62,12 @@ func fetchBearerToken(ctx *fasthttp.RequestCtx) (*token.BearerToken, error) {
 	if ctx == nil {
 		return nil, nil
 	}
-
 	var (
 		lastErr error
 
 		buf []byte
 		tkn = new(token.BearerToken)
 	)
-
 	for _, parse := range []fromHandler{fromHeader, fromCookie} {
 		if buf = parse(&ctx.Request.Header); buf == nil {
 			continue
@@ -88,4 +85,11 @@ func fetchBearerToken(ctx *fasthttp.RequestCtx) (*token.BearerToken, error) {
 	}
 
 	return nil, lastErr
+}
+
+func loadBearerToken(ctx context.Context) (*token.BearerToken, error) {
+	if tkn, ok := ctx.Value(bearerTokenKey).(*token.BearerToken); ok && tkn != nil {
+		return tkn, nil
+	}
+	return nil, errors.New("found empty bearer token")
 }

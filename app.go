@@ -2,36 +2,33 @@ package main
 
 import (
 	"context"
-	"crypto/ecdsa"
+	"sort"
 	"strconv"
 
 	"github.com/fasthttp/router"
-	sdk "github.com/nspcc-dev/cdn-sdk"
-	"github.com/nspcc-dev/cdn-sdk/creds/neofs"
-	"github.com/nspcc-dev/cdn-sdk/logger"
-	"github.com/nspcc-dev/cdn-sdk/pool"
+	"github.com/nspcc-dev/neofs-api-go/pkg/client"
+	"github.com/nspcc-dev/neofs-api-go/pkg/token"
+	"github.com/nspcc-dev/neofs-http-gate/logger"
+	"github.com/nspcc-dev/neofs-http-gate/neofs"
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
-	"google.golang.org/grpc/keepalive"
 )
 
 type (
 	app struct {
-		cli  sdk.Client
-		pool pool.Client
-		log  *zap.Logger
-		cfg  *viper.Viper
-		key  *ecdsa.PrivateKey
-
-		wlog logger.Logger
-		web  *fasthttp.Server
-
-		jobDone chan struct{}
-		webDone chan struct{}
-
+		plant         neofs.ClientPlant
+		getOperations struct {
+			client       client.Client
+			sessionToken *token.SessionToken
+		}
+		log                    *zap.Logger
+		cfg                    *viper.Viper
+		wlog                   logger.Logger
+		web                    *fasthttp.Server
+		jobDone                chan struct{}
+		webDone                chan struct{}
 		enableDefaultTimestamp bool
 	}
 
@@ -84,11 +81,11 @@ func newApp(ctx context.Context, opt ...Option) App {
 		grpclog.SetLoggerV2(a.wlog)
 	}
 
-	conTimeout := a.cfg.GetDuration(cfgConTimeout)
-	reqTimeout := a.cfg.GetDuration(cfgReqTimeout)
-	tckTimeout := a.cfg.GetDuration(cfgRebalance)
+	// conTimeout := a.cfg.GetDuration(cfgConTimeout)
+	// reqTimeout := a.cfg.GetDuration(cfgReqTimeout)
+	// tckTimeout := a.cfg.GetDuration(cfgRebalance)
 
-	// -- setup FastHTTP server: --
+	// -- setup FastHTTP server --
 	a.web.Name = "neofs-http-gate"
 	a.web.ReadBufferSize = a.cfg.GetInt(cfgWebReadBufferSize)
 	a.web.WriteBufferSize = a.cfg.GetInt(cfgWebWriteBufferSize)
@@ -99,68 +96,42 @@ func newApp(ctx context.Context, opt ...Option) App {
 	a.web.NoDefaultContentType = true
 	a.web.MaxRequestBodySize = a.cfg.GetInt(cfgWebMaxRequestBodySize)
 
-	// FIXME don't work with StreamRequestBody,
-	//       some bugs with readMultipartForm
+	// -- -- -- -- -- -- FIXME -- -- -- -- -- --
+	// Does not work with StreamRequestBody,
+	// some bugs with readMultipartForm
 	// https://github.com/valyala/fasthttp/issues/968
 	a.web.DisablePreParseMultipartForm = true
-
 	a.web.StreamRequestBody = a.cfg.GetBool(cfgWebStreamRequestBody)
-	// -- -- -- -- -- -- -- -- -- --
+	// -- -- -- -- -- -- -- -- -- -- -- -- -- --
 
-	connections := make(map[string]float64)
+	var cl connectionList
 	for i := 0; ; i++ {
 		address := a.cfg.GetString(cfgPeers + "." + strconv.Itoa(i) + ".address")
 		weight := a.cfg.GetFloat64(cfgPeers + "." + strconv.Itoa(i) + ".weight")
 		if address == "" {
 			break
 		}
-
-		connections[address] = weight
-		a.log.Info("add connection peer",
-			zap.String("address", address),
-			zap.Float64("weight", weight))
+		cl = append(cl, connection{address: address, weight: weight})
+		a.log.Info("add connection peer", zap.String("address", address), zap.Float64("weight", weight))
 	}
-
-	cred, err := neofs.New(a.cfg.GetString(cmdNeoFSKey))
+	sort.Sort(sort.Reverse(cl))
+	cred, err := neofs.NewCredentials(a.cfg.GetString(cmdNeoFSKey))
 	if err != nil {
-		a.log.Fatal("could not prepare credentials", zap.Error(err))
+		a.log.Fatal("could not get credentials", zap.Error(err))
 	}
-
-	a.pool, err = pool.New(ctx,
-		pool.WithLogger(a.log),
-		pool.WithCredentials(cred),
-		pool.WithWeightPool(connections),
-		pool.WithTickerTimeout(tckTimeout),
-		pool.WithConnectTimeout(conTimeout),
-		pool.WithRequestTimeout(reqTimeout),
-		pool.WithAPIPreparer(sdk.APIPreparer),
-		pool.WithGRPCOptions(
-			grpc.WithBlock(),
-			grpc.WithInsecure(),
-			grpc.WithKeepaliveParams(keepalive.ClientParameters{
-				Time:                a.cfg.GetDuration(cfgKeepaliveTime),
-				Timeout:             a.cfg.GetDuration(cfgKeepaliveTimeout),
-				PermitWithoutStream: a.cfg.GetBool(cfgKeepalivePermitWithoutStream),
-			})))
-
+	a.plant, err = neofs.NewClientPlant(ctx, cl[0].address, cred)
 	if err != nil {
-		a.log.Fatal("could not prepare connection pool", zap.Error(err))
+		a.log.Fatal("failed to create neofs client")
 	}
-
-	a.cli, err = sdk.New(ctx,
-		sdk.WithLogger(a.log),
-		sdk.WithCredentials(cred),
-		sdk.WithConnectionPool(a.pool),
-		sdk.WithAPIPreparer(sdk.APIPreparer))
+	a.getOperations.client, a.getOperations.sessionToken, err = a.plant.GetReusableArtifacts(ctx)
 	if err != nil {
-		a.log.Fatal("could not prepare sdk client", zap.Error(err))
+		a.log.Fatal("failed to get neofs client's reusable artifacts")
 	}
-
 	return a
 }
 
 func (a *app) Wait() {
-	a.log.Info("application started")
+	a.log.Info("starting application")
 
 	select {
 	case <-a.jobDone: // wait for job is stopped
@@ -171,50 +142,51 @@ func (a *app) Wait() {
 }
 
 func (a *app) Worker(ctx context.Context) {
-	a.pool.Worker(ctx)
 	close(a.jobDone)
 }
 
 func (a *app) Serve(ctx context.Context) {
 	go func() {
 		<-ctx.Done()
-		a.log.Info("stop web-server", zap.Error(a.web.Shutdown()))
+		a.log.Info("shutting down web server", zap.Error(a.web.Shutdown()))
 		close(a.webDone)
 	}()
-
+	// Configure router.
 	r := router.New()
 	r.RedirectTrailingSlash = true
-
-	a.log.Info("enabled /upload/{cid}")
 	r.POST("/upload/{cid}", a.upload)
-
-	a.log.Info("enabled /get/{cid}/{oid}")
+	a.log.Info("added path /upload/{cid}")
 	r.GET("/get/{cid}/{oid}", a.byAddress)
-
-	a.log.Info("enabled /get_by_attribute/{cid}/{attr_key}/{attr_val:*}")
+	a.log.Info("added path /get/{cid}/{oid}")
 	r.GET("/get_by_attribute/{cid}/{attr_key}/{attr_val:*}", a.byAttribute)
-
+	a.log.Info("added path /get_by_attribute/{cid}/{attr_key}/{attr_val:*}")
 	// attaching /-/(ready,healthy)
-	attachHealthy(r, a.pool.Status)
-
+	// attachHealthy(r, a.pool.Status)
 	// enable metrics
 	if a.cfg.GetBool(cmdMetrics) {
-		a.log.Info("enabled /metrics/")
+		a.log.Info("added path /metrics/")
 		attachMetrics(r, a.wlog)
 	}
-
 	// enable pprof
 	if a.cfg.GetBool(cmdPprof) {
-		a.log.Info("enabled /debug/pprof/")
+		a.log.Info("added path /debug/pprof/")
 		attachProfiler(r)
 	}
-
 	bind := a.cfg.GetString(cfgListenAddress)
-	a.log.Info("run gateway server",
-		zap.String("address", bind))
-
+	a.log.Info("running web server", zap.String("address", bind))
 	a.web.Handler = r.Handler
 	if err := a.web.ListenAndServe(bind); err != nil {
 		a.log.Fatal("could not start server", zap.Error(err))
 	}
 }
+
+type connection struct {
+	address string
+	weight  float64
+}
+
+type connectionList []connection
+
+func (p connectionList) Len() int           { return len(p) }
+func (p connectionList) Less(i, j int) bool { return p[i].weight < p[j].weight }
+func (p connectionList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }

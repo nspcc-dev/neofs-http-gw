@@ -17,7 +17,6 @@ func attachHealthy(r *router.Router, e stater) {
 		ctx.SetStatusCode(fasthttp.StatusOK)
 		ctx.SetBodyString(healthyState + "ready")
 	})
-
 	r.GET("/-/healthy/", func(c *fasthttp.RequestCtx) {
 		code := fasthttp.StatusOK
 		msg := "healthy"
@@ -26,7 +25,6 @@ func attachHealthy(r *router.Router, e stater) {
 			msg = "unhealthy: " + err.Error()
 			code = fasthttp.StatusBadRequest
 		}
-
 		c.Response.Reset()
 		c.SetStatusCode(code)
 		c.SetContentType(defaultContentType)
