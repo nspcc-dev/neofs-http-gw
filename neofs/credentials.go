@@ -16,10 +16,10 @@ type (
 		PrivateKey() *ecdsa.PrivateKey
 	}
 
-	cred struct {
-		key   *ecdsa.PrivateKey
-		owner *owner.ID
-		wif   string
+	credentials struct {
+		key     *ecdsa.PrivateKey
+		ownerID *owner.ID
+		wif     string
 	}
 )
 
@@ -34,26 +34,26 @@ func NewCredentials(secret string) (Credentials, error) {
 }
 
 // PrivateKey returns ecdsa.PrivateKey.
-func (c *cred) PrivateKey() *ecdsa.PrivateKey {
+func (c *credentials) PrivateKey() *ecdsa.PrivateKey {
 	return c.key
 }
 
 // PublicKey returns ecdsa.PublicKey.
-func (c *cred) PublicKey() *ecdsa.PublicKey {
+func (c *credentials) PublicKey() *ecdsa.PublicKey {
 	return &c.key.PublicKey
 }
 
 // Owner returns owner.ID.
-func (c *cred) Owner() *owner.ID {
-	return c.owner
+func (c *credentials) Owner() *owner.ID {
+	return c.ownerID
 }
 
 // WIF returns string representation of WIF.
-func (c *cred) WIF() string {
+func (c *credentials) WIF() string {
 	return c.wif
 }
 
-func setFromPrivateKey(key *ecdsa.PrivateKey) (*cred, error) {
+func setFromPrivateKey(key *ecdsa.PrivateKey) (*credentials, error) {
 	wallet, err := owner.NEO3WalletFromPublicKey(&key.PublicKey)
 	if err != nil {
 		return nil, err
@@ -63,5 +63,5 @@ func setFromPrivateKey(key *ecdsa.PrivateKey) (*cred, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &cred{key: key, owner: ownerID, wif: wif}, nil
+	return &credentials{key: key, ownerID: ownerID, wif: wif}, nil
 }

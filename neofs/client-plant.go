@@ -102,9 +102,27 @@ func (cc *neofsClient) OwnerID() *owner.ID {
 	return cc.ownerID
 }
 
-func NewClientPlant(ctx context.Context, address string, creds Credentials) (ClientPlant, error) {
+type Connection struct {
+	address string
+	weight  float64
+}
+
+type ConnectionList []Connection
+
+func (p ConnectionList) Len() int           { return len(p) }
+func (p ConnectionList) Less(i, j int) bool { return p[i].weight < p[j].weight }
+func (p ConnectionList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+func (cl *ConnectionList) Add(address string, weight float64) ConnectionList {
+	*cl = append(*cl, Connection{address, weight})
+	return *cl
+}
+
+func NewClientPlant(ctx context.Context, connectionList ConnectionList, creds Credentials) (ClientPlant, error) {
 	toctx, c := context.WithTimeout(ctx, nodeConnectionTimeout)
 	defer c()
+	// TODO: Use connection pool here.
+	address := connectionList[0].address
 	conn, err := grpc.DialContext(toctx, address, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		if err == context.DeadlineExceeded {

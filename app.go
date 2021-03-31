@@ -18,14 +18,13 @@ import (
 
 type (
 	app struct {
-		log                    *zap.Logger
-		plant                  neofs.ClientPlant
-		cfg                    *viper.Viper
-		auxiliaryLog           logger.Logger
-		web                    *fasthttp.Server
-		jobDone                chan struct{}
-		webDone                chan struct{}
-		enableDefaultTimestamp bool
+		log          *zap.Logger
+		plant        neofs.ClientPlant
+		cfg          *viper.Viper
+		auxiliaryLog logger.Logger
+		webServer    *fasthttp.Server
+		jobDone      chan struct{}
+		webDone      chan struct{}
 	}
 
 	App interface {
@@ -57,61 +56,55 @@ func WithConfig(c *viper.Viper) Option {
 
 func newApp(ctx context.Context, opt ...Option) App {
 	a := &app{
-		log:     zap.L(),
-		cfg:     viper.GetViper(),
-		web:     new(fasthttp.Server),
-		jobDone: make(chan struct{}),
-		webDone: make(chan struct{}),
+		log:       zap.L(),
+		cfg:       viper.GetViper(),
+		webServer: new(fasthttp.Server),
+		jobDone:   make(chan struct{}),
+		webDone:   make(chan struct{}),
 	}
 	for i := range opt {
 		opt[i](a)
 	}
-	a.enableDefaultTimestamp = a.cfg.GetBool(cfgUploaderHeaderEnableDefaultTimestamp)
 	a.auxiliaryLog = logger.GRPC(a.log)
-
 	if a.cfg.GetBool(cmdVerbose) {
 		grpclog.SetLoggerV2(a.auxiliaryLog)
 	}
-
 	// conTimeout := a.cfg.GetDuration(cfgConTimeout)
 	// reqTimeout := a.cfg.GetDuration(cfgReqTimeout)
 	// tckTimeout := a.cfg.GetDuration(cfgRebalance)
-
 	// -- setup FastHTTP server --
-	a.web.Name = "neofs-http-gate"
-	a.web.ReadBufferSize = a.cfg.GetInt(cfgWebReadBufferSize)
-	a.web.WriteBufferSize = a.cfg.GetInt(cfgWebWriteBufferSize)
-	a.web.ReadTimeout = a.cfg.GetDuration(cfgWebReadTimeout)
-	a.web.WriteTimeout = a.cfg.GetDuration(cfgWebWriteTimeout)
-	a.web.DisableHeaderNamesNormalizing = true
-	a.web.NoDefaultServerHeader = true
-	a.web.NoDefaultContentType = true
-	a.web.MaxRequestBodySize = a.cfg.GetInt(cfgWebMaxRequestBodySize)
-
+	a.webServer.Name = "neofs-http-gate"
+	a.webServer.ReadBufferSize = a.cfg.GetInt(cfgWebReadBufferSize)
+	a.webServer.WriteBufferSize = a.cfg.GetInt(cfgWebWriteBufferSize)
+	a.webServer.ReadTimeout = a.cfg.GetDuration(cfgWebReadTimeout)
+	a.webServer.WriteTimeout = a.cfg.GetDuration(cfgWebWriteTimeout)
+	a.webServer.DisableHeaderNamesNormalizing = true
+	a.webServer.NoDefaultServerHeader = true
+	a.webServer.NoDefaultContentType = true
+	a.webServer.MaxRequestBodySize = a.cfg.GetInt(cfgWebMaxRequestBodySize)
 	// -- -- -- -- -- -- FIXME -- -- -- -- -- --
 	// Does not work with StreamRequestBody,
 	// some bugs with readMultipartForm
 	// https://github.com/valyala/fasthttp/issues/968
-	a.web.DisablePreParseMultipartForm = true
-	a.web.StreamRequestBody = a.cfg.GetBool(cfgWebStreamRequestBody)
+	a.webServer.DisablePreParseMultipartForm = true
+	a.webServer.StreamRequestBody = a.cfg.GetBool(cfgWebStreamRequestBody)
 	// -- -- -- -- -- -- -- -- -- -- -- -- -- --
-
-	var cl connectionList
+	var cl neofs.ConnectionList
 	for i := 0; ; i++ {
 		address := a.cfg.GetString(cfgPeers + "." + strconv.Itoa(i) + ".address")
 		weight := a.cfg.GetFloat64(cfgPeers + "." + strconv.Itoa(i) + ".weight")
 		if address == "" {
 			break
 		}
-		cl = append(cl, connection{address: address, weight: weight})
-		a.log.Info("add connection peer", zap.String("address", address), zap.Float64("weight", weight))
+		cl.Add(address, weight)
+		a.log.Info("add connection", zap.String("address", address), zap.Float64("weight", weight))
 	}
 	sort.Sort(sort.Reverse(cl))
-	cred, err := neofs.NewCredentials(a.cfg.GetString(cmdNeoFSKey))
+	creds, err := neofs.NewCredentials(a.cfg.GetString(cmdNeoFSKey))
 	if err != nil {
-		a.log.Fatal("could not get credentials", zap.Error(err))
+		a.log.Fatal("could not get neofs credentials", zap.Error(err))
 	}
-	a.plant, err = neofs.NewClientPlant(ctx, cl[0].address, cred)
+	a.plant, err = neofs.NewClientPlant(ctx, cl, creds)
 	if err != nil {
 		a.log.Fatal("failed to create neofs client")
 	}
@@ -120,7 +113,6 @@ func newApp(ctx context.Context, opt ...Option) App {
 
 func (a *app) Wait() {
 	a.log.Info("starting application")
-
 	select {
 	case <-a.jobDone: // wait for job is stopped
 		<-a.webDone
@@ -136,10 +128,11 @@ func (a *app) Worker(ctx context.Context) {
 func (a *app) Serve(ctx context.Context) {
 	go func() {
 		<-ctx.Done()
-		a.log.Info("shutting down web server", zap.Error(a.web.Shutdown()))
+		a.log.Info("shutting down web server", zap.Error(a.webServer.Shutdown()))
 		close(a.webDone)
 	}()
-	uploader := uploader.New(a.log, a.plant, a.enableDefaultTimestamp)
+	edts := a.cfg.GetBool(cfgUploaderHeaderEnableDefaultTimestamp)
+	uploader := uploader.New(a.log, a.plant, edts)
 	downloader, err := downloader.New(ctx, a.log, a.plant)
 	if err != nil {
 		a.log.Fatal("failed to create downloader", zap.Error(err))
@@ -167,19 +160,8 @@ func (a *app) Serve(ctx context.Context) {
 	}
 	bind := a.cfg.GetString(cfgListenAddress)
 	a.log.Info("running web server", zap.String("address", bind))
-	a.web.Handler = r.Handler
-	if err := a.web.ListenAndServe(bind); err != nil {
+	a.webServer.Handler = r.Handler
+	if err := a.webServer.ListenAndServe(bind); err != nil {
 		a.log.Fatal("could not start server", zap.Error(err))
 	}
 }
-
-type connection struct {
-	address string
-	weight  float64
-}
-
-type connectionList []connection
-
-func (p connectionList) Len() int           { return len(p) }
-func (p connectionList) Less(i, j int) bool { return p[i].weight < p[j].weight }
-func (p connectionList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
