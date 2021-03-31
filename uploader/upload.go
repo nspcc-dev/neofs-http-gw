@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/nspcc-dev/neofs-api-go/pkg/container"
@@ -16,6 +17,12 @@ import (
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
+
+var putOptionsPool = sync.Pool{
+	New: func() interface{} {
+		return new(neofs.PutOptions)
+	},
+}
 
 type Uploader struct {
 	log                    *zap.Logger
@@ -89,15 +96,14 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		attributes = append(attributes, timestamp)
 	}
 	oid, bt := u.fetchOwnerAndBearerToken(c)
-	// prepares new object and fill it
+	// Prepare a new object and fill it.
 	raw := object.NewRaw()
 	raw.SetContainerID(cid)
 	raw.SetOwnerID(oid)
 	raw.SetAttributes(attributes...)
-	// tries to put file into NeoFS or throw error
-	// if addr, err = a.plant.Object().Put(c, raw.Object(), sdk.WithPutReader(file)); err != nil {
-	// TODO: Take this from a sync pool.
-	putOpts := new(neofs.PutOptions)
+	putOpts := putOptionsPool.Get().(*neofs.PutOptions)
+	defer putOptionsPool.Put(putOpts)
+	// Try to put file into NeoFS or throw an error.
 	putOpts.Client, putOpts.SessionToken, err = u.plant.GetReusableArtifacts(c)
 	if err != nil {
 		log.Error("failed to get neofs client's reusable artifacts", zap.Error(err))
@@ -114,14 +120,14 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		c.Error("could not store file in NeoFS", fasthttp.StatusBadRequest)
 		return
 	}
-	// tries to return response, otherwise, if something went wrong throw error
+	// Try to return the response, otherwise, if something went wrong, throw an error.
 	if err = newPutResponse(addr).encode(c); err != nil {
 		log.Error("could not prepare response", zap.Error(err))
 		c.Error("could not prepare response", fasthttp.StatusBadRequest)
 
 		return
 	}
-	// reports status code and content type
+	// Report status code and content type.
 	c.Response.SetStatusCode(fasthttp.StatusOK)
 	c.Response.Header.SetContentType(jsonHeader)
 }

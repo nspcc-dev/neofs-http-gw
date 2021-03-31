@@ -1,6 +1,7 @@
-package main
+package downloader
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"path"
@@ -9,8 +10,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nspcc-dev/neofs-api-go/pkg/client"
 	"github.com/nspcc-dev/neofs-api-go/pkg/container"
 	"github.com/nspcc-dev/neofs-api-go/pkg/object"
+	"github.com/nspcc-dev/neofs-api-go/pkg/token"
 	"github.com/nspcc-dev/neofs-http-gate/neofs"
 	"github.com/nspcc-dev/neofs-http-gate/tokens"
 	"github.com/pkg/errors"
@@ -18,6 +21,20 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+)
+
+var (
+	getOptionsPool = sync.Pool{
+		New: func() interface{} {
+			return new(neofs.GetOptions)
+		},
+	}
+
+	searchOptionsPool = sync.Pool{
+		New: func() interface{} {
+			return new(neofs.SearchOptions)
+		},
+	}
 )
 
 type (
@@ -29,8 +46,8 @@ type (
 
 	request struct {
 		*fasthttp.RequestCtx
-		log *zap.Logger
-		obj neofs.ObjectClient
+		log          *zap.Logger
+		objectClient neofs.ObjectClient
 	}
 
 	objectIDs []*object.ID
@@ -61,7 +78,7 @@ func (r *request) receiveFile(options *neofs.GetOptions) {
 	}
 	writer := newDetector(r.Response.BodyWriter())
 	options.Writer = writer
-	obj, err := r.obj.Get(r.RequestCtx, options)
+	obj, err := r.objectClient.Get(r.RequestCtx, options)
 	if err != nil {
 		r.log.Error(
 			"could not receive object",
@@ -120,15 +137,34 @@ func (o objectIDs) Slice() []string {
 	return res
 }
 
-func (a *app) request(ctx *fasthttp.RequestCtx, log *zap.Logger) *request {
-	return &request{
-		RequestCtx: ctx,
-		log:        log,
-		obj:        a.plant.Object(),
+type Downloader struct {
+	log           *zap.Logger
+	plant         neofs.ClientPlant
+	getOperations struct {
+		client       client.Client
+		sessionToken *token.SessionToken
 	}
 }
 
-func (a *app) byAddress(c *fasthttp.RequestCtx) {
+func New(ctx context.Context, log *zap.Logger, plant neofs.ClientPlant) (*Downloader, error) {
+	var err error
+	d := &Downloader{log: log, plant: plant}
+	d.getOperations.client, d.getOperations.sessionToken, err = d.plant.GetReusableArtifacts(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get neofs client's reusable artifacts")
+	}
+	return d, nil
+}
+
+func (a *Downloader) newRequest(ctx *fasthttp.RequestCtx, log *zap.Logger) *request {
+	return &request{
+		RequestCtx:   ctx,
+		log:          log,
+		objectClient: a.plant.Object(),
+	}
+}
+
+func (a *Downloader) DownloadByAddress(c *fasthttp.RequestCtx) {
 	var (
 		err     error
 		address = object.NewAddress()
@@ -142,16 +178,16 @@ func (a *app) byAddress(c *fasthttp.RequestCtx) {
 		c.Error("wrong object address", fasthttp.StatusBadRequest)
 		return
 	}
-	// TODO: Take this from a sync-pool.
-	getOpts := new(neofs.GetOptions)
+	getOpts := getOptionsPool.Get().(*neofs.GetOptions)
+	defer getOptionsPool.Put(getOpts)
 	getOpts.Client = a.getOperations.client
 	getOpts.SessionToken = a.getOperations.sessionToken
 	getOpts.ObjectAddress = address
 	getOpts.Writer = nil
-	a.request(c, log).receiveFile(getOpts)
+	a.newRequest(c, log).receiveFile(getOpts)
 }
 
-func (a *app) byAttribute(c *fasthttp.RequestCtx) {
+func (a *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
 	var (
 		err     error
 		scid, _ = c.UserValue("cid").(string)
@@ -165,8 +201,8 @@ func (a *app) byAttribute(c *fasthttp.RequestCtx) {
 		c.Error("wrong container id", fasthttp.StatusBadRequest)
 		return
 	}
-	// TODO: Take this from a sync-pool.
-	searchOpts := new(neofs.SearchOptions)
+	searchOpts := searchOptionsPool.Get().(*neofs.SearchOptions)
+	defer searchOptionsPool.Put(searchOpts)
 	searchOpts.Client = a.getOperations.client
 	searchOpts.SessionToken = a.getOperations.sessionToken
 	searchOpts.BearerToken = nil
@@ -191,11 +227,11 @@ func (a *app) byAttribute(c *fasthttp.RequestCtx) {
 	address := object.NewAddress()
 	address.SetContainerID(cid)
 	address.SetObjectID(ids[0])
-	// TODO: Take this from a sync-pool.
-	getOpts := new(neofs.GetOptions)
+	getOpts := getOptionsPool.Get().(*neofs.GetOptions)
+	defer getOptionsPool.Put(getOpts)
 	getOpts.Client = a.getOperations.client
 	getOpts.SessionToken = a.getOperations.sessionToken
 	getOpts.ObjectAddress = address
 	getOpts.Writer = nil
-	a.request(c, log).receiveFile(getOpts)
+	a.newRequest(c, log).receiveFile(getOpts)
 }
