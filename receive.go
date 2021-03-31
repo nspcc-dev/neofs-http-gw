@@ -12,6 +12,7 @@ import (
 	"github.com/nspcc-dev/neofs-api-go/pkg/container"
 	"github.com/nspcc-dev/neofs-api-go/pkg/object"
 	"github.com/nspcc-dev/neofs-http-gate/neofs"
+	"github.com/nspcc-dev/neofs-http-gate/tokens"
 	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
@@ -23,13 +24,11 @@ type (
 	detector struct {
 		io.Writer
 		sync.Once
-
 		contentType string
 	}
 
 	request struct {
 		*fasthttp.RequestCtx
-
 		log *zap.Logger
 		obj neofs.ObjectClient
 	}
@@ -45,7 +44,6 @@ func (d *detector) Write(data []byte) (int, error) {
 	d.Once.Do(func() {
 		d.contentType = http.DetectContentType(data)
 	})
-
 	return d.Writer.Write(data)
 }
 
@@ -56,13 +54,12 @@ func (r *request) receiveFile(options *neofs.GetOptions) {
 		start    = time.Now()
 		filename string
 	)
-	if err = storeBearerToken(r.RequestCtx); err != nil {
+	if err = tokens.StoreBearerToken(r.RequestCtx); err != nil {
 		r.log.Error("could not fetch and store bearer token", zap.Error(err))
 		r.Error("could not fetch and store bearer token", fasthttp.StatusBadRequest)
 		return
 	}
 	writer := newDetector(r.Response.BodyWriter())
-	// obj, err := r.obj.Get(r, address, sdk.WithGetWriter(writer))
 	options.Writer = writer
 	obj, err := r.obj.Get(r.RequestCtx, options)
 	if err != nil {
@@ -84,22 +81,17 @@ func (r *request) receiveFile(options *neofs.GetOptions) {
 		r.Error(msg, code)
 		return
 	}
-
 	if r.Request.URI().QueryArgs().GetBool("download") {
 		dis = "attachment"
 	}
-
 	r.Response.Header.Set("Content-Length", strconv.FormatUint(obj.PayloadSize(), 10))
 	r.Response.Header.Set("x-object-id", obj.ID().String())
 	r.Response.Header.Set("x-owner-id", obj.OwnerID().String())
 	r.Response.Header.Set("x-container-id", obj.ContainerID().String())
-
 	for _, attr := range obj.Attributes() {
 		key := attr.Key()
 		val := attr.Value()
-
 		r.Response.Header.Set("x-"+key, val)
-
 		switch key {
 		case object.AttributeFileName:
 			filename = val
@@ -112,13 +104,10 @@ func (r *request) receiveFile(options *neofs.GetOptions) {
 					zap.Error(err))
 				continue
 			}
-
 			r.Response.Header.Set("Last-Modified",
 				time.Unix(value, 0).Format(time.RFC1123))
 		}
-
 	}
-
 	r.SetContentType(writer.contentType)
 	r.Response.Header.Set("Content-Disposition", dis+"; filename="+path.Base(filename))
 }
@@ -128,16 +117,14 @@ func (o objectIDs) Slice() []string {
 	for _, oid := range o {
 		res = append(res, oid.String())
 	}
-
 	return res
 }
 
 func (a *app) request(ctx *fasthttp.RequestCtx, log *zap.Logger) *request {
 	return &request{
 		RequestCtx: ctx,
-
-		log: log,
-		obj: a.plant.Object(),
+		log:        log,
+		obj:        a.plant.Object(),
 	}
 }
 
@@ -177,7 +164,6 @@ func (a *app) byAttribute(c *fasthttp.RequestCtx) {
 		log.Error("wrong container id", zap.Error(err))
 		c.Error("wrong container id", fasthttp.StatusBadRequest)
 		return
-		// } else if ids, err = a.cli.Object().Search(c, cid, sdk.SearchRootObjects(), sdk.SearchByAttribute(key, val)); err != nil {
 	}
 	// TODO: Take this from a sync-pool.
 	searchOpts := new(neofs.SearchOptions)

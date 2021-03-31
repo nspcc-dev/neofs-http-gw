@@ -1,4 +1,4 @@
-package main
+package tokens
 
 import (
 	"encoding/base64"
@@ -36,7 +36,7 @@ func Test_fromCookie(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.expect, fromCookie(makeTestCookie(tt.actual)))
+			require.Equal(t, tt.expect, BearerTokenFromCookie(makeTestCookie(tt.actual)))
 		})
 	}
 }
@@ -53,7 +53,7 @@ func Test_fromHeader(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.expect, fromHeader(makeTestHeader(tt.actual)))
+			require.Equal(t, tt.expect, BearerTokenFromHeader(makeTestHeader(tt.actual)))
 		})
 	}
 }
@@ -151,10 +151,10 @@ func Test_checkAndPropagateBearerToken(t *testing.T) {
 	ctx := makeTestRequest(t64, "")
 
 	// Expect to see the token within the context.
-	require.NoError(t, storeBearerToken(ctx))
+	require.NoError(t, StoreBearerToken(ctx))
 
 	// Expect to see the same token without errors.
-	actual, err := loadBearerToken(ctx)
+	actual, err := LoadBearerToken(ctx)
 	require.NoError(t, err)
 	require.Equal(t, tkn, actual)
 }

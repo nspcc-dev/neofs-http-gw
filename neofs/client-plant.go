@@ -21,14 +21,17 @@ import (
 
 const (
 	nodeConnectionTimeout = 10 * time.Second
-	maxObjectSize         = uint64(1 << (20 + 6)) // 64MB
+	maxObjectSize         = uint64(1 << 26) // 64MiB
 )
 
-type PutOptions struct {
+type BaseOptions struct {
 	Client       client.Client
 	SessionToken *token.SessionToken
 	BearerToken  *token.BearerToken
-	// ...
+}
+
+type PutOptions struct {
+	BaseOptions
 	ContainerID         *container.ID
 	OwnerID             *owner.ID
 	PrepareObjectOnsite bool
@@ -36,19 +39,13 @@ type PutOptions struct {
 }
 
 type GetOptions struct {
-	Client       client.Client
-	SessionToken *token.SessionToken
-	BearerToken  *token.BearerToken
-	// ...
+	BaseOptions
 	ObjectAddress *object.Address
 	Writer        io.Writer
 }
 
 type SearchOptions struct {
-	Client       client.Client
-	SessionToken *token.SessionToken
-	BearerToken  *token.BearerToken
-	// ...
+	BaseOptions
 	ContainerID *container.ID
 	Attribute   struct {
 		Key   string
@@ -57,10 +54,7 @@ type SearchOptions struct {
 }
 
 type DeleteOptions struct {
-	Client       client.Client
-	SessionToken *token.SessionToken
-	BearerToken  *token.BearerToken
-	// ...
+	BaseOptions
 	ObjectAddress *object.Address
 }
 

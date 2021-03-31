@@ -10,6 +10,7 @@ import (
 	"github.com/nspcc-dev/neofs-api-go/pkg/token"
 	"github.com/nspcc-dev/neofs-http-gate/logger"
 	"github.com/nspcc-dev/neofs-http-gate/neofs"
+	"github.com/nspcc-dev/neofs-http-gate/uploader"
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
@@ -151,10 +152,11 @@ func (a *app) Serve(ctx context.Context) {
 		a.log.Info("shutting down web server", zap.Error(a.web.Shutdown()))
 		close(a.webDone)
 	}()
+	uploader := uploader.New(a.log, a.plant, a.enableDefaultTimestamp)
 	// Configure router.
 	r := router.New()
 	r.RedirectTrailingSlash = true
-	r.POST("/upload/{cid}", a.upload)
+	r.POST("/upload/{cid}", uploader.Upload)
 	a.log.Info("added path /upload/{cid}")
 	r.GET("/get/{cid}/{oid}", a.byAddress)
 	a.log.Info("added path /get/{cid}/{oid}")
