@@ -6,6 +6,7 @@ import (
 	"crypto/ecdsa"
 	"io"
 	"math"
+	"sort"
 	"time"
 
 	"github.com/nspcc-dev/neofs-api-go/pkg/client"
@@ -121,6 +122,7 @@ func (cl *ConnectionList) Add(address string, weight float64) ConnectionList {
 func NewClientPlant(ctx context.Context, connectionList ConnectionList, creds Credentials) (ClientPlant, error) {
 	toctx, c := context.WithTimeout(ctx, nodeConnectionTimeout)
 	defer c()
+	sort.Sort(sort.Reverse(connectionList))
 	// TODO: Use connection pool here.
 	address := connectionList[0].address
 	conn, err := grpc.DialContext(toctx, address, grpc.WithInsecure(), grpc.WithBlock())

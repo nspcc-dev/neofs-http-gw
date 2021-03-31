@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"sort"
 	"strconv"
 
 	"github.com/fasthttp/router"
@@ -99,7 +98,6 @@ func newApp(ctx context.Context, opt ...Option) App {
 		cl.Add(address, weight)
 		a.log.Info("add connection", zap.String("address", address), zap.Float64("weight", weight))
 	}
-	sort.Sort(sort.Reverse(cl))
 	creds, err := neofs.NewCredentials(a.cfg.GetString(cmdNeoFSKey))
 	if err != nil {
 		a.log.Fatal("could not get neofs credentials", zap.Error(err))
