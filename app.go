@@ -6,8 +6,7 @@ import (
 	"strconv"
 
 	"github.com/fasthttp/router"
-	"github.com/nspcc-dev/neofs-api-go/pkg/client"
-	"github.com/nspcc-dev/neofs-api-go/pkg/token"
+	"github.com/nspcc-dev/neofs-http-gate/downloader"
 	"github.com/nspcc-dev/neofs-http-gate/logger"
 	"github.com/nspcc-dev/neofs-http-gate/neofs"
 	"github.com/nspcc-dev/neofs-http-gate/uploader"
@@ -19,14 +18,10 @@ import (
 
 type (
 	app struct {
-		plant         neofs.ClientPlant
-		getOperations struct {
-			client       client.Client
-			sessionToken *token.SessionToken
-		}
 		log                    *zap.Logger
+		plant                  neofs.ClientPlant
 		cfg                    *viper.Viper
-		wlog                   logger.Logger
+		auxiliaryLog           logger.Logger
 		web                    *fasthttp.Server
 		jobDone                chan struct{}
 		webDone                chan struct{}
@@ -62,24 +57,20 @@ func WithConfig(c *viper.Viper) Option {
 
 func newApp(ctx context.Context, opt ...Option) App {
 	a := &app{
-		log: zap.L(),
-		cfg: viper.GetViper(),
-		web: new(fasthttp.Server),
-
+		log:     zap.L(),
+		cfg:     viper.GetViper(),
+		web:     new(fasthttp.Server),
 		jobDone: make(chan struct{}),
 		webDone: make(chan struct{}),
 	}
-
 	for i := range opt {
 		opt[i](a)
 	}
-
 	a.enableDefaultTimestamp = a.cfg.GetBool(cfgUploaderHeaderEnableDefaultTimestamp)
-
-	a.wlog = logger.GRPC(a.log)
+	a.auxiliaryLog = logger.GRPC(a.log)
 
 	if a.cfg.GetBool(cmdVerbose) {
-		grpclog.SetLoggerV2(a.wlog)
+		grpclog.SetLoggerV2(a.auxiliaryLog)
 	}
 
 	// conTimeout := a.cfg.GetDuration(cfgConTimeout)
@@ -124,10 +115,6 @@ func newApp(ctx context.Context, opt ...Option) App {
 	if err != nil {
 		a.log.Fatal("failed to create neofs client")
 	}
-	a.getOperations.client, a.getOperations.sessionToken, err = a.plant.GetReusableArtifacts(ctx)
-	if err != nil {
-		a.log.Fatal("failed to get neofs client's reusable artifacts")
-	}
 	return a
 }
 
@@ -153,21 +140,25 @@ func (a *app) Serve(ctx context.Context) {
 		close(a.webDone)
 	}()
 	uploader := uploader.New(a.log, a.plant, a.enableDefaultTimestamp)
+	downloader, err := downloader.New(ctx, a.log, a.plant)
+	if err != nil {
+		a.log.Fatal("failed to create downloader", zap.Error(err))
+	}
 	// Configure router.
 	r := router.New()
 	r.RedirectTrailingSlash = true
 	r.POST("/upload/{cid}", uploader.Upload)
 	a.log.Info("added path /upload/{cid}")
-	r.GET("/get/{cid}/{oid}", a.byAddress)
+	r.GET("/get/{cid}/{oid}", downloader.DownloadByAddress)
 	a.log.Info("added path /get/{cid}/{oid}")
-	r.GET("/get_by_attribute/{cid}/{attr_key}/{attr_val:*}", a.byAttribute)
+	r.GET("/get_by_attribute/{cid}/{attr_key}/{attr_val:*}", downloader.DownloadByAttribute)
 	a.log.Info("added path /get_by_attribute/{cid}/{attr_key}/{attr_val:*}")
 	// attaching /-/(ready,healthy)
 	// attachHealthy(r, a.pool.Status)
 	// enable metrics
 	if a.cfg.GetBool(cmdMetrics) {
 		a.log.Info("added path /metrics/")
-		attachMetrics(r, a.wlog)
+		attachMetrics(r, a.auxiliaryLog)
 	}
 	// enable pprof
 	if a.cfg.GetBool(cmdPprof) {
