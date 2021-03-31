@@ -1,4 +1,4 @@
-package main
+package tokens
 
 import (
 	"bytes"
@@ -25,20 +25,18 @@ const (
 // 	return
 // }
 
-func fromHeader(h *fasthttp.RequestHeader) []byte {
+func BearerTokenFromHeader(h *fasthttp.RequestHeader) []byte {
 	auth := h.Peek(fasthttp.HeaderAuthorization)
 	if auth == nil || !bytes.HasPrefix(auth, []byte(bearerTokenHdr)) {
 		return nil
 	}
-
 	if auth = bytes.TrimPrefix(auth, []byte(bearerTokenHdr+" ")); len(auth) == 0 {
 		return nil
 	}
-
 	return auth
 }
 
-func fromCookie(h *fasthttp.RequestHeader) []byte {
+func BearerTokenFromCookie(h *fasthttp.RequestHeader) []byte {
 	auth := h.Cookie(bearerTokenHdr)
 	if len(auth) == 0 {
 		return nil
@@ -47,7 +45,7 @@ func fromCookie(h *fasthttp.RequestHeader) []byte {
 	return auth
 }
 
-func storeBearerToken(ctx *fasthttp.RequestCtx) error {
+func StoreBearerToken(ctx *fasthttp.RequestCtx) error {
 	tkn, err := fetchBearerToken(ctx)
 	if err != nil {
 		return err
@@ -55,6 +53,13 @@ func storeBearerToken(ctx *fasthttp.RequestCtx) error {
 	// This is an analog of context.WithValue.
 	ctx.SetUserValue(bearerTokenKey, tkn)
 	return nil
+}
+
+func LoadBearerToken(ctx context.Context) (*token.BearerToken, error) {
+	if tkn, ok := ctx.Value(bearerTokenKey).(*token.BearerToken); ok && tkn != nil {
+		return tkn, nil
+	}
+	return nil, errors.New("found empty bearer token")
 }
 
 func fetchBearerToken(ctx *fasthttp.RequestCtx) (*token.BearerToken, error) {
@@ -68,7 +73,7 @@ func fetchBearerToken(ctx *fasthttp.RequestCtx) (*token.BearerToken, error) {
 		buf []byte
 		tkn = new(token.BearerToken)
 	)
-	for _, parse := range []fromHandler{fromHeader, fromCookie} {
+	for _, parse := range []fromHandler{BearerTokenFromHeader, BearerTokenFromCookie} {
 		if buf = parse(&ctx.Request.Header); buf == nil {
 			continue
 		} else if data, err := base64.StdEncoding.DecodeString(string(buf)); err != nil {
@@ -85,11 +90,4 @@ func fetchBearerToken(ctx *fasthttp.RequestCtx) (*token.BearerToken, error) {
 	}
 
 	return nil, lastErr
-}
-
-func loadBearerToken(ctx context.Context) (*token.BearerToken, error) {
-	if tkn, ok := ctx.Value(bearerTokenKey).(*token.BearerToken); ok && tkn != nil {
-		return tkn, nil
-	}
-	return nil, errors.New("found empty bearer token")
 }
