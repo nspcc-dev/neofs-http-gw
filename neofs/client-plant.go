@@ -72,18 +72,18 @@ type ClientPlant interface {
 	OwnerID() *owner.ID
 }
 
-type objectClient struct {
+type neofsObjectClient struct {
 	key  *ecdsa.PrivateKey
 	conn *grpc.ClientConn
 }
 
-type neofsClient struct {
+type neofsClientPlant struct {
 	key     *ecdsa.PrivateKey
 	ownerID *owner.ID
 	conn    *grpc.ClientConn
 }
 
-func (cc *neofsClient) GetReusableArtifacts(ctx context.Context) (client.Client, *token.SessionToken, error) {
+func (cc *neofsClientPlant) GetReusableArtifacts(ctx context.Context) (client.Client, *token.SessionToken, error) {
 	c, err := client.New(client.WithDefaultPrivateKey(cc.key), client.WithGRPCConnection(cc.conn))
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to create reusable neofs client")
@@ -95,11 +95,11 @@ func (cc *neofsClient) GetReusableArtifacts(ctx context.Context) (client.Client,
 	return c, st, nil
 }
 
-func (cc *neofsClient) Object() ObjectClient {
-	return &objectClient{key: cc.key, conn: cc.conn}
+func (cc *neofsClientPlant) Object() ObjectClient {
+	return &neofsObjectClient{key: cc.key, conn: cc.conn}
 }
 
-func (cc *neofsClient) OwnerID() *owner.ID {
+func (cc *neofsClientPlant) OwnerID() *owner.ID {
 	return cc.ownerID
 }
 
@@ -132,14 +132,14 @@ func NewClientPlant(ctx context.Context, connectionList ConnectionList, creds Cr
 		}
 		return nil, err
 	}
-	return &neofsClient{
+	return &neofsClientPlant{
 		key:     creds.PrivateKey(),
 		ownerID: creds.Owner(),
 		conn:    conn,
 	}, nil
 }
 
-func (oc *objectClient) Put(ctx context.Context, options *PutOptions) (*object.Address, error) {
+func (oc *neofsObjectClient) Put(ctx context.Context, options *PutOptions) (*object.Address, error) {
 	var (
 		err      error
 		objectID *object.ID
@@ -199,7 +199,7 @@ func (oc *objectClient) Put(ctx context.Context, options *PutOptions) (*object.A
 	return address, nil
 }
 
-func (oc *objectClient) Get(ctx context.Context, options *GetOptions) (*object.Object, error) {
+func (oc *neofsObjectClient) Get(ctx context.Context, options *GetOptions) (*object.Object, error) {
 	var (
 		err error
 		obj *object.Object
@@ -216,7 +216,7 @@ func (oc *objectClient) Get(ctx context.Context, options *GetOptions) (*object.O
 	return obj, err
 }
 
-func (oc *objectClient) Search(ctx context.Context, options *SearchOptions) ([]*object.ID, error) {
+func (oc *neofsObjectClient) Search(ctx context.Context, options *SearchOptions) ([]*object.ID, error) {
 	sfs := object.NewSearchFilters()
 	sfs.AddRootFilter()
 	sfs.AddFilter(options.Attribute.Key, options.Attribute.Value, object.MatchStringEqual)
@@ -231,7 +231,7 @@ func (oc *objectClient) Search(ctx context.Context, options *SearchOptions) ([]*
 	)
 }
 
-func (oc *objectClient) Delete(ctx context.Context, options *DeleteOptions) error {
+func (oc *neofsObjectClient) Delete(ctx context.Context, options *DeleteOptions) error {
 	ops := new(client.DeleteObjectParams).WithAddress(options.ObjectAddress)
 	err := options.Client.DeleteObject(
 		ctx,
