@@ -18,6 +18,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const jsonHeader = "application/json; charset=UTF-8"
+
 var putOptionsPool = sync.Pool{
 	New: func() interface{} {
 		return new(neofs.PutOptions)
@@ -140,16 +142,14 @@ func (u *Uploader) fetchOwnerAndBearerToken(ctx context.Context) (*owner.ID, *to
 }
 
 type putResponse struct {
-	OID string `json:"object_id"`
-	CID string `json:"container_id"`
+	ObjectID    string `json:"object_id"`
+	ContainerID string `json:"container_id"`
 }
-
-const jsonHeader = "application/json; charset=UTF-8"
 
 func newPutResponse(addr *object.Address) *putResponse {
 	return &putResponse{
-		OID: addr.ObjectID().String(),
-		CID: addr.ContainerID().String(),
+		ObjectID:    addr.ObjectID().String(),
+		ContainerID: addr.ContainerID().String(),
 	}
 }
 

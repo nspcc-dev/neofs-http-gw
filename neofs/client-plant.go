@@ -6,24 +6,19 @@ import (
 	"crypto/ecdsa"
 	"io"
 	"math"
-	"sort"
-	"time"
 
 	"github.com/nspcc-dev/neofs-api-go/pkg/client"
 	"github.com/nspcc-dev/neofs-api-go/pkg/container"
 	"github.com/nspcc-dev/neofs-api-go/pkg/object"
 	"github.com/nspcc-dev/neofs-api-go/pkg/owner"
 	"github.com/nspcc-dev/neofs-api-go/pkg/token"
+	"github.com/nspcc-dev/neofs-http-gate/connections"
 	objectCore "github.com/nspcc-dev/neofs-node/pkg/core/object"
 	"github.com/nspcc-dev/neofs-node/pkg/services/object_manager/transformer"
 	"github.com/pkg/errors"
-	"google.golang.org/grpc"
 )
 
-const (
-	nodeConnectionTimeout = 10 * time.Second
-	maxObjectSize         = uint64(1 << 26) // 64MiB
-)
+const maxObjectSize = uint64(1 << 28) // Limit objects to 256 MiB.
 
 type BaseOptions struct {
 	Client       client.Client
@@ -74,20 +69,17 @@ type ClientPlant interface {
 
 type neofsObjectClient struct {
 	key  *ecdsa.PrivateKey
-	conn *grpc.ClientConn
+	pool connections.Pool
 }
 
 type neofsClientPlant struct {
 	key     *ecdsa.PrivateKey
 	ownerID *owner.ID
-	conn    *grpc.ClientConn
+	pool    connections.Pool
 }
 
-func (cc *neofsClientPlant) GetReusableArtifacts(ctx context.Context) (client.Client, *token.SessionToken, error) {
-	c, err := client.New(client.WithDefaultPrivateKey(cc.key), client.WithGRPCConnection(cc.conn))
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to create reusable neofs client")
-	}
+func (cp *neofsClientPlant) GetReusableArtifacts(ctx context.Context) (client.Client, *token.SessionToken, error) {
+	c := cp.pool.Client()
 	st, err := c.CreateSession(ctx, math.MaxUint64)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to create reusable neofs session token")
@@ -96,47 +88,18 @@ func (cc *neofsClientPlant) GetReusableArtifacts(ctx context.Context) (client.Cl
 }
 
 func (cc *neofsClientPlant) Object() ObjectClient {
-	return &neofsObjectClient{key: cc.key, conn: cc.conn}
+	return &neofsObjectClient{
+		key:  cc.key,
+		pool: cc.pool,
+	}
 }
 
 func (cc *neofsClientPlant) OwnerID() *owner.ID {
 	return cc.ownerID
 }
 
-type Connection struct {
-	address string
-	weight  float64
-}
-
-type ConnectionList []Connection
-
-func (p ConnectionList) Len() int           { return len(p) }
-func (p ConnectionList) Less(i, j int) bool { return p[i].weight < p[j].weight }
-func (p ConnectionList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
-
-func (cl *ConnectionList) Add(address string, weight float64) ConnectionList {
-	*cl = append(*cl, Connection{address, weight})
-	return *cl
-}
-
-func NewClientPlant(ctx context.Context, connectionList ConnectionList, creds Credentials) (ClientPlant, error) {
-	toctx, c := context.WithTimeout(ctx, nodeConnectionTimeout)
-	defer c()
-	sort.Sort(sort.Reverse(connectionList))
-	// TODO: Use connection pool here.
-	address := connectionList[0].address
-	conn, err := grpc.DialContext(toctx, address, grpc.WithInsecure(), grpc.WithBlock())
-	if err != nil {
-		if err == context.DeadlineExceeded {
-			err = errors.New("failed to connect to neofs node")
-		}
-		return nil, err
-	}
-	return &neofsClientPlant{
-		key:     creds.PrivateKey(),
-		ownerID: creds.Owner(),
-		conn:    conn,
-	}, nil
+func NewClientPlant(ctx context.Context, pool connections.Pool, creds Credentials) (ClientPlant, error) {
+	return &neofsClientPlant{key: creds.PrivateKey(), ownerID: creds.Owner(), pool: pool}, nil
 }
 
 func (oc *neofsObjectClient) Put(ctx context.Context, options *PutOptions) (*object.Address, error) {

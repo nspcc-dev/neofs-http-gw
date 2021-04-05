@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/fasthttp/router"
+	"github.com/nspcc-dev/neofs-http-gate/connections"
 	"github.com/nspcc-dev/neofs-http-gate/downloader"
 	"github.com/nspcc-dev/neofs-http-gate/logger"
 	"github.com/nspcc-dev/neofs-http-gate/neofs"
@@ -68,9 +69,6 @@ func newApp(ctx context.Context, opt ...Option) App {
 	if a.cfg.GetBool(cmdVerbose) {
 		grpclog.SetLoggerV2(a.auxiliaryLog)
 	}
-	// conTimeout := a.cfg.GetDuration(cfgConTimeout)
-	// reqTimeout := a.cfg.GetDuration(cfgReqTimeout)
-	// tckTimeout := a.cfg.GetDuration(cfgRebalance)
 	// -- setup FastHTTP server --
 	a.webServer.Name = "neofs-http-gate"
 	a.webServer.ReadBufferSize = a.cfg.GetInt(cfgWebReadBufferSize)
@@ -82,29 +80,38 @@ func newApp(ctx context.Context, opt ...Option) App {
 	a.webServer.NoDefaultContentType = true
 	a.webServer.MaxRequestBodySize = a.cfg.GetInt(cfgWebMaxRequestBodySize)
 	// -- -- -- -- -- -- FIXME -- -- -- -- -- --
-	// Does not work with StreamRequestBody,
-	// some bugs with readMultipartForm
-	// https://github.com/valyala/fasthttp/issues/968
+	// Does not work with StreamRequestBody due to bugs with
+	// readMultipartForm, see https://github.com/valyala/fasthttp/issues/968
 	a.webServer.DisablePreParseMultipartForm = true
 	a.webServer.StreamRequestBody = a.cfg.GetBool(cfgWebStreamRequestBody)
 	// -- -- -- -- -- -- -- -- -- -- -- -- -- --
-	var cl neofs.ConnectionList
+	creds, err := neofs.NewCredentials(a.cfg.GetString(cmdNeoFSKey))
+	if err != nil {
+		a.log.Fatal("failed to get neofs credentials", zap.Error(err))
+	}
+	pb := new(connections.PoolBuilder)
 	for i := 0; ; i++ {
 		address := a.cfg.GetString(cfgPeers + "." + strconv.Itoa(i) + ".address")
 		weight := a.cfg.GetFloat64(cfgPeers + "." + strconv.Itoa(i) + ".weight")
 		if address == "" {
 			break
 		}
-		cl.Add(address, weight)
+		pb.AddNode(address, weight)
 		a.log.Info("add connection", zap.String("address", address), zap.Float64("weight", weight))
 	}
-	creds, err := neofs.NewCredentials(a.cfg.GetString(cmdNeoFSKey))
-	if err != nil {
-		a.log.Fatal("could not get neofs credentials", zap.Error(err))
+	opts := &connections.PoolBuilderOptions{
+		Key:                     creds.PrivateKey(),
+		NodeConnectionTimeout:   a.cfg.GetDuration(cfgConTimeout),
+		NodeRequestTimeout:      a.cfg.GetDuration(cfgReqTimeout),
+		ClientRebalanceInterval: a.cfg.GetDuration(cfgRebalance),
 	}
-	a.plant, err = neofs.NewClientPlant(ctx, cl, creds)
+	pool, err := pb.Build(ctx, opts)
 	if err != nil {
-		a.log.Fatal("failed to create neofs client")
+		a.log.Fatal("failed to create connection pool", zap.Error(err))
+	}
+	a.plant, err = neofs.NewClientPlant(ctx, pool, creds)
+	if err != nil {
+		a.log.Fatal("failed to create neofs client plant")
 	}
 	return a
 }
@@ -144,8 +151,6 @@ func (a *app) Serve(ctx context.Context) {
 	a.log.Info("added path /get/{cid}/{oid}")
 	r.GET("/get_by_attribute/{cid}/{attr_key}/{attr_val:*}", downloader.DownloadByAttribute)
 	a.log.Info("added path /get_by_attribute/{cid}/{attr_key}/{attr_val:*}")
-	// attaching /-/(ready,healthy)
-	// attachHealthy(r, a.pool.Status)
 	// enable metrics
 	if a.cfg.GetBool(cmdMetrics) {
 		a.log.Info("added path /metrics/")
