@@ -3,7 +3,7 @@ package connections
 import "math/rand"
 
 // https://www.keithschwarz.com/darts-dice-coins/
-type Generator struct {
+type Sampler struct {
 	randomGenerator *rand.Rand
 	probabilities   []float64
 	alias           []int
@@ -22,8 +22,8 @@ func (wl *workList) pop() int {
 	return n
 }
 
-func NewGenerator(probabilities []float64, source rand.Source) *Generator {
-	generator := &Generator{}
+func NewSampler(probabilities []float64, source rand.Source) *Sampler {
+	generator := &Sampler{}
 	var (
 		small workList
 		large workList
@@ -66,7 +66,7 @@ func NewGenerator(probabilities []float64, source rand.Source) *Generator {
 	return generator
 }
 
-func (g *Generator) Next() int {
+func (g *Sampler) Next() int {
 	n := len(g.alias)
 	i := g.randomGenerator.Intn(n)
 	if g.randomGenerator.Float64() < g.probabilities[i] {

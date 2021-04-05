@@ -80,6 +80,9 @@ type neofsClientPlant struct {
 
 func (cp *neofsClientPlant) GetReusableArtifacts(ctx context.Context) (client.Client, *token.SessionToken, error) {
 	c := cp.pool.Client()
+	if c == nil {
+		return nil, nil, errors.New("failed to peek a healthy node to connect to")
+	}
 	st, err := c.CreateSession(ctx, math.MaxUint64)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to create reusable neofs session token")
