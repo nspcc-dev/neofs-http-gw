@@ -23,15 +23,15 @@ func (wl *workList) pop() int {
 }
 
 func NewSampler(probabilities []float64, source rand.Source) *Sampler {
-	generator := &Sampler{}
+	sampler := &Sampler{}
 	var (
 		small workList
 		large workList
 	)
 	n := len(probabilities)
-	generator.randomGenerator = rand.New(source)
-	generator.probabilities = make([]float64, n)
-	generator.alias = make([]int, n)
+	sampler.randomGenerator = rand.New(source)
+	sampler.probabilities = make([]float64, n)
+	sampler.alias = make([]int, n)
 	// Compute scaled probabilities.
 	p := make([]float64, n)
 	for i := 0; i < n; i++ {
@@ -46,8 +46,8 @@ func NewSampler(probabilities []float64, source rand.Source) *Sampler {
 	}
 	for len(large) > 0 && len(small) > 0 {
 		l, g := small.pop(), large.pop()
-		generator.probabilities[l] = p[l]
-		generator.alias[l] = g
+		sampler.probabilities[l] = p[l]
+		sampler.alias[l] = g
 		p[g] = (p[g] + p[l]) - 1
 		if p[g] < 1 {
 			small.push(g)
@@ -57,13 +57,13 @@ func NewSampler(probabilities []float64, source rand.Source) *Sampler {
 	}
 	for len(large) > 0 {
 		g := large.pop()
-		generator.probabilities[g] = 1
+		sampler.probabilities[g] = 1
 	}
 	for len(small) > 0 {
 		l := small.pop()
-		generator.probabilities[l] = 1
+		sampler.probabilities[l] = 1
 	}
-	return generator
+	return sampler
 }
 
 func (g *Sampler) Next() int {
