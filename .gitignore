@@ -4,6 +4,7 @@ cmd/test
 /plugins/
 /vendor/
 
+.test.env
 *.log
 test.sh
 testfile
