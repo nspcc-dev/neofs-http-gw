@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"io"
-	"math"
 
 	"github.com/nspcc-dev/neofs-api-go/pkg/client"
 	"github.com/nspcc-dev/neofs-api-go/pkg/container"
@@ -15,7 +14,6 @@ import (
 	"github.com/nspcc-dev/neofs-http-gate/connections"
 	objectCore "github.com/nspcc-dev/neofs-node/pkg/core/object"
 	"github.com/nspcc-dev/neofs-node/pkg/services/object_manager/transformer"
-	"github.com/pkg/errors"
 )
 
 const maxObjectSize = uint64(1 << 28) // Limit objects to 256 MiB.
@@ -62,7 +60,7 @@ type ObjectClient interface {
 }
 
 type ClientPlant interface {
-	GetReusableArtifacts(ctx context.Context) (client.Client, *token.SessionToken, error)
+	ConnectionArtifacts() (client.Client, *token.SessionToken, error)
 	Object() ObjectClient
 	OwnerID() *owner.ID
 }
@@ -78,16 +76,8 @@ type neofsClientPlant struct {
 	pool    connections.Pool
 }
 
-func (cp *neofsClientPlant) GetReusableArtifacts(ctx context.Context) (client.Client, *token.SessionToken, error) {
-	c := cp.pool.Client()
-	if c == nil {
-		return nil, nil, errors.New("failed to peek a healthy node to connect to")
-	}
-	st, err := c.CreateSession(ctx, math.MaxUint64)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to create reusable neofs session token")
-	}
-	return c, st, nil
+func (cp *neofsClientPlant) ConnectionArtifacts() (client.Client, *token.SessionToken, error) {
+	return cp.pool.ConnectionArtifacts()
 }
 
 func (cc *neofsClientPlant) Object() ObjectClient {

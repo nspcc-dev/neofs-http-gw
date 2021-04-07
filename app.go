@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"math"
 	"strconv"
 
 	"github.com/fasthttp/router"
@@ -104,6 +105,7 @@ func newApp(ctx context.Context, opt ...Option) App {
 		NodeConnectionTimeout:   a.cfg.GetDuration(cfgConTimeout),
 		NodeRequestTimeout:      a.cfg.GetDuration(cfgReqTimeout),
 		ClientRebalanceInterval: a.cfg.GetDuration(cfgRebalance),
+		SessionExpirationEpoch:  math.MaxUint64,
 	}
 	pool, err := pb.Build(ctx, opts)
 	if err != nil {

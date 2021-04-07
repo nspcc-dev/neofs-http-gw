@@ -56,7 +56,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		return
 	}
 	defer func() {
-		// if temporary reader can be closed - close it
+		// If the temporary reader can be closed - let's close it.
 		if file == nil {
 			return
 		}
@@ -106,10 +106,10 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	putOpts := putOptionsPool.Get().(*neofs.PutOptions)
 	defer putOptionsPool.Put(putOpts)
 	// Try to put file into NeoFS or throw an error.
-	putOpts.Client, putOpts.SessionToken, err = u.plant.GetReusableArtifacts(c)
+	putOpts.Client, putOpts.SessionToken, err = u.plant.ConnectionArtifacts()
 	if err != nil {
-		log.Error("failed to get neofs client's reusable artifacts", zap.Error(err))
-		c.Error("failed to get neofs client's reusable artifacts", fasthttp.StatusInternalServerError)
+		log.Error("failed to get neofs connection artifacts", zap.Error(err))
+		c.Error("failed to get neofs connection artifacts", fasthttp.StatusInternalServerError)
 		return
 	}
 	putOpts.BearerToken = bt
@@ -118,8 +118,8 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	putOpts.PrepareObjectOnsite = false
 	putOpts.Reader = file
 	if addr, err = u.plant.Object().Put(c, putOpts); err != nil {
-		log.Error("could not store file in NeoFS", zap.Error(err))
-		c.Error("could not store file in NeoFS", fasthttp.StatusBadRequest)
+		log.Error("could not store file in neofs", zap.Error(err))
+		c.Error("could not store file in neofs", fasthttp.StatusBadRequest)
 		return
 	}
 	// Try to return the response, otherwise, if something went wrong, throw an error.

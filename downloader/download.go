@@ -10,10 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nspcc-dev/neofs-api-go/pkg/client"
 	"github.com/nspcc-dev/neofs-api-go/pkg/container"
 	"github.com/nspcc-dev/neofs-api-go/pkg/object"
-	"github.com/nspcc-dev/neofs-api-go/pkg/token"
 	"github.com/nspcc-dev/neofs-http-gate/neofs"
 	"github.com/nspcc-dev/neofs-http-gate/tokens"
 	"github.com/pkg/errors"
@@ -138,40 +136,35 @@ func (o objectIDs) Slice() []string {
 }
 
 type Downloader struct {
-	log           *zap.Logger
-	plant         neofs.ClientPlant
-	getOperations struct {
-		client       client.Client
-		sessionToken *token.SessionToken
-	}
+	log   *zap.Logger
+	plant neofs.ClientPlant
 }
 
 func New(ctx context.Context, log *zap.Logger, plant neofs.ClientPlant) (*Downloader, error) {
 	var err error
 	d := &Downloader{log: log, plant: plant}
-	d.getOperations.client, d.getOperations.sessionToken, err = d.plant.GetReusableArtifacts(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get neofs client's reusable artifacts")
 	}
 	return d, nil
 }
 
-func (a *Downloader) newRequest(ctx *fasthttp.RequestCtx, log *zap.Logger) *request {
+func (d *Downloader) newRequest(ctx *fasthttp.RequestCtx, log *zap.Logger) *request {
 	return &request{
 		RequestCtx:   ctx,
 		log:          log,
-		objectClient: a.plant.Object(),
+		objectClient: d.plant.Object(),
 	}
 }
 
-func (a *Downloader) DownloadByAddress(c *fasthttp.RequestCtx) {
+func (d *Downloader) DownloadByAddress(c *fasthttp.RequestCtx) {
 	var (
 		err     error
 		address = object.NewAddress()
 		cid, _  = c.UserValue("cid").(string)
 		oid, _  = c.UserValue("oid").(string)
 		val     = strings.Join([]string{cid, oid}, "/")
-		log     = a.log.With(zap.String("cid", cid), zap.String("oid", oid))
+		log     = d.log.With(zap.String("cid", cid), zap.String("oid", oid))
 	)
 	if err = address.Parse(val); err != nil {
 		log.Error("wrong object address", zap.Error(err))
@@ -180,20 +173,24 @@ func (a *Downloader) DownloadByAddress(c *fasthttp.RequestCtx) {
 	}
 	getOpts := getOptionsPool.Get().(*neofs.GetOptions)
 	defer getOptionsPool.Put(getOpts)
-	getOpts.Client = a.getOperations.client
-	getOpts.SessionToken = a.getOperations.sessionToken
+	getOpts.Client, getOpts.SessionToken, err = d.plant.ConnectionArtifacts()
+	if err != nil {
+		log.Error("failed to get neofs connection artifacts", zap.Error(err))
+		c.Error("failed to get neofs connection artifacts", fasthttp.StatusInternalServerError)
+		return
+	}
 	getOpts.ObjectAddress = address
 	getOpts.Writer = nil
-	a.newRequest(c, log).receiveFile(getOpts)
+	d.newRequest(c, log).receiveFile(getOpts)
 }
 
-func (a *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
+func (d *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
 	var (
 		err     error
 		scid, _ = c.UserValue("cid").(string)
 		key, _  = c.UserValue("attr_key").(string)
 		val, _  = c.UserValue("attr_val").(string)
-		log     = a.log.With(zap.String("cid", scid), zap.String("attr_key", key), zap.String("attr_val", val))
+		log     = d.log.With(zap.String("cid", scid), zap.String("attr_key", key), zap.String("attr_val", val))
 	)
 	cid := container.NewID()
 	if err = cid.Parse(scid); err != nil {
@@ -203,14 +200,18 @@ func (a *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
 	}
 	searchOpts := searchOptionsPool.Get().(*neofs.SearchOptions)
 	defer searchOptionsPool.Put(searchOpts)
-	searchOpts.Client = a.getOperations.client
-	searchOpts.SessionToken = a.getOperations.sessionToken
+	searchOpts.Client, searchOpts.SessionToken, err = d.plant.ConnectionArtifacts()
+	if err != nil {
+		log.Error("failed to get neofs connection artifacts", zap.Error(err))
+		c.Error("failed to get neofs connection artifacts", fasthttp.StatusInternalServerError)
+		return
+	}
 	searchOpts.BearerToken = nil
 	searchOpts.ContainerID = cid
 	searchOpts.Attribute.Key = key
 	searchOpts.Attribute.Value = val
 	var ids []*object.ID
-	if ids, err = a.plant.Object().Search(c, searchOpts); err != nil {
+	if ids, err = d.plant.Object().Search(c, searchOpts); err != nil {
 		log.Error("something went wrong", zap.Error(err))
 		c.Error("something went wrong", fasthttp.StatusBadRequest)
 		return
@@ -229,9 +230,13 @@ func (a *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
 	address.SetObjectID(ids[0])
 	getOpts := getOptionsPool.Get().(*neofs.GetOptions)
 	defer getOptionsPool.Put(getOpts)
-	getOpts.Client = a.getOperations.client
-	getOpts.SessionToken = a.getOperations.sessionToken
+	getOpts.Client, getOpts.SessionToken, err = d.plant.ConnectionArtifacts()
+	if err != nil {
+		log.Error("failed to get neofs connection artifacts", zap.Error(err))
+		c.Error("failed to get neofs connection artifacts", fasthttp.StatusInternalServerError)
+		return
+	}
 	getOpts.ObjectAddress = address
 	getOpts.Writer = nil
-	a.newRequest(c, log).receiveFile(getOpts)
+	d.newRequest(c, log).receiveFile(getOpts)
 }
