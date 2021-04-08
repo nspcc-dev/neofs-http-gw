@@ -128,16 +128,12 @@ func (p *pool) ConnectionArtifacts() (client.Client, *token.SessionToken, error)
 		}
 		return nil, nil, errors.New("no healthy client")
 	}
-	var i *int = nil
-	for k := 0; k < 10; k++ {
-		i_ := p.sampler.Next()
-		if p.clientPacks[i_].healthy {
-			i = &i_
+	attempts := 3 * len(p.clientPacks)
+	for k := 0; k < attempts; k++ {
+		i := p.sampler.Next()
+		if cp := p.clientPacks[i]; cp.healthy {
+			return cp.client, cp.sessionToken, nil
 		}
-	}
-	if i != nil {
-		cp := p.clientPacks[*i]
-		return cp.client, cp.sessionToken, nil
 	}
 	return nil, nil, errors.New("no healthy client")
 }
