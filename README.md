@@ -1,25 +1,18 @@
-# NeoFS HTTP Gate
+# NeoFS HTTP Protocol Gateway
 
-NeoFS HTTP Gate is example of tool that provides basic interactions with NeoFS.
-
-- you can download one file per request from NeoFS Network using NeoFS Gate
-- you can upload one file per request into NeoFS Network using NeoFS Gate 
+NeoFS HTTP Protocol Gateway bridges NeoFS internal protocol and HTTP standard.
+- you can download one file per request from NeoFS Network
+- you can upload one file per request into the NeoFS Network
 
 ## Notable make targets
 
 ```
-  Usage:
-
-    make <target>
-
-  Targets:
-
-    deps      Check and ensure dependencies
-    dev       Build development docker images
-    help      Show this help prompt
-    image     Build docker image
-    publish   Publish docker image
-    version   Show current version
+dep          Check and ensure dependencies
+image        Build clean docker image
+dirty-image  Build diry docker image with host-built binaries
+fmts         Run all code formatters
+lint         Run linters
+version      Show current version
 ```
 
 ## Install
