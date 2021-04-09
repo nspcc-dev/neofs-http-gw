@@ -1,63 +1,108 @@
--include .env
--include help.mk
+#!/usr/bin/make -f
 
-VERSION ?= "$(shell git describe --tags 2>/dev/null | sed 's/^v//')"
+REPO ?= $(shell go list -m)
+VERSION ?= $(shell git describe --tags --dirty --always)
+BUILD ?= $(shell date -u --iso=seconds)
+DEBUG ?= false
 
-GRPC_VERSION=$(shell go list -m google.golang.org/grpc | cut -d " " -f 2)
+HUB_IMAGE ?= nspccdev/neofs-http-gw
+HUB_TAG ?= "$(shell echo ${VERSION} | sed 's/^v//')"
 
-HUB_IMAGE=nspccdev/neofs
+# List of binaries to build. For now just one.
+BINDIR = bin
+DIRS = $(BINDIR)
+BINS = "$(BINDIR)/neofs-http-gw"
 
-B=\033[0;1m
-G=\033[0;92m
-R=\033[0m
+.PHONY: help all dep clean fmts fmt imports test lint docker/lint
 
-.PHONY: version deps image publish
+# Make all binaries
+all: $(BINS)
 
-# Show current version
-version:
-	@echo "Current version: $(VERSION)-$(GRPC_VERSION)"
+$(BINS): $(DIRS) dep
+	@echo "⇒ Build $@"
+	CGO_ENABLED=0 \
+	GO111MODULE=on \
+	go build -v -trimpath \
+	-ldflags "-X main.Version=$(VERSION) \
+	-X main.Build=$(BUILD) \
+	-X main.Debug=$(DEBUG)" \
+	-o $@ ./
 
-# Check and ensure dependencies
-deps:
-	@printf "${B}${G}⇒ Ensure vendor${R}: "
-	@go mod tidy -v && echo OK || (echo fail && exit 2)
-	@printf "${B}${G}⇒ Download requirements${R}: "
-	@go mod download && echo OK || (echo fail && exit 2)
-	@printf "${B}${G}⇒ Store vendor localy${R}: "
-	@go mod vendor && echo OK || (echo fail && exit 2)
+$(DIRS):
+	@echo "⇒ Ensure dir: $@"
+	@mkdir -p $@
 
-# Build docker image
-image: VERSION?=
-image: deps
-	@echo "${B}${G}⇒ Build GW docker-image with $(GRPC_VERSION) ${R}"
+# Pull go dependencies
+dep:
+	@printf "⇒ Download requirements: "
+	@CGO_ENABLED=0 \
+	GO111MODULE=on \
+	go mod download && echo OK
+	@printf "⇒ Tidy requirements: "
+	@CGO_ENABLED=0 \
+	GO111MODULE=on \
+	go mod tidy -v && echo OK
+
+# Run all code formatters
+fmts: fmt imports
+
+# Reformat code
+fmt:
+	@echo "⇒ Processing gofmt check"
+	@GO111MODULE=on gofmt -s -w ./
+
+# Reformat imports
+imports:
+	@echo "⇒ Processing goimports check"
+	@GO111MODULE=on goimports -w ./
+
+# Build clean Docker image
+image:
+	@echo "⇒ Build NeoFS HTTP Gateway docker image "
 	@docker build \
+		--build-arg REPO=$(REPO) \
 		--build-arg VERSION=$(VERSION) \
-		 -f Dockerfile \
-		 -t $(HUB_IMAGE)-http-gate:$(VERSION) .
+		--rm \
+		-f Dockerfile \
+		-t $(HUB_IMAGE):$(HUB_TAG) .
 
-# Publish docker image
-publish:
-	@echo "${B}${G}⇒ publish docker image ${R}"
-	@docker push $(HUB_IMAGE)-http-gate:$(VERSION)
+# Build dirty Docker image
+dirty-image:
+	@echo "⇒ Build NeoFS HTTP Gateway dirty docker image "
+	@docker build \
+		--build-arg REPO=$(REPO) \
+		--build-arg VERSION=$(VERSION) \
+		--rm \
+		-f Dockerfile.dirty \
+		-t $(HUB_IMAGE)-dirty:$(HUB_TAG) .
 
-.PHONY: dev
+# Run linters
+lint:
+	@golangci-lint --timeout=5m run
 
-# Build development docker images
-dev: VERSIONS?=$(GRPC_VERSION)
-dev:
-	@echo "=> Build multiple images for $(VERSIONS)"; \
-	git checkout go.{sum,mod}; \
-	for v in $(VERSIONS); do \
-  		curdir=$$(pwd); \
-  		echo "=> Checkout gRPC to $${v}"; \
-  		cd ../grpc-go; \
-  		git checkout $${v} &> /dev/null || (echo  "Release $${v} not found" && exit 2); \
-  		cd ../neofs-api; \
-  		git checkout go.{sum,mod}; \
-  		go get google.golang.org/grpc@$${v}; \
-  		cd $${curdir}; \
-  		cp  go_dev.mod go.mod; \
-  		go get google.golang.org/grpc@$${v}; \
-  		make image VERSION=$(VERSION)-$${v}; \
-  		git checkout go.{sum,mod}; \
-	done
+# Run linters in Docker
+docker/lint:
+	docker run --rm -it \
+	-v `pwd`:/src \
+	-u `stat -c "%u:%g" .` \
+	--env HOME=/src \
+	golangci/golangci-lint:v1.39 bash -c 'cd /src/ && make lint'
+
+# Print version
+version:
+	@echo $(VERSION)
+
+# Show this help prompt
+help:
+	@echo '  Usage:'
+	@echo ''
+	@echo '    make <target>'
+	@echo ''
+	@echo '  Targets:'
+	@echo ''
+	@awk '/^#/{ comment = substr($$0,3) } comment && /^[a-zA-Z][a-zA-Z0-9_-]+ ?:/{ print "   ", $$1, comment }' $(MAKEFILE_LIST) | column -t -s ':' | grep -v 'IGNORE' | sort -u
+
+# Clean up
+clean:
+	rm -rf vendor
+	rm -rf $(BINDIR)

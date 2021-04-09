@@ -1,6 +1,6 @@
+.idea
 bin
 temp
-cmd/test
 /plugins/
 /vendor/
 
@@ -10,3 +10,5 @@ test.sh
 testfile
 .blast.yml
 .neofs-cli.yml
+
+.cache

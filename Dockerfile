@@ -1,33 +1,23 @@
-FROM golang:1 as builder
+FROM golang:1.16-alpine as basebuilder
+RUN apk add --update make bash ca-certificates
 
-
+FROM basebuilder as builder
 ENV GOGC off
 ENV CGO_ENABLED 0
-
-RUN set -x \
-    && apt update \
-    && apt install -y upx-ucl
-
+ARG BUILD=now
+ARG VERSION=dev
+ARG REPO=repository
 WORKDIR /src
 COPY . /src
 
-ARG VERSION=dev
-ENV LDFLAGS "-w -s -X main.Version=${VERSION}"
-RUN set -x \
-    && go build \
-      -v \
-      -mod=vendor \
-      -trimpath \
-      -ldflags "${LDFLAGS} -X main.Build=$(date -u +%s%N)" \
-      -o /go/bin/neofs-gw ./ \
-    && upx -3 /go/bin/neofs-gw
+RUN make
 
 # Executable image
 FROM scratch
 
 WORKDIR /
 
-COPY --from=builder /go/bin/neofs-gw /bin/neofs-gw
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /src/bin/neofs-http-gw /bin/neofs-http-gw
 
-ENTRYPOINT ["/bin/neofs-gw"]
+ENTRYPOINT ["/bin/neofs-http-gw"]
