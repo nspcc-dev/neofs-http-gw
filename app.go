@@ -97,6 +97,9 @@ func newApp(ctx context.Context, opt ...Option) App {
 		if address == "" {
 			break
 		}
+		if weight <= 0 { // unspecified or wrong
+			weight = 1
+		}
 		pb.AddNode(address, weight)
 		a.log.Info("add connection", zap.String("address", address), zap.Float64("weight", weight))
 	}
