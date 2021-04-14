@@ -2,6 +2,9 @@ package neofs
 
 import (
 	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"math/big"
 
 	"github.com/nspcc-dev/neofs-api-go/pkg/owner"
 	crypto "github.com/nspcc-dev/neofs-crypto"
@@ -29,6 +32,25 @@ func NewCredentials(secret string) (Credentials, error) {
 	key, err := crypto.LoadPrivateKey(secret)
 	if err != nil {
 		return nil, err
+	}
+	return setFromPrivateKey(key)
+}
+
+// NewEphemeralCredentials creates new private key and Credentials based on that
+// key.
+func NewEphemeralCredentials() (Credentials, error) {
+	c := elliptic.P256()
+	priv, x, y, err := elliptic.GenerateKey(c, rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	key := &ecdsa.PrivateKey{
+		PublicKey: ecdsa.PublicKey{
+			Curve: c,
+			X:     x,
+			Y:     y,
+		},
+		D: new(big.Int).SetBytes(priv),
 	}
 	return setFromPrivateKey(key)
 }

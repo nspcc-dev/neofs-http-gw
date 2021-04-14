@@ -56,6 +56,11 @@ func WithConfig(c *viper.Viper) Option {
 }
 
 func newApp(ctx context.Context, opt ...Option) App {
+	var (
+		creds neofs.Credentials
+		err   error
+	)
+
 	a := &app{
 		log:       zap.L(),
 		cfg:       viper.GetViper(),
@@ -86,7 +91,13 @@ func newApp(ctx context.Context, opt ...Option) App {
 	a.webServer.DisablePreParseMultipartForm = true
 	a.webServer.StreamRequestBody = a.cfg.GetBool(cfgWebStreamRequestBody)
 	// -- -- -- -- -- -- -- -- -- -- -- -- -- --
-	creds, err := neofs.NewCredentials(a.cfg.GetString(cmdNeoFSKey))
+	keystring := a.cfg.GetString(cmdNeoFSKey)
+	if len(keystring) == 0 {
+		a.log.Info("no key specified, creating one automatically for this run")
+		creds, err = neofs.NewEphemeralCredentials()
+	} else {
+		creds, err = neofs.NewCredentials(keystring)
+	}
 	if err != nil {
 		a.log.Fatal("failed to get neofs credentials", zap.Error(err))
 	}
