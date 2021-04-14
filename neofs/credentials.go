@@ -13,7 +13,6 @@ import (
 type (
 	// Credentials contains methods that needed to work with NeoFS.
 	Credentials interface {
-		WIF() string
 		Owner() *owner.ID
 		PublicKey() *ecdsa.PublicKey
 		PrivateKey() *ecdsa.PrivateKey
@@ -22,7 +21,6 @@ type (
 	credentials struct {
 		key     *ecdsa.PrivateKey
 		ownerID *owner.ID
-		wif     string
 	}
 )
 
@@ -70,20 +68,11 @@ func (c *credentials) Owner() *owner.ID {
 	return c.ownerID
 }
 
-// WIF returns string representation of WIF.
-func (c *credentials) WIF() string {
-	return c.wif
-}
-
 func setFromPrivateKey(key *ecdsa.PrivateKey) (*credentials, error) {
 	wallet, err := owner.NEO3WalletFromPublicKey(&key.PublicKey)
 	if err != nil {
 		return nil, err
 	}
 	ownerID := owner.NewIDFromNeo3Wallet(wallet)
-	wif, err := crypto.WIFEncode(key)
-	if err != nil {
-		return nil, err
-	}
-	return &credentials{key: key, ownerID: ownerID, wif: wif}, nil
+	return &credentials{key: key, ownerID: ownerID}, nil
 }
