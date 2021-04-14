@@ -3,7 +3,6 @@ package connections
 import (
 	"context"
 	"crypto/ecdsa"
-	"math"
 	"math/rand"
 	"sync"
 	"time"
@@ -40,8 +39,8 @@ func (pb *PoolBuilder) Build(ctx context.Context, options *PoolBuilderOptions) (
 	for _, w := range pb.weights {
 		totalWeight += w
 	}
-	if math.Abs(totalWeight-1.0) >= 1e-4 {
-		return nil, errors.New("total weight must be equal to unity")
+	for i, w := range pb.weights {
+		pb.weights[i] = w / totalWeight
 	}
 	var cons = make([]*grpc.ClientConn, len(pb.addresses))
 	for i, address := range pb.addresses {

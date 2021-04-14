@@ -80,5 +80,5 @@ HTTP_GW_WEB_MAX_REQUEST_BODY_SIZE=4194304  - maximum request body size, server r
 Peers preset:
 
 HTTP_GW_PEERS_<N>_ADDRESS = string
-HTTP_GW_PEERS_<N>_WEIGHT = 0..1 (float)
+HTTP_GW_PEERS_<N>_WEIGHT = float
 ```

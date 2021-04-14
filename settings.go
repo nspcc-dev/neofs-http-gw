@@ -183,7 +183,7 @@ func settings() *viper.Viper {
 		fmt.Println()
 
 		fmt.Printf("%s_%s_[N]_ADDRESS = string\n", Prefix, strings.ToUpper(cfgPeers))
-		fmt.Printf("%s_%s_[N]_WEIGHT = 0..1 (float)\n", Prefix, strings.ToUpper(cfgPeers))
+		fmt.Printf("%s_%s_[N]_WEIGHT = float\n", Prefix, strings.ToUpper(cfgPeers))
 
 		os.Exit(0)
 	case version != nil && *version:
