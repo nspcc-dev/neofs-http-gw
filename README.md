@@ -38,6 +38,8 @@ version      Show current version
       --request_timeout duration   gRPC request timeout (default 5s)
       --connect_timeout duration   gRPC connect timeout (default 30s)
       --listen_address string      HTTP gate's listen address (default "0.0.0.0:8082")
+      --tls_certificate string     TLS certificate path
+      --tls_key string             TLS key path
   -p, --peers stringArray          NeoFS nodes
 
 # Environments:
@@ -47,6 +49,8 @@ HTTP_GW_CONNECT_TIMEOUT=duration                 - Timeout for connection
 HTTP_GW_REQUEST_TIMEOUT=duration                 - Timeout for request
 HTTP_GW_REBALANCE_TIMER=duration                 - Time between connections checks
 HTTP_GW_LISTEN_ADDRESS=host:port                 - Address to listen connections
+HTTP_GW_TLS_CERTIFICATE=path                     - File with TLS certificate
+HTTP_GW_TLS_KEY=path                             - File with TLS private key
 HTTP_GW_PEERS_<X>_ADDRESS=host:port              - Address of NeoFS Node
 HTTP_GW_PEERS_<X>_WEIGHT=float                   - Weight of NeoFS Node (1 if not specified)
 HTTP_GW_PPROF=bool                               - Enable/disable pprof (/debug/pprof)

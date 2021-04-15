@@ -178,9 +178,18 @@ func (a *app) Serve(ctx context.Context) {
 		attachProfiler(r)
 	}
 	bind := a.cfg.GetString(cfgListenAddress)
-	a.log.Info("running web server", zap.String("address", bind))
+	tlsCertPath := a.cfg.GetString(cfgTLSCertificate)
+	tlsKeyPath := a.cfg.GetString(cfgTLSKey)
+
 	a.webServer.Handler = r.Handler
-	if err := a.webServer.ListenAndServe(bind); err != nil {
+	if tlsCertPath == "" && tlsKeyPath == "" {
+		a.log.Info("running web server", zap.String("address", bind))
+		err = a.webServer.ListenAndServe(bind)
+	} else {
+		a.log.Info("running web server (TLS-enabled)", zap.String("address", bind))
+		err = a.webServer.ListenAndServeTLS(bind, tlsCertPath, tlsKeyPath)
+	}
+	if err != nil {
 		a.log.Fatal("could not start server", zap.Error(err))
 	}
 }
