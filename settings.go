@@ -26,7 +26,9 @@ const (
 	defaultKeepaliveTime    = 10 * time.Second
 	defaultKeepaliveTimeout = 10 * time.Second
 
-	cfgListenAddress = "listen_address"
+	cfgListenAddress  = "listen_address"
+	cfgTLSCertificate = "tls_certificate"
+	cfgTLSKey         = "tls_key"
 
 	// KeepAlive
 	cfgKeepaliveTime                = "keepalive.time"
@@ -112,6 +114,8 @@ func settings() *viper.Viper {
 	flags.Duration(cfgRebalance, defaultRebalanceTimer, "gRPC connection rebalance timer")
 
 	flags.String(cfgListenAddress, "0.0.0.0:8082", "address to listen")
+	flags.String(cfgTLSCertificate, "", "TLS certificate path")
+	flags.String(cfgTLSKey, "", "TLS key path")
 	peers := flags.StringArrayP(cfgPeers, "p", nil, "NeoFS nodes")
 
 	// set prefers:
