@@ -24,13 +24,11 @@ type (
 		cfg          *viper.Viper
 		auxiliaryLog logger.Logger
 		webServer    *fasthttp.Server
-		jobDone      chan struct{}
 		webDone      chan struct{}
 	}
 
 	App interface {
 		Wait()
-		Worker(context.Context)
 		Serve(context.Context)
 	}
 
@@ -65,7 +63,6 @@ func newApp(ctx context.Context, opt ...Option) App {
 		log:       zap.L(),
 		cfg:       viper.GetViper(),
 		webServer: new(fasthttp.Server),
-		jobDone:   make(chan struct{}),
 		webDone:   make(chan struct{}),
 	}
 	for i := range opt {
@@ -134,16 +131,7 @@ func newApp(ctx context.Context, opt ...Option) App {
 
 func (a *app) Wait() {
 	a.log.Info("starting application")
-	select {
-	case <-a.jobDone: // wait for job is stopped
-		<-a.webDone
-	case <-a.webDone: // wait for web-server is stopped
-		<-a.jobDone
-	}
-}
-
-func (a *app) Worker(ctx context.Context) {
-	close(a.jobDone)
+	<-a.webDone // wait for web-server to be stopped
 }
 
 func (a *app) Serve(ctx context.Context) {

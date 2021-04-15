@@ -15,7 +15,6 @@ func main() {
 	globalContext := global.Context()
 	app := newApp(globalContext, WithLogger(l), WithConfig(v))
 	go app.Serve(globalContext)
-	go app.Worker(globalContext)
 	app.Wait()
 }
 
