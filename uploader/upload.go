@@ -98,11 +98,6 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		attributes = append(attributes, timestamp)
 	}
 	oid, bt := u.fetchOwnerAndBearerToken(c)
-	// Prepare a new object and fill it.
-	raw := object.NewRaw()
-	raw.SetContainerID(cid)
-	raw.SetOwnerID(oid)
-	raw.SetAttributes(attributes...)
 	putOpts := putOptionsPool.Get().(*neofs.PutOptions)
 	defer putOptionsPool.Put(putOpts)
 	// Try to put file into NeoFS or throw an error.
@@ -112,6 +107,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		c.Error("failed to get neofs connection artifacts", fasthttp.StatusInternalServerError)
 		return
 	}
+	putOpts.Attributes = attributes
 	putOpts.BearerToken = bt
 	putOpts.ContainerID = cid
 	putOpts.OwnerID = oid
