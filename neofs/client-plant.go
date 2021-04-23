@@ -1,7 +1,6 @@
 package neofs
 
 import (
-	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"io"
@@ -12,11 +11,7 @@ import (
 	"github.com/nspcc-dev/neofs-api-go/pkg/owner"
 	"github.com/nspcc-dev/neofs-api-go/pkg/token"
 	"github.com/nspcc-dev/neofs-http-gate/connections"
-	objectCore "github.com/nspcc-dev/neofs-node/pkg/core/object"
-	"github.com/nspcc-dev/neofs-node/pkg/services/object_manager/transformer"
 )
-
-const maxObjectSize = uint64(1 << 28) // Limit objects to 256 MiB.
 
 type BaseOptions struct {
 	Client       client.Client
@@ -26,11 +21,10 @@ type BaseOptions struct {
 
 type PutOptions struct {
 	BaseOptions
-	Attributes          []*object.Attribute
-	ContainerID         *container.ID
-	OwnerID             *owner.ID
-	PrepareObjectOnsite bool
-	Reader              io.Reader
+	Attributes  []*object.Attribute
+	ContainerID *container.ID
+	OwnerID     *owner.ID
+	Reader      io.Reader
 }
 
 type GetOptions struct {
@@ -102,58 +96,23 @@ func (oc *neofsObjectClient) Put(ctx context.Context, options *PutOptions) (*obj
 		objectID *object.ID
 	)
 	address := object.NewAddress()
-	if options.PrepareObjectOnsite {
-		rawObject := objectCore.NewRaw()
-		rawObject.SetContainerID(options.ContainerID)
-		rawObject.SetOwnerID(options.OwnerID)
-		rawObject.SetAttributes(options.Attributes...)
-		ns := newNetworkState(ctx, options.Client)
-		objectTarget := transformer.NewPayloadSizeLimiter(maxObjectSize, func() transformer.ObjectTarget {
-			return transformer.NewFormatTarget(&transformer.FormatterParams{
-				Key: oc.key,
-				NextTarget: &remoteClientTarget{
-					ctx:    ctx,
-					client: options.Client,
-				},
-				NetworkState: ns,
-			})
-		})
-		if err = ns.LastError(); err != nil {
-			return nil, err
-		}
-		err = objectTarget.WriteHeader(rawObject)
-		if err != nil {
-			return nil, err
-		}
-		_, err = io.Copy(objectTarget, options.Reader)
-		if err != nil {
-			return nil, err
-		}
-		var ids *transformer.AccessIdentifiers
-		ids, err = objectTarget.Close()
-		if err != nil {
-			return nil, err
-		}
-		address.SetObjectID(ids.SelfID())
-	} else {
-		rawObject := object.NewRaw()
-		rawObject.SetContainerID(options.ContainerID)
-		rawObject.SetOwnerID(options.OwnerID)
-		rawObject.SetAttributes(options.Attributes...)
-		ops := new(client.PutObjectParams).
-			WithObject(rawObject.Object()).
-			WithPayloadReader(options.Reader)
-		objectID, err = options.Client.PutObject(
-			ctx,
-			ops,
-			client.WithSession(options.SessionToken),
-			client.WithBearer(options.BearerToken),
-		)
-		if err != nil {
-			return nil, err
-		}
-		address.SetObjectID(objectID)
+	rawObject := object.NewRaw()
+	rawObject.SetContainerID(options.ContainerID)
+	rawObject.SetOwnerID(options.OwnerID)
+	rawObject.SetAttributes(options.Attributes...)
+	ops := new(client.PutObjectParams).
+		WithObject(rawObject.Object()).
+		WithPayloadReader(options.Reader)
+	objectID, err = options.Client.PutObject(
+		ctx,
+		ops,
+		client.WithSession(options.SessionToken),
+		client.WithBearer(options.BearerToken),
+	)
+	if err != nil {
+		return nil, err
 	}
+	address.SetObjectID(objectID)
 	address.SetContainerID(options.ContainerID)
 	return address, nil
 }
@@ -199,61 +158,4 @@ func (oc *neofsObjectClient) Delete(ctx context.Context, options *DeleteOptions)
 		client.WithBearer(options.BearerToken),
 	)
 	return err
-}
-
-type remoteClientTarget struct {
-	ctx     context.Context
-	client  client.Client
-	object  *object.Object
-	payload []byte
-}
-
-func (rct *remoteClientTarget) WriteHeader(raw *objectCore.RawObject) error {
-	rct.object = raw.Object().SDK()
-	return nil
-}
-
-func (rct *remoteClientTarget) Write(p []byte) (n int, err error) {
-	rct.payload = append(rct.payload, p...)
-	return len(p), nil
-}
-
-func (rct *remoteClientTarget) Close() (*transformer.AccessIdentifiers, error) {
-	id, err := rct.client.PutObject(
-		rct.ctx, new(client.PutObjectParams).
-			WithObject(rct.object).
-			WithPayloadReader(bytes.NewReader(rct.payload)),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return new(transformer.AccessIdentifiers).WithSelfID(id), nil
-}
-
-type networkState struct {
-	ctx       context.Context
-	client    client.Client
-	lastError error
-	onError   func(error)
-}
-
-func newNetworkState(ctx context.Context, client client.Client) *networkState {
-	ns := &networkState{
-		ctx:    ctx,
-		client: client,
-	}
-	ns.onError = func(err error) { ns.lastError = err }
-	return ns
-}
-
-func (ns *networkState) LastError() error {
-	return ns.lastError
-}
-
-func (ns *networkState) CurrentEpoch() uint64 {
-	ce, err := ns.client.NetworkInfo(ns.ctx)
-	if err != nil {
-		ns.onError(err)
-	}
-	return ce.CurrentEpoch()
 }

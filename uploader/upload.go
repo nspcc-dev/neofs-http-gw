@@ -111,7 +111,6 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	putOpts.BearerToken = bt
 	putOpts.ContainerID = cid
 	putOpts.OwnerID = oid
-	putOpts.PrepareObjectOnsite = false
 	putOpts.Reader = file
 	if addr, err = u.plant.Object().Put(c, putOpts); err != nil {
 		log.Error("could not store file in neofs", zap.Error(err))
