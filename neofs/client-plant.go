@@ -26,6 +26,7 @@ type BaseOptions struct {
 
 type PutOptions struct {
 	BaseOptions
+	Attributes          []*object.Attribute
 	ContainerID         *container.ID
 	OwnerID             *owner.ID
 	PrepareObjectOnsite bool
@@ -105,6 +106,7 @@ func (oc *neofsObjectClient) Put(ctx context.Context, options *PutOptions) (*obj
 		rawObject := objectCore.NewRaw()
 		rawObject.SetContainerID(options.ContainerID)
 		rawObject.SetOwnerID(options.OwnerID)
+		rawObject.SetAttributes(options.Attributes...)
 		ns := newNetworkState(ctx, options.Client)
 		objectTarget := transformer.NewPayloadSizeLimiter(maxObjectSize, func() transformer.ObjectTarget {
 			return transformer.NewFormatTarget(&transformer.FormatterParams{
@@ -137,6 +139,7 @@ func (oc *neofsObjectClient) Put(ctx context.Context, options *PutOptions) (*obj
 		rawObject := object.NewRaw()
 		rawObject.SetContainerID(options.ContainerID)
 		rawObject.SetOwnerID(options.OwnerID)
+		rawObject.SetAttributes(options.Attributes...)
 		ops := new(client.PutObjectParams).
 			WithObject(rawObject.Object()).
 			WithPayloadReader(options.Reader)
