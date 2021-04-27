@@ -82,9 +82,6 @@ func newApp(ctx context.Context, opt ...Option) App {
 	a.webServer.NoDefaultServerHeader = true
 	a.webServer.NoDefaultContentType = true
 	a.webServer.MaxRequestBodySize = a.cfg.GetInt(cfgWebMaxRequestBodySize)
-	// -- -- -- -- -- -- FIXME -- -- -- -- -- --
-	// Does not work with StreamRequestBody due to bugs with
-	// readMultipartForm, see https://github.com/valyala/fasthttp/issues/968
 	a.webServer.DisablePreParseMultipartForm = true
 	a.webServer.StreamRequestBody = a.cfg.GetBool(cfgWebStreamRequestBody)
 	// -- -- -- -- -- -- -- -- -- -- -- -- -- --
