@@ -18,7 +18,10 @@ import (
 	"go.uber.org/zap"
 )
 
-const jsonHeader = "application/json; charset=UTF-8"
+const (
+	jsonHeader   = "application/json; charset=UTF-8"
+	drainBufSize = 4096
+)
 
 var putOptionsPool = sync.Pool{
 	New: func() interface{} {
@@ -38,12 +41,14 @@ func New(log *zap.Logger, plant neofs.ClientPlant, enableDefaultTimestamp bool) 
 
 func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	var (
-		err     error
-		file    MultipartFile
-		addr    *object.Address
-		cid     = container.NewID()
-		scid, _ = c.UserValue("cid").(string)
-		log     = u.log.With(zap.String("cid", scid))
+		err        error
+		file       MultipartFile
+		addr       *object.Address
+		cid        = container.NewID()
+		scid, _    = c.UserValue("cid").(string)
+		log        = u.log.With(zap.String("cid", scid))
+		bodyStream = c.RequestBodyStream()
+		drainBuf   = make([]byte, drainBufSize)
 	)
 	if err = tokens.StoreBearerToken(c); err != nil {
 		log.Error("could not fetch bearer token", zap.Error(err))
@@ -69,7 +74,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		)
 	}()
 	boundary := string(c.Request.Header.MultipartFormBoundary())
-	if file, err = fetchMultipartFile(u.log, c.RequestBodyStream(), boundary); err != nil {
+	if file, err = fetchMultipartFile(u.log, bodyStream, boundary); err != nil {
 		log.Error("could not receive multipart/form", zap.Error(err))
 		c.Error("could not receive multipart/form: "+err.Error(), fasthttp.StatusBadRequest)
 		return
@@ -123,6 +128,18 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		c.Error("could not prepare response", fasthttp.StatusBadRequest)
 
 		return
+	}
+	// Multipart is multipart and thus can contain more than one part which
+	// we ignore at the moment. Also, when dealing with chunked encoding
+	// the last zero-length chunk might be left unread (because multipart
+	// reader only cares about its boundary and doesn't look further) and
+	// it will be (erroneously) interpreted as the start of the next
+	// pipelined header. Thus we need to drain the body buffer.
+	for {
+		_, err = bodyStream.Read(drainBuf)
+		if err == io.EOF || err == io.ErrUnexpectedEOF {
+			break
+		}
 	}
 	// Report status code and content type.
 	c.Response.SetStatusCode(fasthttp.StatusOK)
