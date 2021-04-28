@@ -22,3 +22,5 @@ require (
 	golang.org/x/tools v0.0.0-20200123022218-593de606220b // indirect
 	google.golang.org/grpc v1.36.1
 )
+
+replace github.com/valyala/fasthttp => github.com/nspcc-dev/fasthttp v1.19.1-0.20210428122823-ab82e78c7994
