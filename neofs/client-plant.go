@@ -75,15 +75,15 @@ func (cp *neofsClientPlant) ConnectionArtifacts() (client.Client, *token.Session
 	return cp.pool.ConnectionArtifacts()
 }
 
-func (cc *neofsClientPlant) Object() ObjectClient {
+func (cp *neofsClientPlant) Object() ObjectClient {
 	return &neofsObjectClient{
-		key:  cc.key,
-		pool: cc.pool,
+		key:  cp.key,
+		pool: cp.pool,
 	}
 }
 
-func (cc *neofsClientPlant) OwnerID() *owner.ID {
-	return cc.ownerID
+func (cp *neofsClientPlant) OwnerID() *owner.ID {
+	return cp.ownerID
 }
 
 func NewClientPlant(ctx context.Context, pool connections.Pool, creds Credentials) (ClientPlant, error) {
