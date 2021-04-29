@@ -5,5 +5,5 @@ const Prefix = "HTTP_GW"
 var (
 	Build   = "now"
 	Version = "dev"
-	Debug = "false"
+	Debug   = "false"
 )
