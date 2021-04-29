@@ -105,9 +105,6 @@ func (r *request) receiveFile(options *neofs.GetOptions) {
 		dis = "attachment"
 	}
 	r.Response.Header.Set("Content-Length", strconv.FormatUint(obj.PayloadSize(), 10))
-	r.Response.Header.Set("x-object-id", obj.ID().String())
-	r.Response.Header.Set("x-owner-id", obj.OwnerID().String())
-	r.Response.Header.Set("x-container-id", obj.ContainerID().String())
 	for _, attr := range obj.Attributes() {
 		key := attr.Key()
 		val := attr.Value()
@@ -128,6 +125,9 @@ func (r *request) receiveFile(options *neofs.GetOptions) {
 				time.Unix(value, 0).Format(time.RFC1123))
 		}
 	}
+	r.Response.Header.Set("x-object-id", obj.ID().String())
+	r.Response.Header.Set("x-owner-id", obj.OwnerID().String())
+	r.Response.Header.Set("x-container-id", obj.ContainerID().String())
 	r.SetContentType(writer.contentType)
 	r.Response.Header.Set("Content-Disposition", dis+"; filename="+path.Base(filename))
 }
