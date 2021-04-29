@@ -114,6 +114,9 @@ func newApp(ctx context.Context, opt ...Option) App {
 		NodeRequestTimeout:      a.cfg.GetDuration(cfgReqTimeout),
 		ClientRebalanceInterval: a.cfg.GetDuration(cfgRebalance),
 		SessionExpirationEpoch:  math.MaxUint64,
+		KeepaliveTime:           a.cfg.GetDuration(cfgKeepaliveTime),
+		KeepaliveTimeout:        a.cfg.GetDuration(cfgKeepaliveTimeout),
+		KeepalivePermitWoStream: a.cfg.GetBool(cfgKeepalivePermitWithoutStream),
 	}
 	pool, err := pb.Build(ctx, opts)
 	if err != nil {
