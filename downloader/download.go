@@ -63,6 +63,28 @@ func (d *detector) Write(data []byte) (int, error) {
 	return d.Writer.Write(data)
 }
 
+func isValidToken(s string) bool {
+	for _, c := range s {
+		if c <= ' ' || c > 127 {
+			return false
+		}
+		if strings.ContainsRune("()<>@,;:\\\"/[]?={}", c) {
+			return false
+		}
+	}
+	return true
+}
+
+func isValidValue(s string) bool {
+	for _, c := range s {
+		// HTTP specification allows for more technically, but we don't want to escape things.
+		if c < ' ' || c > 127 || c == '"' {
+			return false
+		}
+	}
+	return true
+}
+
 func (r *request) receiveFile(options *neofs.GetOptions) {
 	var (
 		err      error
@@ -108,6 +130,9 @@ func (r *request) receiveFile(options *neofs.GetOptions) {
 	for _, attr := range obj.Attributes() {
 		key := attr.Key()
 		val := attr.Value()
+		if !isValidToken(key) || !isValidValue(val) {
+			continue
+		}
 		r.Response.Header.Set("x-"+key, val)
 		switch key {
 		case object.AttributeFileName:
