@@ -3,13 +3,14 @@ package connections
 import (
 	"context"
 	"crypto/ecdsa"
+	"errors"
+	"fmt"
 	"math/rand"
 	"sync"
 	"time"
 
 	"github.com/nspcc-dev/neofs-api-go/pkg/client"
 	"github.com/nspcc-dev/neofs-api-go/pkg/token"
-	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
 
@@ -91,7 +92,7 @@ func new(ctx context.Context, options *PoolBuilderOptions) (Pool, error) {
 			if epi, err := c.EndpointInfo(ctx); err == nil {
 				address = epi.NodeInfo().Address()
 			}
-			return nil, errors.Wrapf(err, "failed to create neofs session token for client %s", address)
+			return nil, fmt.Errorf("failed to create neofs session token for client %s: %w", address, err)
 		}
 		clientPacks[i] = &clientPack{client: c, sessionToken: st, healthy: true}
 	}
