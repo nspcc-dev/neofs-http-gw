@@ -55,6 +55,6 @@ func (z *zapLogger) Fatal(args ...interface{}) { z.log.Fatal(args...) }
 
 func (z *zapLogger) Fatalln(args ...interface{}) { z.log.Fatal(args...) }
 
-func (z *zapLogger) Fatalf(format string, args ...interface{}) { z.Fatalf(format, args...) }
+func (z *zapLogger) Fatalf(format string, args ...interface{}) { z.log.Fatalf(format, args...) }
 
 func (z *zapLogger) V(int) bool { return z.Enabled(zapcore.DebugLevel) }
