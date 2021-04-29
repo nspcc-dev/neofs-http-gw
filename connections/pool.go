@@ -35,6 +35,9 @@ func (pb *PoolBuilder) AddNode(address string, weight float64) *PoolBuilder {
 }
 
 func (pb *PoolBuilder) Build(ctx context.Context, options *PoolBuilderOptions) (Pool, error) {
+	if len(pb.addresses) == 0 {
+		return nil, errors.New("no NeoFS peers configured")
+	}
 	totalWeight := 0.0
 	for _, w := range pb.weights {
 		totalWeight += w
