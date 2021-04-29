@@ -12,6 +12,7 @@ import (
 	"github.com/nspcc-dev/neofs-api-go/pkg/client"
 	"github.com/nspcc-dev/neofs-api-go/pkg/token"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 )
 
 type PoolBuilderOptions struct {
@@ -19,6 +20,9 @@ type PoolBuilderOptions struct {
 	NodeConnectionTimeout   time.Duration
 	NodeRequestTimeout      time.Duration
 	ClientRebalanceInterval time.Duration
+	KeepaliveTime           time.Duration
+	KeepaliveTimeout        time.Duration
+	KeepalivePermitWoStream bool
 	SessionExpirationEpoch  uint64
 	weights                 []float64
 	connections             []*grpc.ClientConn
@@ -51,7 +55,15 @@ func (pb *PoolBuilder) Build(ctx context.Context, options *PoolBuilderOptions) (
 		con, err := func() (*grpc.ClientConn, error) {
 			toctx, c := context.WithTimeout(ctx, options.NodeConnectionTimeout)
 			defer c()
-			return grpc.DialContext(toctx, address, grpc.WithInsecure(), grpc.WithBlock())
+			return grpc.DialContext(toctx, address,
+				grpc.WithInsecure(),
+				grpc.WithBlock(),
+				grpc.WithKeepaliveParams(keepalive.ClientParameters{
+					Time:                options.KeepaliveTime,
+					Timeout:             options.KeepaliveTimeout,
+					PermitWithoutStream: options.KeepalivePermitWoStream,
+				}),
+			)
 		}()
 		if err != nil {
 			return nil, err
