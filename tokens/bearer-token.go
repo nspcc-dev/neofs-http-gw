@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"errors"
+	"fmt"
 
 	"github.com/nspcc-dev/neofs-api-go/pkg/token"
-	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"
 )
 
@@ -77,10 +78,10 @@ func fetchBearerToken(ctx *fasthttp.RequestCtx) (*token.BearerToken, error) {
 		if buf = parse(&ctx.Request.Header); buf == nil {
 			continue
 		} else if data, err := base64.StdEncoding.DecodeString(string(buf)); err != nil {
-			lastErr = errors.Wrap(err, "could not fetch marshaled from base64")
+			lastErr = fmt.Errorf("can't base64-decode bearer token: %w", err)
 			continue
 		} else if err = tkn.Unmarshal(data); err != nil {
-			lastErr = errors.Wrap(err, "could not unmarshal bearer token")
+			lastErr = fmt.Errorf("can't unmarshal bearer token: %w", err)
 			continue
 		} else if tkn == nil {
 			continue

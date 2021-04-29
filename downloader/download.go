@@ -2,6 +2,8 @@ package downloader
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"path"
@@ -14,7 +16,6 @@ import (
 	"github.com/nspcc-dev/neofs-api-go/pkg/object"
 	"github.com/nspcc-dev/neofs-http-gate/neofs"
 	"github.com/nspcc-dev/neofs-http-gate/tokens"
-	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -84,10 +85,14 @@ func (r *request) receiveFile(options *neofs.GetOptions) {
 			zap.Error(err),
 		)
 		var (
-			msg  = errors.Wrap(err, "could not receive object").Error()
-			code = fasthttp.StatusBadRequest
+			msg   = fmt.Sprintf("could not receive object: %v", err)
+			code  = fasthttp.StatusBadRequest
+			cause = err
 		)
-		if st, ok := status.FromError(errors.Cause(err)); ok && st != nil {
+		for unwrap := errors.Unwrap(err); unwrap != nil; unwrap = errors.Unwrap(cause) {
+			cause = unwrap
+		}
+		if st, ok := status.FromError(cause); ok && st != nil {
 			if st.Code() == codes.NotFound {
 				code = fasthttp.StatusNotFound
 			}
@@ -144,7 +149,7 @@ func New(ctx context.Context, log *zap.Logger, plant neofs.ClientPlant) (*Downlo
 	var err error
 	d := &Downloader{log: log, plant: plant}
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get neofs client's reusable artifacts")
+		return nil, fmt.Errorf("failed to get neofs client's reusable artifacts: %w", err)
 	}
 	return d, nil
 }
