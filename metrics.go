@@ -108,9 +108,10 @@ func metricsHandler(reg prometheus.Gatherer, opts promhttp.HandlerOpts) fasthttp
 			case promhttp.HTTPErrorOnError:
 				c.Error(err.Error(), fasthttp.StatusServiceUnavailable)
 				return true
+			default:
+				// Do nothing in all other cases, including ContinueOnError.
+				return false
 			}
-			// Do nothing in all other cases, including ContinueOnError.
-			return false
 		}
 
 		for _, mf := range mfs {
