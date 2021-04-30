@@ -5,6 +5,7 @@ temp
 /vendor/
 
 .test.env
+*~
 *.log
 test.sh
 testfile
