@@ -19,8 +19,8 @@ Behavior changes:
    object from gate instead of `X-*` (#29)
 
 Improvements:
- * better Makefile (#16, #24, #33)
- * updated documentation (#16, #29)
+ * better Makefile (#16, #24, #33, #34)
+ * updated documentation (#16, #29, #35, #36)
  * updated neofs-api-go to v1.25.0 (#17, #20)
  * updated fasthttp to v1.23.0+ (#17, #29)
  * refactoring, eliminating some dependencies (#20, #29)
