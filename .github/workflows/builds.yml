@@ -1,4 +1,4 @@
-name: Builds and lints
+name: Builds
 
 on:
   pull_request:
@@ -10,17 +10,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
-        with:
-          version: latest
-
   build_cli:
     name: Build CLI
     runs-on: ubuntu-18.04
