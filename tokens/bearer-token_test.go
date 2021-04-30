@@ -82,17 +82,17 @@ func Test_fetchBearerToken(t *testing.T) {
 	}{
 		{name: "empty"},
 
-		{name: "bad base64 header", header: "WRONG BASE64", error: "could not fetch marshaled from base64"},
-		{name: "bad base64 cookie", cookie: "WRONG BASE64", error: "could not fetch marshaled from base64"},
+		{name: "bad base64 header", header: "WRONG BASE64", error: "can't base64-decode bearer token"},
+		{name: "bad base64 cookie", cookie: "WRONG BASE64", error: "can't base64-decode bearer token"},
 
-		{name: "header token unmarshal error", header: "dGVzdAo=", error: "could not unmarshal bearer token"},
-		{name: "cookie token unmarshal error", cookie: "dGVzdAo=", error: "could not unmarshal bearer token"},
+		{name: "header token unmarshal error", header: "dGVzdAo=", error: "can't unmarshal bearer token"},
+		{name: "cookie token unmarshal error", cookie: "dGVzdAo=", error: "can't unmarshal bearer token"},
 
 		{
 			name:   "bad header and cookie",
 			header: "WRONG BASE64",
 			cookie: "dGVzdAo=",
-			error:  "could not unmarshal bearer token",
+			error:  "can't unmarshal bearer token",
 		},
 
 		{

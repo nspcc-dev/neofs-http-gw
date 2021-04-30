@@ -13,7 +13,7 @@ BINDIR = bin
 DIRS = $(BINDIR)
 BINS = "$(BINDIR)/neofs-http-gw"
 
-.PHONY: help all dep clean fmts fmt imports test lint docker/lint
+.PHONY: help all dep clean fmts fmt imports test cover lint docker/lint
 
 # Make all binaries
 all: $(BINS)
@@ -42,6 +42,15 @@ dep:
 	@CGO_ENABLED=0 \
 	GO111MODULE=on \
 	go mod tidy -v && echo OK
+
+# Run tests
+test:
+	@go test ./... -cover
+
+# Run tests with race detection and produce coverage output
+cover:
+	@go test -v -race ./... -coverprofile=coverage.txt -covermode=atomic
+	@go tool cover -html=coverage.txt -o coverage.html
 
 # Run all code formatters
 fmts: fmt imports

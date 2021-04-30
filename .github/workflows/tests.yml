@@ -1,4 +1,4 @@
-name: Builds
+name: Tests
 
 on:
   pull_request:
@@ -10,43 +10,23 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_cli:
-    name: Build CLI
-    runs-on: ubuntu-20.04
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
         with:
-          fetch-depth: 0
+          version: latest
 
-      - name: Setup Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.16
-
-      - name: Restore Go modules from cache
-        uses: actions/cache@v2
-        with:
-          path: /home/runner/go/pkg/mod
-          key: deps-${{ hashFiles('go.sum') }}
-
-      - name: Update Go modules
-        run: make dep
-
-      - name: Build CLI
-        run: make
-
-      - name: Save binary
-        uses: actions/upload-artifact@v2
-        with:
-          name: neofs-http-gw
-          path: bin/neofs-http-gw
-
-  build_image:
-    needs: build_cli
-    name: Build Docker image
+  cover:
+    name: Coverage
     runs-on: ubuntu-20.04
 
+    env:
+      CGO_ENABLED: 0
     steps:
       - uses: actions/checkout@v2
         with:
@@ -66,5 +46,41 @@ jobs:
       - name: Update Go modules
         run: make dep
 
-      - name: Build Docker image
-        run: make image
+      - name: Test and write coverage profile
+        run: make cover
+
+      - name: Upload coverage results to Codecov
+        uses: codecov/codecov-action@v1
+        with:
+          fail_ci_if_error: false
+          path_to_write_report: ./coverage.txt
+          verbose: true
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        go_versions: [ '1.16' ]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '${{ matrix.go_versions }}'
+
+      - name: Restore Go modules from cache
+        uses: actions/cache@v2
+        with:
+          path: /home/runner/go/pkg/mod
+          key: deps-${{ hashFiles('go.sum') }}
+
+      - name: Update Go modules
+        run: make dep
+
+      - name: Run tests
+        run: make test

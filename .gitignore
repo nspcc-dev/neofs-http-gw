@@ -13,3 +13,6 @@ testfile
 .neofs-cli.yml
 
 .cache
+
+coverage.txt
+coverage.html
