@@ -79,4 +79,6 @@ jobs:
 
       - name: Push image with 'latest' tag to registry
         if: ${{ github.event_name == 'release' && github.event.release.target_commitish == 'master' }}
-        run: make image-push-latest
+        run: make image-push
+        env:
+          HUB_TAG: latest

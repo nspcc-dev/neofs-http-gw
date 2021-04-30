@@ -66,6 +66,11 @@ image:
 		-f Dockerfile \
 		-t $(HUB_IMAGE):$(HUB_TAG) .
 
+# Push Docker image to the hub
+image-push:
+	@echo "⇒ Publish image"
+	@docker push $(HUB_IMAGE):$(HUB_TAG)
+
 # Build dirty Docker image
 dirty-image:
 	@echo "⇒ Build NeoFS HTTP Gateway dirty docker image "
