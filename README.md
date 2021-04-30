@@ -11,6 +11,11 @@ NeoFS HTTP Protocol Gateway bridges NeoFS internal protocol and HTTP standard.
 Or you can call `make` to build it from the cloned repository (the binary will
 end up in `bin/neofs-http-gw`).
 
+Or you can also use a [Docker
+image](https://hub.docker.com/r/nspccdev/neofs-http-gw) provided for released
+(and occasionaly unreleased) versions of gateway (`:latest` points to the
+latest stable release).
+
 ### Notable make targets
 
 ```
