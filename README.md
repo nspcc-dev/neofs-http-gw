@@ -1,3 +1,15 @@
+<p align="center">
+<img src="./.github/logo.svg" width="500px" alt="NeoFS">
+</p>
+<p align="center">
+  <a href="https://fs.neo.org">NeoFS</a> is a decentralized distributed object storage integrated with the <a href="https://neo.org">NEO Blockchain</a>.
+</p>
+
+---
+[![Report](https://goreportcard.com/badge/github.com/nspcc-dev/neofs-http-gate)](https://goreportcard.com/report/github.com/nspcc-dev/neofs-http-gate)
+![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/nspcc-dev/neofs-http-gate?sort=semver)
+![License](https://img.shields.io/github/license/nspcc-dev/neofs-http-gate.svg?style=popout)
+
 # NeoFS HTTP Protocol Gateway
 
 NeoFS HTTP Protocol Gateway bridges NeoFS internal protocol and HTTP standard.
