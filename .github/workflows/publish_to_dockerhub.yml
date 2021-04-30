@@ -65,7 +65,7 @@ jobs:
         if: ${{ github.event_name == 'release' && github.event.release.target_commitish == 'master' }}
         run: make image
         env:
-          HUB_TAG:latest
+          HUB_TAG: latest
 
       - name: Login to DockerHub
         uses: docker/login-action@v1
