@@ -133,7 +133,7 @@ func (r *request) receiveFile(options *neofs.GetOptions) {
 		if !isValidToken(key) || !isValidValue(val) {
 			continue
 		}
-		r.Response.Header.Set("x-"+key, val)
+		r.Response.Header.Set("X-Attribute-"+key, val)
 		switch key {
 		case object.AttributeFileName:
 			filename = val

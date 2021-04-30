@@ -213,9 +213,9 @@ set of reply headers generated using the following rules:
  * `x-container-id` contains container ID
  * `x-object-id` contains object ID
  * `x-owner-id` contains owner address
- * all the other NeoFS attributes are converted to `x-*` attributes (but only
+ * all the other NeoFS attributes are converted to `X-Attribute-*` headers (but only
    if they can be safely represented in HTTP header), for example `FileName`
-   attribute becomes `x-FileName`
+   attribute becomes `X-Attribute-FileName` header
 
 ### Uploading
 
