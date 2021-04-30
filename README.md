@@ -265,6 +265,16 @@ object ID, like this:
 }
 ```
 
+#### Authentication
+
+You can always upload files to public containers (open for anyone to put
+objects into), but for restricted containers you need to use bearer tokens
+(which basically is an owner-signed ACL data, refer to NeoFS documentation for
+more details). There are two options to pass them to gateway:
+ * "Authorization" header with "Bearer" type and base64-encoded token in
+   credentials field
+ * "__context_bearer_token_key" cookie with base64-encoded token contents
+
 ### Metrics and Pprof
 
 If enabled, Prometheus metrics are available at `/metrics/` path and Pprof at
