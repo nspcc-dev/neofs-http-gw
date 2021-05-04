@@ -23,12 +23,7 @@ NeoFS HTTP Protocol Gateway bridges NeoFS internal protocol and HTTP standard.
 Or you can call `make` to build it from the cloned repository (the binary will
 end up in `bin/neofs-http-gw`).
 
-Or you can also use a [Docker
-image](https://hub.docker.com/r/nspccdev/neofs-http-gw) provided for released
-(and occasionaly unreleased) versions of gateway (`:latest` points to the
-latest stable release).
-
-### Notable make targets
+Notable make targets:
 
 ```
 dep          Check and ensure dependencies
@@ -38,6 +33,11 @@ fmts         Run all code formatters
 lint         Run linters
 version      Show current version
 ```
+
+Or you can also use a [Docker
+image](https://hub.docker.com/r/nspccdev/neofs-http-gw) provided for released
+(and occasionaly unreleased) versions of gateway (`:latest` points to the
+latest stable release).
 
 ## Execution
 
@@ -54,13 +54,13 @@ $ neofs-http-gw -p 192.168.130.72:8080
 $ HTTP_GW_PEERS_0_ADDRESS=192.168.130.72:8080 neofs-http-gw
 ```
 
-### Configuration
+## Configuration
 
 In general, everything available as CLI parameter can also be specified via
 environment variables, so they're not specifically mentioned in most cases
 (see `--help` also).
 
-#### Nodes and weights
+### Nodes and weights
 
 You can specify multiple `-p` options to add more NeoFS nodes, this will make
 gateway spread requests equally among them (using weight 1 for every node):
@@ -78,7 +78,7 @@ $ HTTP_GW_PEERS_0_ADDRESS=192.168.130.72:8080 HTTP_GW_PEERS_0_WEIGHT=9 \
 This command will make gateway use 192.168.130.72 for 90% of requests and
 192.168.130.71 for remaining 10%.
 
-#### Keys
+### Keys
 
 By default gateway autogenerates key pair it will use for NeoFS requests. If
 for some reason you need to have static keys you can pass them via `--key`
@@ -89,7 +89,7 @@ string or (unencrypted) WIF string. Example:
 $ neofs-http-gw -p 192.168.130.72:8080 -k KxDgvEKzgSBPPfuVfw67oPQBSjidEiqTHURKSDL1R7yGaGYAeYnr
 ```
 
-#### Binding and TLS
+### Binding and TLS
 
 Gateway binds to `0.0.0.0:8082` by default and you can change that with
 `--listen_address` option.
@@ -107,7 +107,7 @@ $ neofs-http-gw -p 192.168.130.72:8080 --listen_address 192.168.130.130:443 \
   --tls_key=key.pem --tls_certificate=cert.pem
 ```
 
-#### HTTP parameters
+### HTTP parameters
 
 You can tune HTTP read and write buffer sizes as well as timeouts with
 `HTTP_GW_WEB_READ_BUFFER_SIZE`, `HTTP_GW_WEB_READ_TIMEOUT`,
@@ -121,19 +121,19 @@ first and only then try sending it to NeoFS).
 `HTTP_GW_WEB_MAX_REQUEST_BODY_SIZE` controls maximum request body size
 limiting uploads to files slightly lower than this limit.
 
-#### NeoFS parameters
+### NeoFS parameters
 
 Gateway can automatically set timestamps for uploaded files based on local
 time source, use `HTTP_GW_UPLOAD_HEADER_USE_DEFAULT_TIMESTAMP` environment
 variable to control this behavior.
 
-#### Monitoring and metrics
+### Monitoring and metrics
 
 Pprof and Prometheus are integrated into the gateway, but not enabled by
 default. To enable them use `--pprof` and `--metrics` flags or
 `HTTP_GW_PPROF`/`HTTP_GW_METRICS` environment variables.
 
-#### Timeouts
+### Timeouts
 
 You can tune gRPC interface parameters with `--connect_timeout` (for
 connection to node) and `--request_timeout` (for request processing over
@@ -148,7 +148,7 @@ if needed.
 All timing options accept values with suffixes, so "15s" is 15 seconds and
 "2m" is 2 minutes.
 
-#### Logging
+### Logging
 
 `--verbose` flag enables gRPC logging and there is a number of environment
 variables to tune logging behavior:
@@ -168,7 +168,7 @@ HTTP_GW_LOGGER_TRACE_LEVEL=string                - Logger show trace on level
 This gateway intentionally provides limited feature set and doesn't try to
 substitute (or completely wrap) regular gRPC NeoFS interface. You can download
 and upload objects with it, but deleting, searching, managing ACLs, creating
-containers  and other activities are not supported and not planned to be
+containers and other activities are not supported and not planned to be
 supported.
 
 ### Downloading
@@ -180,7 +180,6 @@ requests to `/get/$CID/$OID` path, like this:
 
 ```
 $ wget http://localhost:8082/get/Dxhf4PNprrJHWWTG5RGLdfLkJiSQ3AQqit1MSnEPRkDZ/2m8PtaoricLouCn5zE8hAFr3gZEBDCZFe9BEgVJTSocY
-
 ```
 
 There is also more complex interface provided for attribute-based downloads,
@@ -285,12 +284,27 @@ object ID, like this:
 #### Authentication
 
 You can always upload files to public containers (open for anyone to put
-objects into), but for restricted containers you need to use bearer tokens
-(which basically is an owner-signed ACL data, refer to NeoFS documentation for
-more details). There are two options to pass them to gateway:
+objects into), but for restricted containers you need to explicitly allow PUT
+operations for request signed with your HTTP Protocol Gateway keys.
+
+If your don't want to manage gateway's secret keys and adjust eACL rules when
+gateway configuration changes (new gate, key rotation, etc) or you plan to use
+public services, there is an option to let your application backend (or you) to
+issue Bearer Tokens ans pass them from the client via gate down to NeoFS level
+to grant access.
+
+NeoFS Bearer Token basically is a container owner-signed ACL data (refer to NeoFS
+documentation for more details). There are two options to pass them to gateway:
  * "Authorization" header with "Bearer" type and base64-encoded token in
    credentials field
  * "__context_bearer_token_key" cookie with base64-encoded token contents
+
+For example you have a mobile application frontend with a backend part storing
+data in NeoFS. When user authorizes in mobile app, the backend issues a NeoFS
+Bearer token and provides it to the frontend. Then the mobile app may generate
+some data and upload it via any available NeoFS HTTP Protocol Gateway by adding
+the corresponding header to the upload request. Accessing the ACL protected data
+works the same way.
 
 ### Metrics and Pprof
 
