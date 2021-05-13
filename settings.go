@@ -30,12 +30,12 @@ const (
 	cfgTLSCertificate = "tls_certificate"
 	cfgTLSKey         = "tls_key"
 
-	// KeepAlive
+	// KeepAlive.
 	cfgKeepaliveTime                = "keepalive.time"
 	cfgKeepaliveTimeout             = "keepalive.timeout"
 	cfgKeepalivePermitWithoutStream = "keepalive.permit_without_stream"
 
-	// Web
+	// Web.
 	cfgWebReadBufferSize     = "web.read_buffer_size"
 	cfgWebWriteBufferSize    = "web.write_buffer_size"
 	cfgWebReadTimeout        = "web.read_timeout"
@@ -43,12 +43,12 @@ const (
 	cfgWebStreamRequestBody  = "web.stream_request_body"
 	cfgWebMaxRequestBodySize = "web.max_request_body_size"
 
-	// Timeouts
+	// Timeouts.
 	cfgConTimeout = "connect_timeout"
 	cfgReqTimeout = "request_timeout"
 	cfgRebalance  = "rebalance_timer"
 
-	// Logger:
+	// Logger.
 	cfgLoggerLevel              = "logger.level"
 	cfgLoggerFormat             = "logger.format"
 	cfgLoggerTraceLevel         = "logger.trace_level"
@@ -57,18 +57,18 @@ const (
 	cfgLoggerSamplingInitial    = "logger.sampling.initial"
 	cfgLoggerSamplingThereafter = "logger.sampling.thereafter"
 
-	// Uploader Header
+	// Uploader Header.
 	cfgUploaderHeaderEnableDefaultTimestamp = "upload_header.use_default_timestamp"
 
-	// Peers
+	// Peers.
 	cfgPeers = "peers"
 
-	// Application
+	// Application.
 	cfgApplicationName      = "app.name"
 	cfgApplicationVersion   = "app.version"
 	cfgApplicationBuildTime = "app.build_time"
 
-	// command line args
+	// Command line args.
 	cmdHelp     = "help"
 	cmdVersion  = "version"
 	cmdVerbose  = "verbose"
