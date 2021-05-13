@@ -29,16 +29,20 @@ var putOptionsPool = sync.Pool{
 	},
 }
 
+// Uploader is an upload request handler.
 type Uploader struct {
 	log                    *zap.Logger
 	plant                  neofs.ClientPlant
 	enableDefaultTimestamp bool
 }
 
+// New creates a new Uploader using specified logger, connection pool and
+// other options.
 func New(log *zap.Logger, plant neofs.ClientPlant, enableDefaultTimestamp bool) *Uploader {
 	return &Uploader{log, plant, enableDefaultTimestamp}
 }
 
+// Upload handles multipart upload request.
 func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	var (
 		err        error

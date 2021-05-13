@@ -8,6 +8,7 @@ import (
 )
 
 type (
+	// Option represents logger option setter.
 	Option func(o *options)
 
 	options struct {
@@ -77,6 +78,8 @@ func defaults() *options {
 	}
 }
 
+// New returns new zap.Logger using all options specified and stdout used
+// for output.
 func New(opts ...Option) (*zap.Logger, error) {
 	o := defaults()
 	c := zap.NewProductionConfig()

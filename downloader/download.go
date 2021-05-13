@@ -165,11 +165,13 @@ func (o objectIDs) Slice() []string {
 	return res
 }
 
+// Downloader is a download request handler.
 type Downloader struct {
 	log   *zap.Logger
 	plant neofs.ClientPlant
 }
 
+// New creates an instance of Downloader using specified options.
 func New(ctx context.Context, log *zap.Logger, plant neofs.ClientPlant) (*Downloader, error) {
 	var err error
 	d := &Downloader{log: log, plant: plant}
@@ -187,6 +189,7 @@ func (d *Downloader) newRequest(ctx *fasthttp.RequestCtx, log *zap.Logger) *requ
 	}
 }
 
+// DownloadByAddress handles download requests using simple cid/oid format.
 func (d *Downloader) DownloadByAddress(c *fasthttp.RequestCtx) {
 	var (
 		err     error
@@ -214,6 +217,7 @@ func (d *Downloader) DownloadByAddress(c *fasthttp.RequestCtx) {
 	d.newRequest(c, log).receiveFile(getOpts)
 }
 
+// DownloadByAttribute handles attribute-based download requests.
 func (d *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
 	var (
 		err     error

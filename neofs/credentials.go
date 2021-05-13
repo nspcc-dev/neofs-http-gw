@@ -24,8 +24,8 @@ type (
 	}
 )
 
-// New creates an instance of Credentials through string representation of secret.
-//     It allows passing WIF, path, hex-encoded and others.
+// NewCredentials creates an instance of Credentials through string
+// representation of secret. It allows passing WIF, path, hex-encoded and others.
 func NewCredentials(secret string) (Credentials, error) {
 	key, err := crypto.LoadPrivateKey(secret)
 	if err != nil {

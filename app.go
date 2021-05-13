@@ -27,14 +27,17 @@ type (
 		webDone      chan struct{}
 	}
 
+	// App is an interface for the main gateway function.
 	App interface {
 		Wait()
 		Serve(context.Context)
 	}
 
+	// Option is an application option.
 	Option func(a *app)
 )
 
+// WithLogger returns Option to set a specific logger.
 func WithLogger(l *zap.Logger) Option {
 	return func(a *app) {
 		if l == nil {
@@ -44,6 +47,7 @@ func WithLogger(l *zap.Logger) Option {
 	}
 }
 
+// WithConfig returns Option to use specific Viper configuration.
 func WithConfig(c *viper.Viper) Option {
 	return func(a *app) {
 		if c == nil {

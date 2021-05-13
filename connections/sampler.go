@@ -2,13 +2,17 @@ package connections
 
 import "math/rand"
 
-// See Vose's Alias Method (https://www.keithschwarz.com/darts-dice-coins/).
+// Sampler implements weighted random number generation using Vose's Alias
+// Method (https://www.keithschwarz.com/darts-dice-coins/).
 type Sampler struct {
 	randomGenerator *rand.Rand
 	probabilities   []float64
 	alias           []int
 }
 
+// NewSampler creates new Sampler with a given set of probabilities using
+// given source of randomness. Created Sampler will produce numbers from
+// 0 to len(probabilities).
 func NewSampler(probabilities []float64, source rand.Source) *Sampler {
 	sampler := &Sampler{}
 	var (
@@ -53,6 +57,7 @@ func NewSampler(probabilities []float64, source rand.Source) *Sampler {
 	return sampler
 }
 
+// Next returns the next (not so) random number from Sampler.
 func (g *Sampler) Next() int {
 	n := len(g.alias)
 	i := g.randomGenerator.Intn(n)
