@@ -3,7 +3,6 @@
 REPO ?= $(shell go list -m)
 VERSION ?= $(shell git describe --tags --dirty --always)
 BUILD ?= $(shell date -u --iso=seconds)
-DEBUG ?= false
 
 HUB_IMAGE ?= nspccdev/neofs-http-gw
 HUB_TAG ?= "$(shell echo ${VERSION} | sed 's/^v//')"
@@ -24,8 +23,7 @@ $(BINS): $(DIRS) dep
 	GO111MODULE=on \
 	go build -v -trimpath \
 	-ldflags "-X main.Version=$(VERSION) \
-	-X main.Build=$(BUILD) \
-	-X main.Debug=$(DEBUG)" \
+	-X main.Build=$(BUILD)" \
 	-o $@ ./
 
 $(DIRS):
