@@ -7,7 +7,7 @@ run:
   timeout: 5m
 
   # include test files or not, default is true
-  tests: false
+  tests: true
 
 # output configuration options
 output:
@@ -32,16 +32,28 @@ linters:
     - golint
 
     # some default golangci-lint linters
+    - deadcode
     - errcheck
     - gosimple
     - ineffassign
     - staticcheck
+    - structcheck
     - typecheck
+    - unused
+    - varcheck
 
     # extra linters
     - exhaustive
+    - godot
     - gofmt
     - whitespace
     - goimports
   disable-all: true
   fast: false
+
+issues:
+  include:
+    - EXC0002 # should have a comment
+    - EXC0003 # test/Test ... consider calling this
+    - EXC0004 # govet
+    - EXC0005 # C-style breaks
