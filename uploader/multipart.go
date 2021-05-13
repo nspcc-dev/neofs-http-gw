@@ -7,6 +7,8 @@ import (
 	"go.uber.org/zap"
 )
 
+// MultipartFile provides standard ReadCloser interface and also allows one to
+// get file name, it's used for multipart uploads.
 type MultipartFile interface {
 	io.ReadCloser
 	FileName() string

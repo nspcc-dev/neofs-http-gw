@@ -26,6 +26,7 @@ const (
 // 	return
 // }
 
+// BearerTokenFromHeader extracts bearer token from Authorization request header.
 func BearerTokenFromHeader(h *fasthttp.RequestHeader) []byte {
 	auth := h.Peek(fasthttp.HeaderAuthorization)
 	if auth == nil || !bytes.HasPrefix(auth, []byte(bearerTokenHdr)) {
@@ -37,6 +38,7 @@ func BearerTokenFromHeader(h *fasthttp.RequestHeader) []byte {
 	return auth
 }
 
+// BearerTokenFromCookie extracts bearer token from cookies.
 func BearerTokenFromCookie(h *fasthttp.RequestHeader) []byte {
 	auth := h.Cookie(bearerTokenHdr)
 	if len(auth) == 0 {
@@ -46,6 +48,8 @@ func BearerTokenFromCookie(h *fasthttp.RequestHeader) []byte {
 	return auth
 }
 
+// StoreBearerToken extracts bearer token from header or cookie and stores
+// it in the request context.
 func StoreBearerToken(ctx *fasthttp.RequestCtx) error {
 	tkn, err := fetchBearerToken(ctx)
 	if err != nil {
@@ -56,6 +60,8 @@ func StoreBearerToken(ctx *fasthttp.RequestCtx) error {
 	return nil
 }
 
+// LoadBearerToken returns bearer token stored in context given (if it's
+// present there).
 func LoadBearerToken(ctx context.Context) (*token.BearerToken, error) {
 	if tkn, ok := ctx.Value(bearerTokenKey).(*token.BearerToken); ok && tkn != nil {
 		return tkn, nil
