@@ -47,6 +47,10 @@ can be done either via `-p` parameter or via `HTTP_GW_PEERS_<N>_ADDRESS` and
 `HTTP_GW_PEERS_<N>_WEIGHT` environment variables (the gate supports multiple
 NeoFS nodes with weighted load balancing).
 
+If you're launching HTTP gateway in bundle with [neofs-dev-env](https://github.com/nspcc-dev/neofs-dev-env), 
+you can get an IP address of the node in output of `make hosts` command 
+(with s0*.neofs.devenv name).
+
 These two commands are functionally equivalent, they run the gate with one
 backend node (and otherwise default settings):
 ```
@@ -81,9 +85,13 @@ This command will make gateway use 192.168.130.72 for 90% of requests and
 ### Keys
 
 By default gateway autogenerates key pair it will use for NeoFS requests. If
-for some reason you need to have static keys you can pass them via `--key`
-parameter. The key can be a path to private key file (as raw bytes), a hex
-string or (unencrypted) WIF string. Example:
+for some reason you need to have static keys you can pass them via `--key` 
+(or `-k`) parameter. The key can be a path to private key file (as raw bytes), 
+a hex string or (unencrypted) WIF string:
+```
+$ neofs-http-gw -p $NEOFS_NODE -k $KEY
+```
+For example:
 
 ```
 $ neofs-http-gw -p 192.168.130.72:8080 -k KxDgvEKzgSBPPfuVfw67oPQBSjidEiqTHURKSDL1R7yGaGYAeYnr
@@ -171,26 +179,76 @@ and upload objects with it, but deleting, searching, managing ACLs, creating
 containers and other activities are not supported and not planned to be
 supported.
 
+### Preparation
+
+Before uploading or downloading a file make sure you have a prepared container. 
+You can create it with instructions below.
+
+Also in case of downloading you need to have a file inside a container.
+
+#### Create a container
+
+You can create  a container via [neofs-cli](https://github.com/nspcc-dev/neofs-node/releases):
+```
+$ neofs-cli -r $NEOFS_NODE -k $KEY container create --policy $POLICY --basic-acl $ACL
+```
+where `$KEY` can be a path to private key file (as raw bytes), a hex string or 
+(unencrypted) WIF string,   
+`$ACL` -- hex encoded basic ACL value or keywords 'private, 'public', 'readonly' and  
+`$POLICY` -- QL-encoded or JSON-encoded placement policy or path to file with it
+
+For example:
+```
+$ neofs-cli -r 192.168.130.72:8080 -k 6PYLKJhiSub5imt6WCVy6Quxtd9xu176omev1vWYovzkAQCTSQabAAQXii container create --policy "REP 3" --basic-acl public --await
+```
+
+If you launched nodes via [neofs-dev-env](https://github.com/nspcc-dev/neofs-dev-env)
+you can get the key value from `wallets/wallet.json` or write the path to 
+the file `wallets/wallet.key`.
+
+#### Prepare a file in a container
+
+To create a file via [neofs-cli](https://github.com/nspcc-dev/neofs-node/releases), run a command below:
+```
+$ neofs-cli -r $NEOFS_NODE -k $KEY object put --file $FILENAME --cid $CID 
+```
+where 
+`$KEY` -- the key, please read the information [above](#create-a-container), 
+`$CID` -- container ID.
+
+For example:
+```
+$ neofs-cli -r 192.168.130.72:8080 -k 6PYLKJhiSub5imt6WCVy6Quxtd9xu176omev1vWYovzkAQCTSQabAAQXii object put --file cat.png --cid DPL2tpRiuDNmoTj5KZjD1nzDuCS8tVcxa7hsvSLDWpVM --attributes img_type=cat,my_attr=cute
+```
+
+
 ### Downloading
 
 #### Requests
 
-Basic downloading involves container and object ID and is done via GET
-requests to `/get/$CID/$OID` path, like this:
+##### By IDs
+
+Basic downloading involves container ID and object ID and is done via GET
+requests to `/get/$CID/$OID` path, where `$CID` is a container ID, 
+`$OID` is an object's (i.e. your file's) ID. 
+
+ For example:
 
 ```
 $ wget http://localhost:8082/get/Dxhf4PNprrJHWWTG5RGLdfLkJiSQ3AQqit1MSnEPRkDZ/2m8PtaoricLouCn5zE8hAFr3gZEBDCZFe9BEgVJTSocY
 ```
 
+##### By attributes
 There is also more complex interface provided for attribute-based downloads,
 it's usually used to retrieve files by their names, but any other attribute
 can be used as well. The generic syntax for it looks like this:
 
 ```/get_by_attribute/$CID/$ATTRIBUTE_NAME/$ATTRIBUTE_VALUE```
 
-where `$CID` is a container ID, `$ATTRIBUTE_NAME` is the name of the attribute
-we want to use and `ATTRIBUTE_VALUE` is the value of this attribute that the
-target object should have.
+where 
+`$CID` is a container ID, 
+`$ATTRIBUTE_NAME` is the name of the attribute we want to use,
+`$ATTRIBUTE_VALUE` is the value of this attribute that the target object should have.
 
 If multiple objects have specified attribute with specified value, then the
 first one of them is returned (and you can't get others via this interface).
