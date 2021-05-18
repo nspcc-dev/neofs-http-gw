@@ -119,7 +119,7 @@ func settings() *viper.Viper {
 	peers := flags.StringArrayP(cfgPeers, "p", nil, "NeoFS nodes")
 
 	// set prefers:
-	v.Set(cfgApplicationName, "neofs-http-gate")
+	v.Set(cfgApplicationName, "neofs-http-gw")
 	v.Set(cfgApplicationVersion, Version)
 
 	// set defaults:

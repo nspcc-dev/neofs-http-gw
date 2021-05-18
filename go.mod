@@ -1,4 +1,4 @@
-module github.com/nspcc-dev/neofs-http-gate
+module github.com/nspcc-dev/neofs-http-gw
 
 go 1.16
 

@@ -3,8 +3,8 @@
 First, thank you for contributing! We love and encourage pull requests from
 everyone. Please follow the guidelines:
 
-- Check the open [issues](https://github.com/nspcc-dev/neofs-http-gate/issues) and
-  [pull requests](https://github.com/nspcc-dev/neofs-http-gate/pulls) for existing
+- Check the open [issues](https://github.com/nspcc-dev/neofs-http-gw/issues) and
+  [pull requests](https://github.com/nspcc-dev/neofs-http-gw/pulls) for existing
   discussions.
 
 - Open an issue first, to discuss a new feature or enhancement.
@@ -23,24 +23,24 @@ everyone. Please follow the guidelines:
 
 ## Development Workflow
 
-Start by forking the `neofs-http-gate` repository, make changes in a branch and then
+Start by forking the `neofs-http-gw` repository, make changes in a branch and then
 send a pull request. We encourage pull requests to discuss code changes. Here
 are the steps in details:
 
 ### Set up your GitHub Repository
 Fork [NeoFS HTTP Protocol Gateway
-upstream](https://github.com/nspcc-dev/neofs-http-gate/fork) source repository
+upstream](https://github.com/nspcc-dev/neofs-http-gw/fork) source repository
 to your own personal repository. Copy the URL of your fork (you will need it for
 the `git clone` command below).
 
 ```sh
-$ git clone https://github.com/nspcc-dev/neofs-http-gate
+$ git clone https://github.com/nspcc-dev/neofs-http-gw
 ```
 
 ### Set up git remote as ``upstream``
 ```sh
-$ cd neofs-http-gate
-$ git remote add upstream https://github.com/nspcc-dev/neofs-http-gate
+$ cd neofs-http-gw
+$ git remote add upstream https://github.com/nspcc-dev/neofs-http-gw
 $ git fetch upstream
 $ git merge upstream/master
 ...

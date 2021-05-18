@@ -14,8 +14,8 @@ import (
 
 	"github.com/nspcc-dev/neofs-api-go/pkg/container"
 	"github.com/nspcc-dev/neofs-api-go/pkg/object"
-	"github.com/nspcc-dev/neofs-http-gate/neofs"
-	"github.com/nspcc-dev/neofs-http-gate/tokens"
+	"github.com/nspcc-dev/neofs-http-gw/neofs"
+	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
