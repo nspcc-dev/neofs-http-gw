@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/nspcc-dev/neofs-http-gate/global"
-	"github.com/nspcc-dev/neofs-http-gate/logger"
+	"github.com/nspcc-dev/neofs-http-gw/global"
+	"github.com/nspcc-dev/neofs-http-gw/logger"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )

@@ -6,9 +6,9 @@
 </p>
 
 ---
-[![Report](https://goreportcard.com/badge/github.com/nspcc-dev/neofs-http-gate)](https://goreportcard.com/report/github.com/nspcc-dev/neofs-http-gate)
-![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/nspcc-dev/neofs-http-gate?sort=semver)
-![License](https://img.shields.io/github/license/nspcc-dev/neofs-http-gate.svg?style=popout)
+[![Report](https://goreportcard.com/badge/github.com/nspcc-dev/neofs-http-gw)](https://goreportcard.com/report/github.com/nspcc-dev/neofs-http-gw)
+![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/nspcc-dev/neofs-http-gw?sort=semver)
+![License](https://img.shields.io/github/license/nspcc-dev/neofs-http-gw.svg?style=popout)
 
 # NeoFS HTTP Protocol Gateway
 
@@ -18,7 +18,7 @@ NeoFS HTTP Protocol Gateway bridges NeoFS internal protocol and HTTP standard.
 
 ## Installation
 
-```go get -u github.com/nspcc-dev/neofs-http-gate```
+```go get -u github.com/nspcc-dev/neofs-http-gw```
 
 Or you can call `make` to build it from the cloned repository (the binary will
 end up in `bin/neofs-http-gw`).

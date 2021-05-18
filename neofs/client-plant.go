@@ -10,7 +10,7 @@ import (
 	"github.com/nspcc-dev/neofs-api-go/pkg/object"
 	"github.com/nspcc-dev/neofs-api-go/pkg/owner"
 	"github.com/nspcc-dev/neofs-api-go/pkg/token"
-	"github.com/nspcc-dev/neofs-http-gate/connections"
+	"github.com/nspcc-dev/neofs-http-gw/connections"
 )
 
 // BaseOptions represents basic NeoFS request options.

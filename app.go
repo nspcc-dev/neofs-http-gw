@@ -6,11 +6,11 @@ import (
 	"strconv"
 
 	"github.com/fasthttp/router"
-	"github.com/nspcc-dev/neofs-http-gate/connections"
-	"github.com/nspcc-dev/neofs-http-gate/downloader"
-	"github.com/nspcc-dev/neofs-http-gate/logger"
-	"github.com/nspcc-dev/neofs-http-gate/neofs"
-	"github.com/nspcc-dev/neofs-http-gate/uploader"
+	"github.com/nspcc-dev/neofs-http-gw/connections"
+	"github.com/nspcc-dev/neofs-http-gw/downloader"
+	"github.com/nspcc-dev/neofs-http-gw/logger"
+	"github.com/nspcc-dev/neofs-http-gw/neofs"
+	"github.com/nspcc-dev/neofs-http-gw/uploader"
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
@@ -77,7 +77,7 @@ func newApp(ctx context.Context, opt ...Option) App {
 		grpclog.SetLoggerV2(a.auxiliaryLog)
 	}
 	// -- setup FastHTTP server --
-	a.webServer.Name = "neofs-http-gate"
+	a.webServer.Name = "neofs-http-gw"
 	a.webServer.ReadBufferSize = a.cfg.GetInt(cfgWebReadBufferSize)
 	a.webServer.WriteBufferSize = a.cfg.GetInt(cfgWebWriteBufferSize)
 	a.webServer.ReadTimeout = a.cfg.GetDuration(cfgWebReadTimeout)

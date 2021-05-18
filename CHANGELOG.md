@@ -33,5 +33,5 @@ Bugs fixed:
 ## Older versions
 
 Please refer to [Github
-releases](https://github.com/nspcc-dev/neofs-http-gate/releases/) for older
+releases](https://github.com/nspcc-dev/neofs-http-gw/releases/) for older
 releases.
