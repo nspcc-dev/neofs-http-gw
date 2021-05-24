@@ -2,6 +2,21 @@
 
 This document outlines major changes between releases.
 
+## 0.15.1 (24 May 2021)
+
+This important release makes HTTP gateway compatible with NeoFS node version
+0.20.0.
+
+Behavior changes:
+ * neofs-api-go was updated to 1.26.1, which contains some incompatible
+   changes in underlying components (#39, #44)
+ * `neofs-http-gw` is consistently used now for repository, binary and image
+   names (#43)
+
+Improvements:
+ * minor code cleanups based on stricter set of linters (#41)
+ * updated README (#42)
+
 ## 0.15.0 (30 Apr 2021)
 
 This is the first public release incorporating latest NeoFS protocol support
