@@ -1,7 +1,10 @@
 package main
 
 import (
-	"github.com/nspcc-dev/neofs-http-gw/global"
+	"context"
+	"os/signal"
+	"syscall"
+
 	"github.com/nspcc-dev/neofs-http-gw/logger"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -12,7 +15,7 @@ func main() {
 		v = settings()
 		l = newLogger(v)
 	)
-	globalContext := global.Context()
+	globalContext, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	app := newApp(globalContext, WithLogger(l), WithConfig(v))
 	go app.Serve(globalContext)
 	app.Wait()
