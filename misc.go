@@ -5,8 +5,6 @@ package main
 const Prefix = "HTTP_GW"
 
 var (
-	// Build is a timestamp set during gateway build.
-	Build = "now"
 	// Version is gateway version.
 	Version = "dev"
 )

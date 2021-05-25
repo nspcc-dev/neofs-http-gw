@@ -64,9 +64,8 @@ const (
 	cfgPeers = "peers"
 
 	// Application.
-	cfgApplicationName      = "app.name"
-	cfgApplicationVersion   = "app.version"
-	cfgApplicationBuildTime = "app.build_time"
+	cfgApplicationName    = "app.name"
+	cfgApplicationVersion = "app.version"
 
 	// Command line args.
 	cmdHelp     = "help"
@@ -78,12 +77,11 @@ const (
 )
 
 var ignore = map[string]struct{}{
-	cfgApplicationName:      {},
-	cfgApplicationVersion:   {},
-	cfgApplicationBuildTime: {},
-	cfgPeers:                {},
-	cmdHelp:                 {},
-	cmdVersion:              {},
+	cfgApplicationName:    {},
+	cfgApplicationVersion: {},
+	cfgPeers:              {},
+	cmdHelp:               {},
+	cmdVersion:            {},
 }
 
 func (empty) Read([]byte) (int, error) { return 0, io.EOF }
@@ -164,7 +162,7 @@ func settings() *viper.Viper {
 
 	switch {
 	case help != nil && *help:
-		fmt.Printf("NeoFS HTTP Gateway %s (%s)\n", Version, Build)
+		fmt.Printf("NeoFS HTTP Gateway %s\n", Version)
 		flags.PrintDefaults()
 
 		fmt.Println()
@@ -191,7 +189,7 @@ func settings() *viper.Viper {
 
 		os.Exit(0)
 	case version != nil && *version:
-		fmt.Printf("NeoFS HTTP Gateway %s (%s)\n", Version, Build)
+		fmt.Printf("NeoFS HTTP Gateway %s\n", Version)
 		os.Exit(0)
 	}
 

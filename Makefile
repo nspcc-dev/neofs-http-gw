@@ -22,8 +22,7 @@ $(BINS): $(DIRS) dep
 	CGO_ENABLED=0 \
 	GO111MODULE=on \
 	go build -v -trimpath \
-	-ldflags "-X main.Version=$(VERSION) \
-	-X main.Build=$(BUILD)" \
+	-ldflags "-X main.Version=$(VERSION)" \
 	-o $@ ./
 
 $(DIRS):
