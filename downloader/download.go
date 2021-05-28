@@ -17,7 +17,7 @@ import (
 	"github.com/nspcc-dev/neofs-api-go/pkg/object"
 	"github.com/nspcc-dev/neofs-api-go/pkg/token"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
-	"github.com/nspcc-dev/neofs-sdk-go/pkg/neofs"
+	"github.com/nspcc-dev/neofs-sdk-go/pkg/pool"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -164,14 +164,14 @@ func (o objectIDs) Slice() []string {
 
 // Downloader is a download request handler.
 type Downloader struct {
-	log   *zap.Logger
-	plant neofs.ClientPlant
+	log  *zap.Logger
+	pool pool.Pool
 }
 
 // New creates an instance of Downloader using specified options.
-func New(ctx context.Context, log *zap.Logger, plant neofs.ClientPlant) (*Downloader, error) {
+func New(ctx context.Context, log *zap.Logger, conns pool.Pool) (*Downloader, error) {
 	var err error
-	d := &Downloader{log: log, plant: plant}
+	d := &Downloader{log: log, pool: conns}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get neofs client's reusable artifacts: %w", err)
 	}
@@ -203,7 +203,7 @@ func (d *Downloader) DownloadByAddress(c *fasthttp.RequestCtx) {
 		return
 	}
 
-	conn, tkn, err = d.plant.ConnectionArtifacts()
+	conn, tkn, err = d.pool.Connection()
 	if err != nil {
 		log.Error("failed to get neofs connection artifacts", zap.Error(err))
 		c.Error("failed to get neofs connection artifacts", fasthttp.StatusInternalServerError)
@@ -231,7 +231,7 @@ func (d *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
 		return
 	}
 
-	conn, tkn, err = d.plant.ConnectionArtifacts()
+	conn, tkn, err = d.pool.Connection()
 	if err != nil {
 		log.Error("failed to get neofs connection artifacts", zap.Error(err))
 		c.Error("failed to get neofs connection artifacts", fasthttp.StatusInternalServerError)
@@ -261,7 +261,7 @@ func (d *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
 	address.SetContainerID(cid)
 	address.SetObjectID(ids[0])
 
-	conn, tkn, err = d.plant.ConnectionArtifacts()
+	conn, tkn, err = d.pool.Connection()
 	if err != nil {
 		log.Error("failed to get neofs connection artifacts", zap.Error(err))
 		c.Error("failed to get neofs connection artifacts", fasthttp.StatusInternalServerError)

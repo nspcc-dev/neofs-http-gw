@@ -13,7 +13,7 @@ import (
 	"github.com/nspcc-dev/neofs-api-go/pkg/owner"
 	"github.com/nspcc-dev/neofs-api-go/pkg/token"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
-	"github.com/nspcc-dev/neofs-sdk-go/pkg/neofs"
+	"github.com/nspcc-dev/neofs-sdk-go/pkg/pool"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
@@ -26,14 +26,14 @@ const (
 // Uploader is an upload request handler.
 type Uploader struct {
 	log                    *zap.Logger
-	plant                  neofs.ClientPlant
+	pool                   pool.Pool
 	enableDefaultTimestamp bool
 }
 
 // New creates a new Uploader using specified logger, connection pool and
 // other options.
-func New(log *zap.Logger, plant neofs.ClientPlant, enableDefaultTimestamp bool) *Uploader {
-	return &Uploader{log, plant, enableDefaultTimestamp}
+func New(log *zap.Logger, conns pool.Pool, enableDefaultTimestamp bool) *Uploader {
+	return &Uploader{log, conns, enableDefaultTimestamp}
 }
 
 // Upload handles multipart upload request.
@@ -106,7 +106,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	oid, bt := u.fetchOwnerAndBearerToken(c)
 
 	// Try to put file into NeoFS or throw an error.
-	conn, tkn, err = u.plant.ConnectionArtifacts()
+	conn, tkn, err = u.pool.Connection()
 	if err != nil {
 		log.Error("failed to get neofs connection artifacts", zap.Error(err))
 		c.Error("failed to get neofs connection artifacts", fasthttp.StatusInternalServerError)
@@ -157,7 +157,7 @@ func (u *Uploader) fetchOwnerAndBearerToken(ctx context.Context) (*owner.ID, *to
 	if tkn, err := tokens.LoadBearerToken(ctx); err == nil && tkn != nil {
 		return tkn.Issuer(), tkn
 	}
-	return u.plant.OwnerID(), nil
+	return u.pool.OwnerID(), nil
 }
 
 type putResponse struct {
