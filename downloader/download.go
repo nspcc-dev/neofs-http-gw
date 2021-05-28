@@ -12,28 +12,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nspcc-dev/neofs-api-go/pkg/client"
 	"github.com/nspcc-dev/neofs-api-go/pkg/container"
 	"github.com/nspcc-dev/neofs-api-go/pkg/object"
-	"github.com/nspcc-dev/neofs-http-gw/neofs"
+	"github.com/nspcc-dev/neofs-api-go/pkg/token"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
+	"github.com/nspcc-dev/neofs-sdk-go/pkg/neofs"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-)
-
-var (
-	getOptionsPool = sync.Pool{
-		New: func() interface{} {
-			return new(neofs.GetOptions)
-		},
-	}
-
-	searchOptionsPool = sync.Pool{
-		New: func() interface{} {
-			return new(neofs.SearchOptions)
-		},
-	}
 )
 
 type (
@@ -45,8 +33,7 @@ type (
 
 	request struct {
 		*fasthttp.RequestCtx
-		log          *zap.Logger
-		objectClient neofs.ObjectClient
+		log *zap.Logger
 	}
 
 	objectIDs []*object.ID
@@ -85,12 +72,15 @@ func isValidValue(s string) bool {
 	return true
 }
 
-func (r *request) receiveFile(options *neofs.GetOptions) {
+func (r *request) receiveFile(clnt client.Client,
+	sessionToken *token.SessionToken,
+	objectAddress *object.Address) {
 	var (
 		err      error
 		dis      = "inline"
 		start    = time.Now()
 		filename string
+		obj      *object.Object
 	)
 	if err = tokens.StoreBearerToken(r.RequestCtx); err != nil {
 		r.log.Error("could not fetch and store bearer token", zap.Error(err))
@@ -98,8 +88,15 @@ func (r *request) receiveFile(options *neofs.GetOptions) {
 		return
 	}
 	writer := newDetector(r.Response.BodyWriter())
-	options.Writer = writer
-	obj, err := r.objectClient.Get(r.RequestCtx, options)
+	options := new(client.GetObjectParams).
+		WithAddress(objectAddress).
+		WithPayloadWriter(writer)
+
+	obj, err = clnt.GetObject(
+		r.RequestCtx,
+		options,
+		client.WithSession(sessionToken),
+	)
 	if err != nil {
 		r.log.Error(
 			"could not receive object",
@@ -183,9 +180,8 @@ func New(ctx context.Context, log *zap.Logger, plant neofs.ClientPlant) (*Downlo
 
 func (d *Downloader) newRequest(ctx *fasthttp.RequestCtx, log *zap.Logger) *request {
 	return &request{
-		RequestCtx:   ctx,
-		log:          log,
-		objectClient: d.plant.Object(),
+		RequestCtx: ctx,
+		log:        log,
 	}
 }
 
@@ -198,23 +194,22 @@ func (d *Downloader) DownloadByAddress(c *fasthttp.RequestCtx) {
 		oid, _  = c.UserValue("oid").(string)
 		val     = strings.Join([]string{cid, oid}, "/")
 		log     = d.log.With(zap.String("cid", cid), zap.String("oid", oid))
+		conn    client.Client
+		tkn     *token.SessionToken
 	)
 	if err = address.Parse(val); err != nil {
 		log.Error("wrong object address", zap.Error(err))
 		c.Error("wrong object address", fasthttp.StatusBadRequest)
 		return
 	}
-	getOpts := getOptionsPool.Get().(*neofs.GetOptions)
-	defer getOptionsPool.Put(getOpts)
-	getOpts.Client, getOpts.SessionToken, err = d.plant.ConnectionArtifacts()
+
+	conn, tkn, err = d.plant.ConnectionArtifacts()
 	if err != nil {
 		log.Error("failed to get neofs connection artifacts", zap.Error(err))
 		c.Error("failed to get neofs connection artifacts", fasthttp.StatusInternalServerError)
 		return
 	}
-	getOpts.ObjectAddress = address
-	getOpts.Writer = nil
-	d.newRequest(c, log).receiveFile(getOpts)
+	d.newRequest(c, log).receiveFile(conn, tkn, address)
 }
 
 // DownloadByAttribute handles attribute-based download requests.
@@ -225,6 +220,9 @@ func (d *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
 		key, _  = c.UserValue("attr_key").(string)
 		val, _  = c.UserValue("attr_val").(string)
 		log     = d.log.With(zap.String("cid", scid), zap.String("attr_key", key), zap.String("attr_val", val))
+		ids     []*object.ID
+		conn    client.Client
+		tkn     *token.SessionToken
 	)
 	cid := container.NewID()
 	if err = cid.Parse(scid); err != nil {
@@ -232,20 +230,20 @@ func (d *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
 		c.Error("wrong container id", fasthttp.StatusBadRequest)
 		return
 	}
-	searchOpts := searchOptionsPool.Get().(*neofs.SearchOptions)
-	defer searchOptionsPool.Put(searchOpts)
-	searchOpts.Client, searchOpts.SessionToken, err = d.plant.ConnectionArtifacts()
+
+	conn, tkn, err = d.plant.ConnectionArtifacts()
 	if err != nil {
 		log.Error("failed to get neofs connection artifacts", zap.Error(err))
 		c.Error("failed to get neofs connection artifacts", fasthttp.StatusInternalServerError)
 		return
 	}
-	searchOpts.BearerToken = nil
-	searchOpts.ContainerID = cid
-	searchOpts.Attribute.Key = key
-	searchOpts.Attribute.Value = val
-	var ids []*object.ID
-	if ids, err = d.plant.Object().Search(c, searchOpts); err != nil {
+
+	options := object.NewSearchFilters()
+	options.AddRootFilter()
+	options.AddFilter(key, val, object.MatchStringEqual)
+
+	sops := new(client.SearchObjectParams).WithContainerID(cid).WithSearchFilters(options)
+	if ids, err = conn.SearchObject(c, sops, client.WithSession(tkn)); err != nil {
 		log.Error("something went wrong", zap.Error(err))
 		c.Error("something went wrong", fasthttp.StatusBadRequest)
 		return
@@ -262,15 +260,12 @@ func (d *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
 	address := object.NewAddress()
 	address.SetContainerID(cid)
 	address.SetObjectID(ids[0])
-	getOpts := getOptionsPool.Get().(*neofs.GetOptions)
-	defer getOptionsPool.Put(getOpts)
-	getOpts.Client, getOpts.SessionToken, err = d.plant.ConnectionArtifacts()
+
+	conn, tkn, err = d.plant.ConnectionArtifacts()
 	if err != nil {
 		log.Error("failed to get neofs connection artifacts", zap.Error(err))
 		c.Error("failed to get neofs connection artifacts", fasthttp.StatusInternalServerError)
 		return
 	}
-	getOpts.ObjectAddress = address
-	getOpts.Writer = nil
-	d.newRequest(c, log).receiveFile(getOpts)
+	d.newRequest(c, log).receiveFile(conn, tkn, address)
 }

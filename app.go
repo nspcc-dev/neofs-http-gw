@@ -6,11 +6,11 @@ import (
 	"strconv"
 
 	"github.com/fasthttp/router"
-	"github.com/nspcc-dev/neofs-http-gw/connections"
 	"github.com/nspcc-dev/neofs-http-gw/downloader"
-	"github.com/nspcc-dev/neofs-http-gw/logger"
-	"github.com/nspcc-dev/neofs-http-gw/neofs"
 	"github.com/nspcc-dev/neofs-http-gw/uploader"
+	"github.com/nspcc-dev/neofs-sdk-go/pkg/logger"
+	"github.com/nspcc-dev/neofs-sdk-go/pkg/neofs"
+	"github.com/nspcc-dev/neofs-sdk-go/pkg/pool"
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
@@ -99,7 +99,7 @@ func newApp(ctx context.Context, opt ...Option) App {
 	if err != nil {
 		a.log.Fatal("failed to get neofs credentials", zap.Error(err))
 	}
-	pb := new(connections.PoolBuilder)
+	pb := new(pool.Builder)
 	for i := 0; ; i++ {
 		address := a.cfg.GetString(cfgPeers + "." + strconv.Itoa(i) + ".address")
 		weight := a.cfg.GetFloat64(cfgPeers + "." + strconv.Itoa(i) + ".weight")
@@ -112,7 +112,7 @@ func newApp(ctx context.Context, opt ...Option) App {
 		pb.AddNode(address, weight)
 		a.log.Info("add connection", zap.String("address", address), zap.Float64("weight", weight))
 	}
-	opts := &connections.PoolBuilderOptions{
+	opts := &pool.BuilderOptions{
 		Key:                     creds.PrivateKey(),
 		NodeConnectionTimeout:   a.cfg.GetDuration(cfgConTimeout),
 		NodeRequestTimeout:      a.cfg.GetDuration(cfgReqTimeout),
