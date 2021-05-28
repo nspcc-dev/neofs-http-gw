@@ -5,15 +5,15 @@ import (
 	"encoding/json"
 	"io"
 	"strconv"
-	"sync"
 	"time"
 
+	"github.com/nspcc-dev/neofs-api-go/pkg/client"
 	"github.com/nspcc-dev/neofs-api-go/pkg/container"
 	"github.com/nspcc-dev/neofs-api-go/pkg/object"
 	"github.com/nspcc-dev/neofs-api-go/pkg/owner"
 	"github.com/nspcc-dev/neofs-api-go/pkg/token"
-	"github.com/nspcc-dev/neofs-http-gw/neofs"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
+	"github.com/nspcc-dev/neofs-sdk-go/pkg/neofs"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
@@ -22,12 +22,6 @@ const (
 	jsonHeader   = "application/json; charset=UTF-8"
 	drainBufSize = 4096
 )
-
-var putOptionsPool = sync.Pool{
-	New: func() interface{} {
-		return new(neofs.PutOptions)
-	},
-}
 
 // Uploader is an upload request handler.
 type Uploader struct {
@@ -47,7 +41,10 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	var (
 		err        error
 		file       MultipartFile
-		addr       *object.Address
+		obj        *object.ID
+		conn       client.Client
+		tkn        *token.SessionToken
+		addr       = object.NewAddress()
 		cid        = container.NewID()
 		scid, _    = c.UserValue("cid").(string)
 		log        = u.log.With(zap.String("cid", scid))
@@ -107,25 +104,31 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		attributes = append(attributes, timestamp)
 	}
 	oid, bt := u.fetchOwnerAndBearerToken(c)
-	putOpts := putOptionsPool.Get().(*neofs.PutOptions)
-	defer putOptionsPool.Put(putOpts)
+
 	// Try to put file into NeoFS or throw an error.
-	putOpts.Client, putOpts.SessionToken, err = u.plant.ConnectionArtifacts()
+	conn, tkn, err = u.plant.ConnectionArtifacts()
 	if err != nil {
 		log.Error("failed to get neofs connection artifacts", zap.Error(err))
 		c.Error("failed to get neofs connection artifacts", fasthttp.StatusInternalServerError)
 		return
 	}
-	putOpts.Attributes = attributes
-	putOpts.BearerToken = bt
-	putOpts.ContainerID = cid
-	putOpts.OwnerID = oid
-	putOpts.Reader = file
-	if addr, err = u.plant.Object().Put(c, putOpts); err != nil {
+
+	rawObject := object.NewRaw()
+	rawObject.SetContainerID(cid)
+	rawObject.SetOwnerID(oid)
+	rawObject.SetAttributes(attributes...)
+
+	ops := new(client.PutObjectParams).WithObject(rawObject.Object()).WithPayloadReader(file)
+
+	if obj, err = conn.PutObject(c, ops, client.WithSession(tkn), client.WithBearer(bt)); err != nil {
 		log.Error("could not store file in neofs", zap.Error(err))
 		c.Error("could not store file in neofs", fasthttp.StatusBadRequest)
 		return
 	}
+
+	addr.SetObjectID(obj)
+	addr.SetContainerID(cid)
+
 	// Try to return the response, otherwise, if something went wrong, throw an error.
 	if err = newPutResponse(addr).encode(c); err != nil {
 		log.Error("could not prepare response", zap.Error(err))
@@ -151,8 +154,8 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 }
 
 func (u *Uploader) fetchOwnerAndBearerToken(ctx context.Context) (*owner.ID, *token.BearerToken) {
-	if token, err := tokens.LoadBearerToken(ctx); err == nil && token != nil {
-		return token.Issuer(), token
+	if tkn, err := tokens.LoadBearerToken(ctx); err == nil && tkn != nil {
+		return tkn.Issuer(), tkn
 	}
 	return u.plant.OwnerID(), nil
 }
