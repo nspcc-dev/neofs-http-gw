@@ -348,7 +348,7 @@ operations for request signed with your HTTP Protocol Gateway keys.
 If your don't want to manage gateway's secret keys and adjust eACL rules when
 gateway configuration changes (new gate, key rotation, etc) or you plan to use
 public services, there is an option to let your application backend (or you) to
-issue Bearer Tokens ans pass them from the client via gate down to NeoFS level
+issue Bearer Tokens and pass them from the client via gate down to NeoFS level
 to grant access.
 
 NeoFS Bearer Token basically is a container owner-signed ACL data (refer to NeoFS
@@ -356,6 +356,21 @@ documentation for more details). There are two options to pass them to gateway:
  * "Authorization" header with "Bearer" type and base64-encoded token in
    credentials field
  * "__context_bearer_token_key" cookie with base64-encoded token contents
+
+To attach a signed bearer token, add a header 
+`Authorization:Bearer %64base_encoded_token` to your request.
+
+For example, uploading of a file to a container:
+```
+$ curl -H "Authorization:Bearer Cr4BCp4BCgQIAhAGEiIKIPEY6iBiT752QZfT8EWb3wvU3lbsE8IU2MT4bbNJaPlqGnIIAxABGkcIAhABGhMkT2JqZWN0OmNvbnRhaW5lcklEIixIRTlIb2N5ZTZSNzhzcks0UHV4WEt3OW51R0pHZGpHUFJiZzhLaVQxQmRVbSIjEiEDGOpqotjRFG5qUPHblA8REIvKTWY5UGXwsS1sq4qx2SASGwoZNaq5pfYuroaGE7h9o5iQsPR/1aRe5gmWrhJmCiEDGmxvu98CyjUXRfqGubpalFLXhaxPf8K3VIyipGxPz0oSQQQ5nfTsl/gfGzMWs/4UogvgnRwd8UezwKsJAnYxMD9RGYvNlSL3FYjIgrVU/Zl0gQhHNcXiZmj5IJ0lMGaN0QH4"  -F 'file=@kek.png;filename=kek.png' http://localhost:8082/upload/2e8j714YCJNwsmMGnARMeU5ev7Zaw99vJaBiFjcvWoSz
+```
+
+And downloading of a file:
+```
+  wget --header='Authorization:Bearer Cr4BCp4BCgQIAhAGEiIKIPEY6iBiT752QZfT8EWb3wvU3lbsE8IU2MT4bbNJaPlqGnIIAxABGkcIAhABGhMkT2JqZWN0OmNvbnRhaW5lcklEIixIRTlIb2N5ZTZSNzhzcks0UHV4WEt3OW51R0pHZGpHUFJiZzhLaVQxQmRVbSIjEiEDGOpqotjRFG5qUPHblA8REIvKTWY5UGXwsS1sq4qx2SASGwoZNaq5pfYuroaGE7h9o5iQsPR/1aRe5gmWrhJmCiEDGmxvu98CyjUXRfqGubpalFLXhaxPf8K3VIyipGxPz0oSQQQ5nfTsl/gfGzMWs/4UogvgnRwd8UezwKsJAnYxMD9RGYvNlSL3FYjIgrVU/Zl0gQhHNcXiZmj5IJ0lMGaN0QH4'  http://localhost:8082/get/2e8j714YCJNwsmMGnARMeU5ev7Zaw99vJaBiFjcvWoSz/4iY8Zr5K5khuxeqEBeD8MrjTqUvJEyadXB9w9vrJCCsR
+```
+
+Please note that ACL in bearer token mustn't conflict with ACL of the container.
 
 For example you have a mobile application frontend with a backend part storing
 data in NeoFS. When user authorizes in mobile app, the backend issues a NeoFS
