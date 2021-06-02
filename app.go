@@ -2,14 +2,15 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"math"
 	"strconv"
 
 	"github.com/fasthttp/router"
+	crypto "github.com/nspcc-dev/neofs-crypto"
 	"github.com/nspcc-dev/neofs-http-gw/downloader"
 	"github.com/nspcc-dev/neofs-http-gw/uploader"
 	"github.com/nspcc-dev/neofs-sdk-go/pkg/logger"
-	"github.com/nspcc-dev/neofs-sdk-go/pkg/neofs"
 	"github.com/nspcc-dev/neofs-sdk-go/pkg/pool"
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
@@ -20,7 +21,7 @@ import (
 type (
 	app struct {
 		log          *zap.Logger
-		plant        neofs.ClientPlant
+		pool         pool.Pool
 		cfg          *viper.Viper
 		auxiliaryLog logger.Logger
 		webServer    *fasthttp.Server
@@ -59,8 +60,8 @@ func WithConfig(c *viper.Viper) Option {
 
 func newApp(ctx context.Context, opt ...Option) App {
 	var (
-		creds neofs.Credentials
-		err   error
+		key *ecdsa.PrivateKey
+		err error
 	)
 
 	a := &app{
@@ -92,9 +93,9 @@ func newApp(ctx context.Context, opt ...Option) App {
 	keystring := a.cfg.GetString(cmdNeoFSKey)
 	if len(keystring) == 0 {
 		a.log.Info("no key specified, creating one automatically for this run")
-		creds, err = neofs.NewEphemeralCredentials()
+		key, err = pool.NewEphemeralKey()
 	} else {
-		creds, err = neofs.NewCredentials(keystring)
+		key, err = crypto.LoadPrivateKey(keystring)
 	}
 	if err != nil {
 		a.log.Fatal("failed to get neofs credentials", zap.Error(err))
@@ -113,7 +114,7 @@ func newApp(ctx context.Context, opt ...Option) App {
 		a.log.Info("add connection", zap.String("address", address), zap.Float64("weight", weight))
 	}
 	opts := &pool.BuilderOptions{
-		Key:                     creds.PrivateKey(),
+		Key:                     key,
 		NodeConnectionTimeout:   a.cfg.GetDuration(cfgConTimeout),
 		NodeRequestTimeout:      a.cfg.GetDuration(cfgReqTimeout),
 		ClientRebalanceInterval: a.cfg.GetDuration(cfgRebalance),
@@ -122,13 +123,9 @@ func newApp(ctx context.Context, opt ...Option) App {
 		KeepaliveTimeout:        a.cfg.GetDuration(cfgKeepaliveTimeout),
 		KeepalivePermitWoStream: a.cfg.GetBool(cfgKeepalivePermitWithoutStream),
 	}
-	pool, err := pb.Build(ctx, opts)
+	a.pool, err = pb.Build(ctx, opts)
 	if err != nil {
 		a.log.Fatal("failed to create connection pool", zap.Error(err))
-	}
-	a.plant, err = neofs.NewClientPlant(ctx, pool, creds)
-	if err != nil {
-		a.log.Fatal("failed to create neofs client plant")
 	}
 	return a
 }
@@ -145,8 +142,8 @@ func (a *app) Serve(ctx context.Context) {
 		close(a.webDone)
 	}()
 	edts := a.cfg.GetBool(cfgUploaderHeaderEnableDefaultTimestamp)
-	uploader := uploader.New(a.log, a.plant, edts)
-	downloader, err := downloader.New(ctx, a.log, a.plant)
+	uploader := uploader.New(a.log, a.pool, edts)
+	downloader, err := downloader.New(ctx, a.log, a.pool)
 	if err != nil {
 		a.log.Fatal("failed to create downloader", zap.Error(err))
 	}
