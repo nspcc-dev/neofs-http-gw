@@ -355,7 +355,7 @@ NeoFS Bearer Token basically is a container owner-signed ACL data (refer to NeoF
 documentation for more details). There are two options to pass them to gateway:
  * "Authorization" header with "Bearer" type and base64-encoded token in
    credentials field
- * "__context_bearer_token_key" cookie with base64-encoded token contents
+ * "Bearer" cookie with base64-encoded token contents
 
 For example you have a mobile application frontend with a backend part storing
 data in NeoFS. When user authorizes in mobile app, the backend issues a NeoFS
