@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/nspcc-dev/neofs-api-go/pkg/client"
-	"github.com/nspcc-dev/neofs-api-go/pkg/container"
+	cid "github.com/nspcc-dev/neofs-api-go/pkg/container/id"
 	"github.com/nspcc-dev/neofs-api-go/pkg/object"
-	"github.com/nspcc-dev/neofs-api-go/pkg/token"
+	"github.com/nspcc-dev/neofs-api-go/pkg/session"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/nspcc-dev/neofs-sdk-go/pkg/pool"
 	"github.com/valyala/fasthttp"
@@ -73,7 +73,7 @@ func isValidValue(s string) bool {
 }
 
 func (r *request) receiveFile(clnt client.Client,
-	sessionToken *token.SessionToken,
+	sessionToken *session.Token,
 	objectAddress *object.Address) {
 	var (
 		err      error
@@ -195,7 +195,7 @@ func (d *Downloader) DownloadByAddress(c *fasthttp.RequestCtx) {
 		val     = strings.Join([]string{cid, oid}, "/")
 		log     = d.log.With(zap.String("cid", cid), zap.String("oid", oid))
 		conn    client.Client
-		tkn     *token.SessionToken
+		tkn     *session.Token
 	)
 	if err = address.Parse(val); err != nil {
 		log.Error("wrong object address", zap.Error(err))
@@ -222,9 +222,9 @@ func (d *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
 		log     = d.log.With(zap.String("cid", scid), zap.String("attr_key", key), zap.String("attr_val", val))
 		ids     []*object.ID
 		conn    client.Client
-		tkn     *token.SessionToken
+		tkn     *session.Token
 	)
-	cid := container.NewID()
+	cid := cid.New()
 	if err = cid.Parse(scid); err != nil {
 		log.Error("wrong container id", zap.Error(err))
 		c.Error("wrong container id", fasthttp.StatusBadRequest)

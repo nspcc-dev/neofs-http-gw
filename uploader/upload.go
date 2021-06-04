@@ -8,9 +8,10 @@ import (
 	"time"
 
 	"github.com/nspcc-dev/neofs-api-go/pkg/client"
-	"github.com/nspcc-dev/neofs-api-go/pkg/container"
+	cid "github.com/nspcc-dev/neofs-api-go/pkg/container/id"
 	"github.com/nspcc-dev/neofs-api-go/pkg/object"
 	"github.com/nspcc-dev/neofs-api-go/pkg/owner"
+	"github.com/nspcc-dev/neofs-api-go/pkg/session"
 	"github.com/nspcc-dev/neofs-api-go/pkg/token"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/nspcc-dev/neofs-sdk-go/pkg/pool"
@@ -43,9 +44,9 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		file       MultipartFile
 		obj        *object.ID
 		conn       client.Client
-		tkn        *token.SessionToken
+		tkn        *session.Token
 		addr       = object.NewAddress()
-		cid        = container.NewID()
+		cid        = cid.New()
 		scid, _    = c.UserValue("cid").(string)
 		log        = u.log.With(zap.String("cid", scid))
 		bodyStream = c.RequestBodyStream()
