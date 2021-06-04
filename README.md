@@ -194,7 +194,7 @@ $ neofs-cli -r $NEOFS_NODE -k $KEY container create --policy $POLICY --basic-acl
 ```
 where `$KEY` can be a path to private key file (as raw bytes), a hex string or 
 (unencrypted) WIF string,   
-`$ACL` -- hex encoded basic ACL value or keywords 'private, 'public', 'readonly' and  
+`$ACL` -- hex encoded basic ACL value or keywords 'private, 'public-read', 'public-read-write' and  
 `$POLICY` -- QL-encoded or JSON-encoded placement policy or path to file with it
 
 For example:
