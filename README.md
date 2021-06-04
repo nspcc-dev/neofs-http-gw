@@ -364,6 +364,79 @@ some data and upload it via any available NeoFS HTTP Protocol Gateway by adding
 the corresponding header to the upload request. Accessing the ACL protected data
 works the same way.
 
+##### Example
+In order to generate bearer token, you need to know container owner key and 
+address of sender who will be do request to NeoFS (in our case it's gateway wallet address).
+
+Suppose we have:
+* **KxDgvEKzgSBPPfuVfw67oPQBSjidEiqTHURKSDL1R7yGaGYAeYnr** (container owner key)
+* **NhVtreTTCoqsMQV5Wp55fqnriiUCpEaKm3** (token owner address)
+* **BJeErH9MWmf52VsR1mLWKkgF3pRm3FkubYxM7TZkBP4K** (container id)
+
+Firstly we need to encode container id and sender address to base64 (now it's base58). 
+So use **base58** and **base64** utils.
+
+1. Encoding container id:
+```
+$ echo 'BJeErH9MWmf52VsR1mLWKkgF3pRm3FkubYxM7TZkBP4K' | base58 --decode | base64
+# output: mRnZWzewzxjzIPa7Fqlfqdl3TM1KpJ0YnsXsEhafJJg=
+```
+
+2. Encoding token owner id:
+```
+$ echo 'NhVtreTTCoqsMQV5Wp55fqnriiUCpEaKm3' | base58 --decode | base64
+# output: NezFK4ujidF+X7bB88uzREQzRQeAvdj3Gg==
+```
+
+Now we can form Bearer token (10000 is liftetime expiration in epoch) and save it to **bearer.json**:
+```
+{
+    "body": {
+        "eaclTable": {
+            "version": {
+                "major": 0,
+                "minor": 0
+            },
+            "containerID": {
+                "value": "mRnZWzewzxjzIPa7Fqlfqdl3TM1KpJ0YnsXsEhafJJg="
+            },
+            "records": []
+        },
+        "ownerID": {
+            "value": "NezFK4ujidF+X7bB88uzREQzRQeAvdj3Gg=="
+        },
+        "lifetime": {
+            "exp": "10000",
+            "nbf": "0",
+            "iat": "0"
+        }
+    },
+    "signature": null
+}
+```
+
+Then sign it with container owner key:
+```
+$ neofs-cli util sign bearer-token --from bearer.json --to signed.json -k KxDgvEKzgSBPPfuVfw67oPQBSjidEiqTHURKSDL1R7yGaGYAeYnr
+```
+Encoding to base64 to use via header:
+```
+$ base64 -w 0 signed.json 
+# output: Ck4KKgoECAIQBhIiCiCZGdlbN7DPGPMg9rsWqV+p2XdMzUqknRiexewSFp8kmBIbChk17MUri6OJ0X5ftsHzy7NERDNFB4C92PcaGgMIkE4SZgohAxpsb7vfAso1F0X6hrm6WpRS14WsT3/Ct1SMoqRsT89KEkEEGxKi8GjKSf52YqhppgaOTQHbUsL3jn7SHLqS3ndAQ7NtAATnmRHleZw2V2xRRSRBQdjDC05KK83LhdSax72Fsw==
+```
+
+After that Bearer token can be used:
+
+```
+$ curl -F 'file=@cat.jpeg;filename=cat.jpeg' -H "Authorization: Bearer Ck4KKgoECAIQBhIiCiCZGdlbN7DPGPMg9rsWqV+p2XdMzUqknRiexewSFp8kmBIbChk17MUri6OJ0X5ftsHzy7NERDNFB4C92PcaGgMIkE4SZgohAxpsb7vfAso1F0X6hrm6WpRS14WsT3/Ct1SMoqRsT89KEkEEGxKi8GjKSf52YqhppgaOTQHbUsL3jn7SHLqS3ndAQ7NtAATnmRHleZw2V2xRRSRBQdjDC05KK83LhdSax72Fsw==" \
+  http://localhost:8082/upload/BJeErH9MWmf52VsR1mLWKkgF3pRm3FkubYxM7TZkBP4K
+# output:
+# {
+#	"object_id": "DhfES9nVrFksxGDD2jQLunGADfrXExxNwqXbDafyBn9X",
+#	"container_id": "BJeErH9MWmf52VsR1mLWKkgF3pRm3FkubYxM7TZkBP4K"
+# }
+```
+
 ### Metrics and Pprof
 
 If enabled, Prometheus metrics are available at `/metrics/` path and Pprof at
