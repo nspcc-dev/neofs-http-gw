@@ -437,6 +437,47 @@ $ curl -F 'file=@cat.jpeg;filename=cat.jpeg' -H "Authorization: Bearer Ck4KKgoEC
 # }
 ```
 
+##### Note
+For the token to work correctly, you need to create a container with a basic ACL that:
+1. Allow PUT operation to others
+2. Doesn't set "final" bit
+
+For example:
+```
+$ neofs-cli --key KxDgvEKzgSBPPfuVfw67oPQBSjidEiqTHURKSDL1R7yGaGYAeYnr --basic-acl 0x0FFFCFFF -r 192.168.130.72:8080 container create --policy "REP 3"  --await
+```
+
+To deny access to the container without a token, set the eACL rules:
+```
+$ neofs-cli --key KxDgvEKzgSBPPfuVfw67oPQBSjidEiqTHURKSDL1R7yGaGYAeYnr -r 192.168.130.72:8080 container set-eacl --table eacl.json --await --cid BJeErH9MWmf52VsR1mLWKkgF3pRm3FkubYxM7TZkBP4K
+```
+
+File **eacl.json**:
+```
+{
+    "version": {
+        "major": 0,
+        "minor": 0
+    },
+    "containerID": {
+        "value": "mRnZWzewzxjzIPa7Fqlfqdl3TM1KpJ0YnsXsEhafJJg="
+    },
+    "records": [
+        {
+            "operation": "PUT",
+            "action": "DENY",
+            "filters": [],
+            "targets": [
+                {
+                    "role": "OTHERS",
+                    "keys": []
+                }
+            ]
+        }
+    ]
+}
+```
+
 ### Metrics and Pprof
 
 If enabled, Prometheus metrics are available at `/metrics/` path and Pprof at
