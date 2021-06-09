@@ -23,17 +23,9 @@ const (
 	defaultRequestTimeout = 15 * time.Second
 	defaultConnectTimeout = 30 * time.Second
 
-	defaultKeepaliveTime    = 10 * time.Second
-	defaultKeepaliveTimeout = 10 * time.Second
-
 	cfgListenAddress  = "listen_address"
 	cfgTLSCertificate = "tls_certificate"
 	cfgTLSKey         = "tls_key"
-
-	// KeepAlive.
-	cfgKeepaliveTime                = "keepalive.time"
-	cfgKeepaliveTimeout             = "keepalive.timeout"
-	cfgKeepalivePermitWithoutStream = "keepalive.permit_without_stream"
 
 	// Web.
 	cfgWebReadBufferSize     = "web.read_buffer_size"
@@ -129,12 +121,6 @@ func settings() *viper.Viper {
 	v.SetDefault(cfgLoggerNoDisclaimer, true)
 	v.SetDefault(cfgLoggerSamplingInitial, 1000)
 	v.SetDefault(cfgLoggerSamplingThereafter, 1000)
-
-	// keepalive:
-	// If set below 10s, a minimum value of 10s will be used instead.
-	v.SetDefault(cfgKeepaliveTime, defaultKeepaliveTime)
-	v.SetDefault(cfgKeepaliveTimeout, defaultKeepaliveTimeout)
-	v.SetDefault(cfgKeepalivePermitWithoutStream, true)
 
 	// web-server:
 	v.SetDefault(cfgWebReadBufferSize, 4096)

@@ -57,6 +57,11 @@ backend node (and otherwise default settings):
 $ neofs-http-gw -p 192.168.130.72:8080
 $ HTTP_GW_PEERS_0_ADDRESS=192.168.130.72:8080 neofs-http-gw
 ```
+It's also possible to specify uri scheme (grpc or grpcs) when using `-p`:
+```
+$ neofs-http-gw -p grpc://192.168.130.72:8080
+$ HTTP_GW_PEERS_0_ADDRESS=grpcs://192.168.130.72:8080 neofs-http-gw
+```
 
 ## Configuration
 
@@ -145,9 +150,7 @@ default. To enable them use `--pprof` and `--metrics` flags or
 
 You can tune gRPC interface parameters with `--connect_timeout` (for
 connection to node) and `--request_timeout` (for request processing over
-established connection) options as well as `HTTP_GW_KEEPALIVE_TIME`
-(peer pinging interval), `HTTP_GW_KEEPALIVE_TIMEOUT` (peer pinging timeout)
-and `HTTP_GW_KEEPALIVE_PERMIT_WITHOUT_STREAM` environment variables.
+established connection) options.
 
 gRPC-level checks allow gateway to detect dead peers, but it declares them
 unhealthy at pool level once per `--rebalance_timer` interval, so check for it
