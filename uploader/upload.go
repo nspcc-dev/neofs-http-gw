@@ -43,7 +43,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		err        error
 		file       MultipartFile
 		obj        *object.ID
-		conn       client.Client
+		conn       client.Object
 		tkn        *session.Token
 		addr       = object.NewAddress()
 		cid        = cid.New()
