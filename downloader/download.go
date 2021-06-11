@@ -72,7 +72,7 @@ func isValidValue(s string) bool {
 	return true
 }
 
-func (r *request) receiveFile(clnt client.Client,
+func (r *request) receiveFile(clnt client.Object,
 	sessionToken *session.Token,
 	objectAddress *object.Address) {
 	var (
@@ -194,7 +194,7 @@ func (d *Downloader) DownloadByAddress(c *fasthttp.RequestCtx) {
 		oid, _  = c.UserValue("oid").(string)
 		val     = strings.Join([]string{cid, oid}, "/")
 		log     = d.log.With(zap.String("cid", cid), zap.String("oid", oid))
-		conn    client.Client
+		conn    client.Object
 		tkn     *session.Token
 	)
 	if err = address.Parse(val); err != nil {
@@ -221,7 +221,7 @@ func (d *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
 		val, _  = c.UserValue("attr_val").(string)
 		log     = d.log.With(zap.String("cid", scid), zap.String("attr_key", key), zap.String("attr_val", val))
 		ids     []*object.ID
-		conn    client.Client
+		conn    client.Object
 		tkn     *session.Token
 	)
 	cid := cid.New()
