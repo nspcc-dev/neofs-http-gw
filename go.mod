@@ -7,7 +7,7 @@ require (
 	github.com/mr-tron/base58 v1.1.3 // indirect
 	github.com/nspcc-dev/neofs-api-go v1.27.0
 	github.com/nspcc-dev/neofs-crypto v0.3.0
-	github.com/nspcc-dev/neofs-sdk-go v0.0.0-20210609143631-0d3c078a0d9b
+	github.com/nspcc-dev/neofs-sdk-go v0.0.0-20210615074944-86a9aa92599b
 	github.com/prometheus/client_golang v1.9.0
 	github.com/prometheus/common v0.15.0
 	github.com/spf13/pflag v1.0.5

@@ -11,7 +11,6 @@ import (
 	cid "github.com/nspcc-dev/neofs-api-go/pkg/container/id"
 	"github.com/nspcc-dev/neofs-api-go/pkg/object"
 	"github.com/nspcc-dev/neofs-api-go/pkg/owner"
-	"github.com/nspcc-dev/neofs-api-go/pkg/session"
 	"github.com/nspcc-dev/neofs-api-go/pkg/token"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/nspcc-dev/neofs-sdk-go/pkg/pool"
@@ -43,8 +42,6 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		err        error
 		file       MultipartFile
 		obj        *object.ID
-		conn       client.Object
-		tkn        *session.Token
 		addr       = object.NewAddress()
 		cid        = cid.New()
 		scid, _    = c.UserValue("cid").(string)
@@ -106,14 +103,6 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	}
 	oid, bt := u.fetchOwnerAndBearerToken(c)
 
-	// Try to put file into NeoFS or throw an error.
-	conn, tkn, err = u.pool.Connection()
-	if err != nil {
-		log.Error("failed to get neofs connection artifacts", zap.Error(err))
-		c.Error("failed to get neofs connection artifacts", fasthttp.StatusInternalServerError)
-		return
-	}
-
 	rawObject := object.NewRaw()
 	rawObject.SetContainerID(cid)
 	rawObject.SetOwnerID(oid)
@@ -121,7 +110,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 
 	ops := new(client.PutObjectParams).WithObject(rawObject.Object()).WithPayloadReader(file)
 
-	if obj, err = conn.PutObject(c, ops, client.WithSession(tkn), client.WithBearer(bt)); err != nil {
+	if obj, err = u.pool.PutObject(c, ops, client.WithBearer(bt)); err != nil {
 		log.Error("could not store file in neofs", zap.Error(err))
 		c.Error("could not store file in neofs", fasthttp.StatusBadRequest)
 		return
