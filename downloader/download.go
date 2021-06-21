@@ -141,6 +141,8 @@ func (r *request) receiveFile(clnt client.Object, objectAddress *object.Address)
 			}
 			r.Response.Header.Set("Last-Modified",
 				time.Unix(value, 0).Format(time.RFC1123))
+		case object.AttributeContentType:
+			writer.contentType = val
 		}
 	}
 	r.Response.Header.Set("x-object-id", obj.ID().String())
