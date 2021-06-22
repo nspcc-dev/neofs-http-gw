@@ -88,18 +88,15 @@ This command will make gateway use 192.168.130.72 for 90% of requests and
 192.168.130.71 for remaining 10%.
 
 ### Keys
-
-By default gateway autogenerates key pair it will use for NeoFS requests. If
-for some reason you need to have static keys you can pass them via `--key` 
-(or `-k`) parameter. The key can be a path to private key file (as raw bytes), 
-a hex string or (unencrypted) WIF string:
+You can provide wallet via `--wallet` or `-w` flag also you can specify account address using `--address` 
+(if no address provided default one will be used). If wallet is used you need to set `HTTP_GW_WALLET_PASSPHRASE` variable to decrypt wallet. 
+If no wallet provided gateway autogenerates key pair it will use for NeoFS requests.
 ```
-$ neofs-http-gw -p $NEOFS_NODE -k $KEY
+$ neofs-http-gw -p $NEOFS_NODE -w $WALLET_PATH --address $ACCOUNT_ADDRESS
 ```
-For example:
-
+Example:
 ```
-$ neofs-http-gw -p 192.168.130.72:8080 -k KxDgvEKzgSBPPfuVfw67oPQBSjidEiqTHURKSDL1R7yGaGYAeYnr
+$ neofs-http-gw -p 192.168.130.72:8080 -w wallet.json --address NfgHwwTi3wHAS8aFAN243C5vGbkYDpqLHP
 ```
 
 ### Binding and TLS

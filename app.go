@@ -3,11 +3,15 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
+	"fmt"
 	"math"
 	"strconv"
 
 	"github.com/fasthttp/router"
-	crypto "github.com/nspcc-dev/neofs-crypto"
+	"github.com/nspcc-dev/neo-go/cli/flags"
+	"github.com/nspcc-dev/neo-go/cli/input"
+	"github.com/nspcc-dev/neo-go/pkg/util"
+	"github.com/nspcc-dev/neo-go/pkg/wallet"
 	"github.com/nspcc-dev/neofs-http-gw/downloader"
 	"github.com/nspcc-dev/neofs-http-gw/uploader"
 	"github.com/nspcc-dev/neofs-sdk-go/pkg/logger"
@@ -90,13 +94,7 @@ func newApp(ctx context.Context, opt ...Option) App {
 	a.webServer.DisablePreParseMultipartForm = true
 	a.webServer.StreamRequestBody = a.cfg.GetBool(cfgWebStreamRequestBody)
 	// -- -- -- -- -- -- -- -- -- -- -- -- -- --
-	keystring := a.cfg.GetString(cmdNeoFSKey)
-	if len(keystring) == 0 {
-		a.log.Info("no key specified, creating one automatically for this run")
-		key, err = pool.NewEphemeralKey()
-	} else {
-		key, err = crypto.LoadPrivateKey(keystring)
-	}
+	key, err = getNeoFSKey(a)
 	if err != nil {
 		a.log.Fatal("failed to get neofs credentials", zap.Error(err))
 	}
@@ -125,6 +123,58 @@ func newApp(ctx context.Context, opt ...Option) App {
 		a.log.Fatal("failed to create connection pool", zap.Error(err))
 	}
 	return a
+}
+
+func getNeoFSKey(a *app) (*ecdsa.PrivateKey, error) {
+	walletPath := a.cfg.GetString(cmdWallet)
+	if len(walletPath) == 0 {
+		a.log.Info("no wallet path specified, creating ephemeral key automatically for this run")
+		return pool.NewEphemeralKey()
+	}
+	w, err := wallet.NewWalletFromFile(walletPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var password *string
+	if a.cfg.IsSet(cfgWalletPassphrase) {
+		pwd := a.cfg.GetString(cfgWalletPassphrase)
+		password = &pwd
+	}
+	return getKeyFromWallet(w, a.cfg.GetString(cmdAddress), password)
+}
+
+func getKeyFromWallet(w *wallet.Wallet, addrStr string, password *string) (*ecdsa.PrivateKey, error) {
+	var addr util.Uint160
+	var err error
+
+	if addrStr == "" {
+		addr = w.GetChangeAddress()
+	} else {
+		addr, err = flags.ParseAddress(addrStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid address")
+		}
+	}
+
+	acc := w.GetAccount(addr)
+	if acc == nil {
+		return nil, fmt.Errorf("couldn't find wallet account for %s", addrStr)
+	}
+
+	if password == nil {
+		pwd, err := input.ReadPassword("Enter password > ")
+		if err != nil {
+			return nil, fmt.Errorf("couldn't read password")
+		}
+		password = &pwd
+	}
+
+	if err := acc.Decrypt(*password, w.Scrypt); err != nil {
+		return nil, fmt.Errorf("couldn't decrypt account: %w", err)
+	}
+
+	return &acc.PrivateKey().PrivateKey, nil
 }
 
 func (a *app) Wait() {
