@@ -2,6 +2,24 @@
 
 This document outlines major changes between releases.
 
+## 0.15.2 (22 Jun 2021)
+
+New features:
+ * Content-Type returned for object GET requests can now be taken from
+   attributes (overriding autodetection, #65)
+
+Behavior changes:
+ * grpc keepalive options can no longer be changed (#60)
+
+Improvements:
+ * code refactoring (more reuse between different gateways, moved some code to
+   sdk-go, #47, #46, #51, #62, #63)
+ * documentation updates and fixes (#53, #49, #55, #59)
+ * updated api-go dependency (#57)
+
+Bugs fixed:
+ * `-k` option wasn't accepted for key although it was documented (#50)
+
 ## 0.15.1 (24 May 2021)
 
 This important release makes HTTP gateway compatible with NeoFS node version
