@@ -67,7 +67,7 @@ $ HTTP_GW_PEERS_0_ADDRESS=grpcs://192.168.130.72:8080 neofs-http-gw
 
 In general, everything available as CLI parameter can also be specified via
 environment variables, so they're not specifically mentioned in most cases
-(see `--help` also).
+(see `--help` also). If you prefer a config file you can use it in yaml format.
 
 ### Nodes and weights
 
@@ -169,6 +169,42 @@ HTTP_GW_LOGGER_NO_DISCLAIMER=bool                - Logger don't show application
 HTTP_GW_LOGGER_SAMPLING_INITIAL=int              - Logger sampling initial
 HTTP_GW_LOGGER_SAMPLING_THEREAFTER=int           - Logger sampling thereafter
 HTTP_GW_LOGGER_TRACE_LEVEL=string                - Logger show trace on level
+```
+
+### Yaml file
+Configuration file is optional and can be used instead of environment variables/other parameters. 
+It can be specified with `--config` parameter:
+```
+$ neofs-http-gw --config your-config.yaml
+```
+
+Configuration file example:
+```
+listen_address: 0.0.0.0:8082
+
+wallet:
+  passphrase: 123456
+  
+logger:
+  level: debug
+  
+peers:
+  0:
+    address: grpc://s01.neofs.devenv:8080
+    weight: 1
+```
+
+To know nesting level of variable you need to cut off the prefix `HTTP_GW` from variable and split the rest parts by `_`.
+For example variable `HTTP_GW_PEERS_0_WEIGHT=1` will be transformed to:
+```
+peers:
+  0:
+    weight: 1
+```
+
+If parameter doesn't support environment variable (e.g. `--listen_address 0.0.0.0:8082`) form it is used as is:
+```
+listen_address: 0.0.0.0:8082
 ```
 
 ## HTTP API provided

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"sort"
 	"strconv"
@@ -14,11 +13,7 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-type empty int
-
 const (
-	devNull = empty(0)
-
 	defaultRebalanceTimer = 15 * time.Second
 	defaultRequestTimeout = 15 * time.Second
 	defaultConnectTimeout = 30 * time.Second
@@ -70,6 +65,7 @@ const (
 	cmdMetrics = "metrics"
 	cmdWallet  = "wallet"
 	cmdAddress = "address"
+	cmdConfig  = "config"
 )
 
 var ignore = map[string]struct{}{
@@ -80,12 +76,11 @@ var ignore = map[string]struct{}{
 	cmdVersion:            {},
 }
 
-func (empty) Read([]byte) (int, error) { return 0, io.EOF }
-
 func settings() *viper.Viper {
 	v := viper.New()
 	v.AutomaticEnv()
 	v.SetEnvPrefix(Prefix)
+	v.AllowEmptyEnv(true)
 	v.SetConfigType("yaml")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
@@ -102,6 +97,7 @@ func settings() *viper.Viper {
 
 	flags.StringP(cmdWallet, "w", "", `path to the wallet`)
 	flags.String(cmdAddress, "", `address of wallet account`)
+	config := flags.String(cmdConfig, "", "config path")
 	flags.Bool(cmdVerbose, false, "debug gRPC connections")
 	flags.Duration(cfgConTimeout, defaultConnectTimeout, "gRPC connect timeout")
 	flags.Duration(cfgReqTimeout, defaultRequestTimeout, "gRPC request timeout")
@@ -142,10 +138,6 @@ func settings() *viper.Viper {
 		panic(err)
 	}
 
-	if err := v.ReadConfig(devNull); err != nil {
-		panic(err)
-	}
-
 	if err := flags.Parse(os.Args); err != nil {
 		panic(err)
 	}
@@ -181,6 +173,14 @@ func settings() *viper.Viper {
 	case version != nil && *version:
 		fmt.Printf("NeoFS HTTP Gateway %s\n", Version)
 		os.Exit(0)
+	}
+
+	if v.IsSet(cmdConfig) {
+		if cfgFile, err := os.Open(*config); err != nil {
+			panic(err)
+		} else if err := v.ReadConfig(cfgFile); err != nil {
+			panic(err)
+		}
 	}
 
 	if peers != nil && len(*peers) > 0 {
