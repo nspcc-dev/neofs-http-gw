@@ -36,7 +36,7 @@ version      Show current version
 
 Or you can also use a [Docker
 image](https://hub.docker.com/r/nspccdev/neofs-http-gw) provided for released
-(and occasionaly unreleased) versions of gateway (`:latest` points to the
+(and occasionally unreleased) versions of gateway (`:latest` points to the
 latest stable release).
 
 ## Execution
