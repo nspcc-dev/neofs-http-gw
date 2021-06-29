@@ -186,7 +186,7 @@ func (r *request) receiveFile(clnt client.Object, objectAddress *object.Address)
 				continue
 			}
 			r.Response.Header.Set("Last-Modified",
-				time.Unix(value, 0).Format(time.RFC1123))
+				time.Unix(value, 0).UTC().Format(http.TimeFormat))
 		case object.AttributeContentType:
 			contentType = val
 		}
