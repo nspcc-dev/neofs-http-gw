@@ -2,6 +2,22 @@
 
 This document outlines major changes between releases.
 
+## 0.16.0 (29 Jun 2021)
+
+We update HTTP gateway with NEP-6 wallets support, YAML configuration files
+and small fixes.
+
+New features:
+ * YAML configuration file (#71)
+
+Behavior changes:
+ * gateway key needs to be stored in a proper NEP-6 wallet now, `-k` option is
+   no longer available, see `-w` and `-a` (#68)
+
+Bugs fixed:
+ * downloads were not streamed leading to excessive memory usage (#67)
+ * Last-Modified header incorrectly used local time (#75)
+
 ## 0.15.2 (22 Jun 2021)
 
 New features:
