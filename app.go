@@ -197,11 +197,11 @@ func (a *app) Serve(ctx context.Context) {
 	// Configure router.
 	r := router.New()
 	r.RedirectTrailingSlash = true
-	r.POST("/upload/{cid}", uploader.Upload)
+	r.POST("/upload/{cid}", a.logger(uploader.Upload))
 	a.log.Info("added path /upload/{cid}")
-	r.GET("/get/{cid}/{oid}", downloader.DownloadByAddress)
+	r.GET("/get/{cid}/{oid}", a.logger(downloader.DownloadByAddress))
 	a.log.Info("added path /get/{cid}/{oid}")
-	r.GET("/get_by_attribute/{cid}/{attr_key}/{attr_val:*}", downloader.DownloadByAttribute)
+	r.GET("/get_by_attribute/{cid}/{attr_key}/{attr_val:*}", a.logger(downloader.DownloadByAttribute))
 	a.log.Info("added path /get_by_attribute/{cid}/{attr_key}/{attr_val:*}")
 	// enable metrics
 	if a.cfg.GetBool(cmdMetrics) {
@@ -228,4 +228,15 @@ func (a *app) Serve(ctx context.Context) {
 	if err != nil {
 		a.log.Fatal("could not start server", zap.Error(err))
 	}
+}
+
+func (a *app) logger(h fasthttp.RequestHandler) fasthttp.RequestHandler {
+	return fasthttp.RequestHandler(func(ctx *fasthttp.RequestCtx) {
+		a.log.Info("request", zap.String("remote", ctx.RemoteAddr().String()),
+			zap.ByteString("method", ctx.Method()),
+			zap.ByteString("path", ctx.Path()),
+			zap.ByteString("query", ctx.QueryArgs().QueryString()),
+			zap.Uint64("id", ctx.ID()))
+		h(ctx)
+	})
 }
