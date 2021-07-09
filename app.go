@@ -200,8 +200,10 @@ func (a *app) Serve(ctx context.Context) {
 	r.POST("/upload/{cid}", a.logger(uploader.Upload))
 	a.log.Info("added path /upload/{cid}")
 	r.GET("/get/{cid}/{oid}", a.logger(downloader.DownloadByAddress))
+	r.HEAD("/get/{cid}/{oid}", a.logger(downloader.HeadByAddress))
 	a.log.Info("added path /get/{cid}/{oid}")
 	r.GET("/get_by_attribute/{cid}/{attr_key}/{attr_val:*}", a.logger(downloader.DownloadByAttribute))
+	r.HEAD("/get_by_attribute/{cid}/{attr_key}/{attr_val:*}", a.logger(downloader.HeadByAttribute))
 	a.log.Info("added path /get_by_attribute/{cid}/{attr_key}/{attr_val:*}")
 	// enable metrics
 	if a.cfg.GetBool(cmdMetrics) {
