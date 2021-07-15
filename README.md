@@ -262,6 +262,8 @@ $ neofs-cli -r 192.168.130.72:8080 -k 6PYLKJhiSub5imt6WCVy6Quxtd9xu176omev1vWYov
 
 #### Requests
 
+The following requests support GET/HEAD methods. 
+
 ##### By IDs
 
 Basic downloading involves container ID and object ID and is done via GET
@@ -311,7 +313,7 @@ $ wget http://localhost:8082/get/Dxhf4PNprrJHWWTG5RGLdfLkJiSQ3AQqit1MSnEPRkDZ/2m
 
 #### Replies
 
-You get object contents in the reply body, but at the same time you also get a
+You get object contents in the reply body (if GET method was used), but at the same time you also get a
 set of reply headers generated using the following rules:
  * `Content-Length` is set to the length of the object
  * `Content-Type` is autodetected dynamically by gateway
