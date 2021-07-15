@@ -45,6 +45,8 @@ type (
 	}
 )
 
+var errObjectNotFound = errors.New("object not found")
+
 func newReader(data []byte, err error) *errReader {
 	return &errReader{data: data, err: err}
 }
@@ -112,7 +114,7 @@ func isValidValue(s string) bool {
 	return true
 }
 
-func (r *request) receiveFile(clnt client.Object, objectAddress *object.Address) {
+func (r request) receiveFile(clnt client.Object, objectAddress *object.Address) {
 	var (
 		err      error
 		dis      = "inline"
@@ -133,31 +135,9 @@ func (r *request) receiveFile(clnt client.Object, objectAddress *object.Address)
 			readDetector.Detect()
 		})
 
-	obj, err = clnt.GetObject(
-		r.RequestCtx,
-		options,
-	)
+	obj, err = clnt.GetObject(r.RequestCtx, options, bearerOpts(r.RequestCtx))
 	if err != nil {
-		r.log.Error(
-			"could not receive object",
-			zap.Stringer("elapsed", time.Since(start)),
-			zap.Error(err),
-		)
-		var (
-			msg   = fmt.Sprintf("could not receive object: %v", err)
-			code  = fasthttp.StatusBadRequest
-			cause = err
-		)
-		for unwrap := errors.Unwrap(err); unwrap != nil; unwrap = errors.Unwrap(cause) {
-			cause = unwrap
-		}
-		if st, ok := status.FromError(cause); ok && st != nil {
-			if st.Code() == codes.NotFound {
-				code = fasthttp.StatusNotFound
-			}
-			msg = st.Message()
-		}
-		r.Error(msg, code)
+		r.handleNeoFSErr(err, start)
 		return
 	}
 	if r.Request.URI().QueryArgs().GetBool("download") {
@@ -209,6 +189,36 @@ func (r *request) receiveFile(clnt client.Object, objectAddress *object.Address)
 	r.Response.Header.Set("Content-Disposition", dis+"; filename="+path.Base(filename))
 }
 
+func bearerOpts(ctx context.Context) client.CallOption {
+	if tkn, err := tokens.LoadBearerToken(ctx); err == nil {
+		return client.WithBearer(tkn)
+	}
+	return client.WithBearer(nil)
+}
+
+func (r *request) handleNeoFSErr(err error, start time.Time) {
+	r.log.Error(
+		"could not receive object",
+		zap.Stringer("elapsed", time.Since(start)),
+		zap.Error(err),
+	)
+	var (
+		msg   = fmt.Sprintf("could not receive object: %v", err)
+		code  = fasthttp.StatusBadRequest
+		cause = err
+	)
+	for unwrap := errors.Unwrap(err); unwrap != nil; unwrap = errors.Unwrap(cause) {
+		cause = unwrap
+	}
+	if st, ok := status.FromError(cause); ok && st != nil {
+		if st.Code() == codes.NotFound {
+			code = fasthttp.StatusNotFound
+		}
+		msg = st.Message()
+	}
+	r.Error(msg, code)
+}
+
 func (o objectIDs) Slice() []string {
 	res := make([]string, 0, len(o))
 	for _, oid := range o {
@@ -242,53 +252,74 @@ func (d *Downloader) newRequest(ctx *fasthttp.RequestCtx, log *zap.Logger) *requ
 
 // DownloadByAddress handles download requests using simple cid/oid format.
 func (d *Downloader) DownloadByAddress(c *fasthttp.RequestCtx) {
+	d.byAddress(c, request.receiveFile)
+}
+
+// byAddress is wrapper for function (e.g. request.headObject, request.receiveFile) that
+// prepares request and object address to it.
+func (d *Downloader) byAddress(c *fasthttp.RequestCtx, f func(request, client.Object, *object.Address)) {
 	var (
-		err     error
 		address = object.NewAddress()
 		cid, _  = c.UserValue("cid").(string)
 		oid, _  = c.UserValue("oid").(string)
 		val     = strings.Join([]string{cid, oid}, "/")
 		log     = d.log.With(zap.String("cid", cid), zap.String("oid", oid))
 	)
-	if err = address.Parse(val); err != nil {
+	if err := address.Parse(val); err != nil {
 		log.Error("wrong object address", zap.Error(err))
 		c.Error("wrong object address", fasthttp.StatusBadRequest)
 		return
 	}
 
-	d.newRequest(c, log).receiveFile(d.pool, address)
+	f(*d.newRequest(c, log), d.pool, address)
 }
 
 // DownloadByAttribute handles attribute-based download requests.
 func (d *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
+	d.byAttribute(c, request.receiveFile)
+}
+
+// byAttribute is wrapper similar to byAddress.
+func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, client.Object, *object.Address)) {
 	var (
-		err     error
-		scid, _ = c.UserValue("cid").(string)
-		key, _  = c.UserValue("attr_key").(string)
-		val, _  = c.UserValue("attr_val").(string)
-		log     = d.log.With(zap.String("cid", scid), zap.String("attr_key", key), zap.String("attr_val", val))
-		ids     []*object.ID
+		httpStatus = fasthttp.StatusBadRequest
+		scid, _    = c.UserValue("cid").(string)
+		key, _     = c.UserValue("attr_key").(string)
+		val, _     = c.UserValue("attr_val").(string)
+		log        = d.log.With(zap.String("cid", scid), zap.String("attr_key", key), zap.String("attr_val", val))
 	)
-	cid := cid.New()
-	if err = cid.Parse(scid); err != nil {
+	containerID := cid.New()
+	if err := containerID.Parse(scid); err != nil {
 		log.Error("wrong container id", zap.Error(err))
-		c.Error("wrong container id", fasthttp.StatusBadRequest)
+		c.Error("wrong container id", httpStatus)
 		return
 	}
 
+	address, err := d.searchObject(c, log, containerID, key, val)
+	if err != nil {
+		log.Error("couldn't search object", zap.Error(err))
+		if errors.Is(err, errObjectNotFound) {
+			httpStatus = fasthttp.StatusNotFound
+		}
+		c.Error("couldn't search object", httpStatus)
+		return
+	}
+
+	f(*d.newRequest(c, log), d.pool, address)
+}
+
+func (d *Downloader) searchObject(c *fasthttp.RequestCtx, log *zap.Logger, cid *cid.ID, key, val string) (*object.Address, error) {
 	options := object.NewSearchFilters()
 	options.AddRootFilter()
 	options.AddFilter(key, val, object.MatchStringEqual)
 
 	sops := new(client.SearchObjectParams).WithContainerID(cid).WithSearchFilters(options)
-	if ids, err = d.pool.SearchObject(c, sops); err != nil {
-		log.Error("something went wrong", zap.Error(err))
-		c.Error("something went wrong", fasthttp.StatusBadRequest)
-		return
-	} else if len(ids) == 0 {
-		log.Debug("object not found")
-		c.Error("object not found", fasthttp.StatusNotFound)
-		return
+	ids, err := d.pool.SearchObject(c, sops)
+	if err != nil {
+		return nil, err
+	}
+	if len(ids) == 0 {
+		return nil, errObjectNotFound
 	}
 	if len(ids) > 1 {
 		log.Debug("found multiple objects",
@@ -298,6 +329,5 @@ func (d *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
 	address := object.NewAddress()
 	address.SetContainerID(cid)
 	address.SetObjectID(ids[0])
-
-	d.newRequest(c, log).receiveFile(d.pool, address)
+	return address, nil
 }
