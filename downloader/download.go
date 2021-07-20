@@ -18,8 +18,6 @@ import (
 	"github.com/nspcc-dev/neofs-sdk-go/pkg/pool"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type (
@@ -210,12 +208,13 @@ func (r *request) handleNeoFSErr(err error, start time.Time) {
 	for unwrap := errors.Unwrap(err); unwrap != nil; unwrap = errors.Unwrap(cause) {
 		cause = unwrap
 	}
-	if st, ok := status.FromError(cause); ok && st != nil {
-		if st.Code() == codes.NotFound {
-			code = fasthttp.StatusNotFound
-		}
-		msg = st.Message()
+
+	if strings.Contains(cause.Error(), "not found") ||
+		strings.Contains(cause.Error(), "can't fetch container info") {
+		code = fasthttp.StatusNotFound
+		msg = errObjectNotFound.Error()
 	}
+
 	r.Error(msg, code)
 }
 
