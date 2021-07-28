@@ -2,6 +2,18 @@
 
 This document outlines major changes between releases.
 
+## 0.16.1 (28 Jul 2021)
+
+New features:
+* logging requests (#77)
+* HEAD methods for download routes (#76)
+
+Improvements:
+* updated sdk-go dependency (#82)
+
+Bugs fixed:
+* wrong NotFound status was used (#30)
+
 ## 0.16.0 (29 Jun 2021)
 
 We update HTTP gateway with NEP-6 wallets support, YAML configuration files
