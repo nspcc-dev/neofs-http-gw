@@ -16,7 +16,7 @@ require (
 	github.com/klauspost/compress v1.13.1 // indirect
 	github.com/nspcc-dev/neo-go v0.96.1
 	github.com/nspcc-dev/neofs-api-go v1.28.3
-	github.com/nspcc-dev/neofs-sdk-go v0.0.0-20210707142403-393034fd73bb
+	github.com/nspcc-dev/neofs-sdk-go v0.0.0-20210728093755-d95d722d6156
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/common v0.29.0
 	github.com/prometheus/procfs v0.7.1 // indirect
