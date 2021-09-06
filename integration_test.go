@@ -1,0 +1,259 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"strconv"
+	"testing"
+	"time"
+
+	"github.com/nspcc-dev/neofs-api-go/pkg/client"
+	"github.com/nspcc-dev/neofs-api-go/pkg/object"
+
+	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
+	"github.com/nspcc-dev/neofs-api-go/pkg/container"
+	cid "github.com/nspcc-dev/neofs-api-go/pkg/container/id"
+	"github.com/nspcc-dev/neofs-sdk-go/pkg/policy"
+	"github.com/nspcc-dev/neofs-sdk-go/pkg/pool"
+	"github.com/spf13/viper"
+	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
+)
+
+type putResponse struct {
+	CID string `json:"container_id"`
+	OID string `json:"object_id"`
+}
+
+func TestIntegration(t *testing.T) {
+	ctx := context.Background()
+	aioImage := "nspccdev/neofs-aio-testcontainer:"
+	versions := []string{"0.24.0", "latest"}
+	key, err := keys.NewPrivateKeyFromHex("1dd37fba80fec4e6a6f13fd708d8dcb3b29def768017052f6c930fa1c5d90bbb")
+	require.NoError(t, err)
+
+	for _, version := range versions {
+		aioContainer := createDockerContainer(ctx, t, aioImage+version)
+		cancel := runServer()
+		clientPool := getPool(ctx, t, key)
+		CID := createContainer(ctx, t, clientPool)
+
+		t.Run("simple put "+version, func(t *testing.T) { simplePut(ctx, t, clientPool, CID) })
+		t.Run("simple get "+version, func(t *testing.T) { simpleGet(ctx, t, clientPool, CID) })
+		t.Run("get by attribute "+version, func(t *testing.T) { getByAttr(ctx, t, clientPool, CID) })
+
+		cancel()
+		err = aioContainer.Terminate(ctx)
+		require.NoError(t, err)
+	}
+}
+
+func runServer() context.CancelFunc {
+	cancelCtx, cancel := context.WithCancel(context.Background())
+
+	v := getDefaultConfig()
+	l := newLogger(v)
+	application := newApp(cancelCtx, WithConfig(v), WithLogger(l))
+	go application.Serve(cancelCtx)
+
+	return cancel
+}
+
+func simplePut(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid.ID) {
+	content := "content of file"
+	keyAttr, valAttr := "User-Attribute", "user value"
+
+	attributes := map[string]string{
+		object.AttributeFileName: "newFile.txt",
+		keyAttr:                  valAttr,
+	}
+
+	var buff bytes.Buffer
+	w := multipart.NewWriter(&buff)
+	fw, err := w.CreateFormFile("file", attributes[object.AttributeFileName])
+	require.NoError(t, err)
+	_, err = io.Copy(fw, bytes.NewBufferString(content))
+	require.NoError(t, err)
+	err = w.Close()
+	require.NoError(t, err)
+
+	request, err := http.NewRequest(http.MethodPost, "http://localhost:8082/upload/"+CID.String(), &buff)
+	require.NoError(t, err)
+	request.Header.Set("Content-Type", w.FormDataContentType())
+	request.Header.Set("X-Attribute-"+keyAttr, valAttr)
+
+	resp, err := http.DefaultClient.Do(request)
+	require.NoError(t, err)
+	defer func() {
+		err = resp.Body.Close()
+		require.NoError(t, err)
+	}()
+
+	addr := &putResponse{}
+	err = json.NewDecoder(resp.Body).Decode(addr)
+	require.NoError(t, err)
+
+	err = CID.Parse(addr.CID)
+	require.NoError(t, err)
+
+	oid := object.NewID()
+	err = oid.Parse(addr.OID)
+	require.NoError(t, err)
+
+	objectAddress := object.NewAddress()
+	objectAddress.SetContainerID(CID)
+	objectAddress.SetObjectID(oid)
+
+	payload := bytes.NewBuffer(nil)
+	ops := new(client.GetObjectParams).WithAddress(objectAddress).WithPayloadWriter(payload)
+	obj, err := clientPool.GetObject(ctx, ops)
+	require.NoError(t, err)
+	require.Equal(t, content, payload.String())
+
+	for _, attribute := range obj.Attributes() {
+		require.Equal(t, attributes[attribute.Key()], attribute.Value())
+	}
+}
+
+func simpleGet(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid.ID) {
+	content := "content of file"
+	attributes := map[string]string{
+		"some-attr": "some-get-value",
+	}
+
+	oid := putObject(ctx, t, clientPool, CID, content, attributes)
+
+	resp, err := http.Get("http://localhost:8082/get/" + CID.String() + "/" + oid.String())
+	require.NoError(t, err)
+	defer func() {
+		err = resp.Body.Close()
+		require.NoError(t, err)
+	}()
+
+	data, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, content, string(data))
+
+	for k, v := range attributes {
+		require.Equal(t, v, resp.Header.Get("X-Attribute-"+k))
+	}
+}
+
+func getByAttr(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid.ID) {
+	keyAttr, valAttr := "some-attr", "some-get-by-attr-value"
+	content := "content of file"
+	attributes := map[string]string{keyAttr: valAttr}
+
+	oid := putObject(ctx, t, clientPool, CID, content, attributes)
+
+	expectedAttr := map[string]string{
+		"X-Attribute-" + keyAttr: valAttr,
+		"x-object-id":            oid.String(),
+		"x-container-id":         CID.String(),
+	}
+
+	resp, err := http.Get("http://localhost:8082/get_by_attribute/" + CID.String() + "/" + keyAttr + "/" + valAttr)
+	require.NoError(t, err)
+	defer func() {
+		err = resp.Body.Close()
+		require.NoError(t, err)
+	}()
+
+	data, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, content, string(data))
+
+	for k, v := range expectedAttr {
+		require.Equal(t, v, resp.Header.Get(k))
+	}
+}
+
+func createDockerContainer(ctx context.Context, t *testing.T, image string) testcontainers.Container {
+	req := testcontainers.ContainerRequest{
+		Image:       image,
+		WaitingFor:  wait.NewLogStrategy("aio container started").WithStartupTimeout(30 * time.Second),
+		Name:        "aio",
+		Hostname:    "aio",
+		NetworkMode: "host",
+	}
+	aioC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	require.NoError(t, err)
+
+	return aioC
+}
+
+func getDefaultConfig() *viper.Viper {
+	v := settings()
+	v.SetDefault(cfgPeers+".0.address", "127.0.0.1:8080")
+	v.SetDefault(cfgPeers+".0.weight", 1)
+
+	return v
+}
+
+func getPool(ctx context.Context, t *testing.T, key *keys.PrivateKey) pool.Pool {
+	pb := new(pool.Builder)
+	pb.AddNode("localhost:8080", 1)
+
+	opts := &pool.BuilderOptions{
+		Key:                   &key.PrivateKey,
+		NodeConnectionTimeout: 5 * time.Second,
+		NodeRequestTimeout:    5 * time.Second,
+	}
+	clientPool, err := pb.Build(ctx, opts)
+	require.NoError(t, err)
+	return clientPool
+}
+
+func createContainer(ctx context.Context, t *testing.T, clientPool pool.Pool) *cid.ID {
+	pp, err := policy.Parse("REP 1")
+	require.NoError(t, err)
+
+	cnr := container.New(
+		container.WithPolicy(pp),
+		container.WithCustomBasicACL(0x0FFFFFFF),
+		container.WithAttribute(container.AttributeName, "friendlyName"),
+		container.WithAttribute(container.AttributeTimestamp, strconv.FormatInt(time.Now().Unix(), 10)))
+	cnr.SetOwnerID(clientPool.OwnerID())
+
+	CID, err := clientPool.PutContainer(ctx, cnr)
+	require.NoError(t, err)
+	fmt.Println(CID.String())
+
+	err = clientPool.WaitForContainerPresence(ctx, CID, &pool.ContainerPollingParams{
+		CreationTimeout: 15 * time.Second,
+		PollInterval:    3 * time.Second,
+	})
+	require.NoError(t, err)
+
+	return CID
+}
+
+func putObject(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid.ID, content string, attributes map[string]string) *object.ID {
+	rawObject := object.NewRaw()
+	rawObject.SetContainerID(CID)
+	rawObject.SetOwnerID(clientPool.OwnerID())
+
+	var attrs []*object.Attribute
+	for key, val := range attributes {
+		attr := object.NewAttribute()
+		attr.SetKey(key)
+		attr.SetValue(val)
+		attrs = append(attrs, attr)
+	}
+	rawObject.SetAttributes(attrs...)
+
+	ops := new(client.PutObjectParams).WithObject(rawObject.Object()).WithPayloadReader(bytes.NewBufferString(content))
+	oid, err := clientPool.PutObject(ctx, ops)
+	require.NoError(t, err)
+
+	return oid
+}
