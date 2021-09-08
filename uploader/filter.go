@@ -8,15 +8,15 @@ import (
 )
 
 const (
-	userAttributeHeaderPrefix  = "X-Attribute-"
-	neofsAttributeHeaderPrefix = "NEOFS-"
-
-	systemAttributePrefix = "__NEOFS__"
+	userAttributeHeaderPrefix = "X-Attribute-"
+	systemAttributePrefix     = "__NEOFS__"
 )
 
-func systemTranslator(key []byte) []byte {
-	// replace `NEOFS-` with `__NEOFS__`
-	key = bytes.Replace(key, []byte(neofsAttributeHeaderPrefix), []byte(systemAttributePrefix), 1)
+var neofsAttributeHeaderPrefixes = [...][]byte{[]byte("Neofs-"), []byte("NEOFS-"), []byte("neofs-")}
+
+func systemTranslator(key, prefix []byte) []byte {
+	// replace specified prefix with `__NEOFS__`
+	key = bytes.Replace(key, prefix, []byte(systemAttributePrefix), 1)
 
 	// replace `-` with `_`
 	key = bytes.ReplaceAll(key, []byte("-"), []byte("_"))
@@ -28,7 +28,6 @@ func systemTranslator(key []byte) []byte {
 func filterHeaders(l *zap.Logger, header *fasthttp.RequestHeader) map[string]string {
 	result := make(map[string]string)
 	prefix := []byte(userAttributeHeaderPrefix)
-	system := []byte(neofsAttributeHeaderPrefix)
 
 	header.VisitAll(func(key, val []byte) {
 		// checks that key and val not empty
@@ -45,8 +44,11 @@ func filterHeaders(l *zap.Logger, header *fasthttp.RequestHeader) map[string]str
 		key = bytes.TrimPrefix(key, prefix)
 
 		// checks that it's a system NeoFS header
-		if bytes.HasPrefix(key, system) {
-			key = systemTranslator(key)
+		for _, system := range neofsAttributeHeaderPrefixes {
+			if bytes.HasPrefix(key, system) {
+				key = systemTranslator(key, system)
+				break
+			}
 		}
 
 		// checks that attribute key not empty

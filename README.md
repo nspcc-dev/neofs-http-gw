@@ -357,7 +357,8 @@ You can also add some attributes to your file using the following rules:
    "X-Attribute-" prefix stripped, that is if you add "X-Attribute-Ololo:
    100500" header to your request the resulting object will get "Ololo:
    100500" attribute
- * "X-Attribute-NEOFS-*" headers are special, they're used to set internal
+ * "X-Attribute-NEOFS-*" headers are special 
+   (`-NEOFS-` part can also be `-neofs-` or`-Neofs-`), they're used to set internal
    NeoFS attributes starting with `__NEOFS__` prefix, for these attributes all
    dashes get converted to underscores and all letters are capitalized. For
    example, you can use "X-Attribute-NEOFS-Expiration-Epoch" header to set
