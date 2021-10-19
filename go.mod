@@ -15,7 +15,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/klauspost/compress v1.13.1 // indirect
 	github.com/nspcc-dev/neo-go v0.96.1
-	github.com/nspcc-dev/neofs-api-go v1.28.3
+	github.com/nspcc-dev/neofs-api-go v1.30.0
 	github.com/nspcc-dev/neofs-sdk-go v0.0.0-20210728093755-d95d722d6156
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/common v0.29.0
@@ -27,9 +27,7 @@ require (
 	github.com/valyala/fasthttp v1.28.0
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.18.1
-	golang.org/x/net v0.0.0-20210716203947-853a461950ff // indirect
-	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
 	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
-	google.golang.org/genproto v0.0.0-20210722135532-667f2b7c528f // indirect
-	google.golang.org/grpc v1.39.0
+	golang.org/x/tools v0.1.5 // indirect
+	google.golang.org/grpc v1.41.0
 )

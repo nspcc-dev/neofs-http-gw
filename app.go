@@ -205,6 +205,8 @@ func (a *app) Serve(ctx context.Context) {
 	r.GET("/get_by_attribute/{cid}/{attr_key}/{attr_val:*}", a.logger(downloader.DownloadByAttribute))
 	r.HEAD("/get_by_attribute/{cid}/{attr_key}/{attr_val:*}", a.logger(downloader.HeadByAttribute))
 	a.log.Info("added path /get_by_attribute/{cid}/{attr_key}/{attr_val:*}")
+	r.GET("/zip/{cid}/{prefix:*}", a.logger(downloader.DownloadZipped))
+	a.log.Info("added path /zip/{cid}/{prefix}")
 	// enable metrics
 	if a.cfg.GetBool(cmdMetrics) {
 		a.log.Info("added path /metrics/")

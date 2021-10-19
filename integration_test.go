@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -8,16 +9,16 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"sort"
 	"strconv"
 	"testing"
 	"time"
 
-	"github.com/nspcc-dev/neofs-api-go/pkg/client"
-	"github.com/nspcc-dev/neofs-api-go/pkg/object"
-
 	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
+	"github.com/nspcc-dev/neofs-api-go/pkg/client"
 	"github.com/nspcc-dev/neofs-api-go/pkg/container"
 	cid "github.com/nspcc-dev/neofs-api-go/pkg/container/id"
+	"github.com/nspcc-dev/neofs-api-go/pkg/object"
 	"github.com/nspcc-dev/neofs-sdk-go/pkg/policy"
 	"github.com/nspcc-dev/neofs-sdk-go/pkg/pool"
 	"github.com/spf13/viper"
@@ -47,6 +48,7 @@ func TestIntegration(t *testing.T) {
 		t.Run("simple put "+version, func(t *testing.T) { simplePut(ctx, t, clientPool, CID) })
 		t.Run("simple get "+version, func(t *testing.T) { simpleGet(ctx, t, clientPool, CID) })
 		t.Run("get by attribute "+version, func(t *testing.T) { getByAttr(ctx, t, clientPool, CID) })
+		t.Run("get zip "+version, func(t *testing.T) { getZip(ctx, t, clientPool, CID) })
 
 		cancel()
 		err = aioContainer.Terminate(ctx)
@@ -171,6 +173,66 @@ func getByAttr(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid
 
 	for k, v := range expectedAttr {
 		require.Equal(t, v, resp.Header.Get(k))
+	}
+}
+
+func getZip(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid.ID) {
+	names := []string{"zipfolder/dir/name1.txt", "zipfolder/name2.txt"}
+	contents := []string{"content of file1", "content of file2"}
+	attributes1 := map[string]string{object.AttributeFileName: names[0]}
+	attributes2 := map[string]string{object.AttributeFileName: names[1]}
+
+	putObject(ctx, t, clientPool, CID, contents[0], attributes1)
+	putObject(ctx, t, clientPool, CID, contents[1], attributes2)
+
+	resp, err := http.Get("http://localhost:8082/zip/" + CID.String() + "/zipfolder")
+	require.NoError(t, err)
+	defer func() {
+		err = resp.Body.Close()
+		require.NoError(t, err)
+	}()
+
+	data, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	checkZip(t, data, resp.ContentLength, names, contents)
+
+	// check nested folder
+	resp2, err := http.Get("http://localhost:8082/zip/" + CID.String() + "/zipfolder/dir")
+	require.NoError(t, err)
+	defer func() {
+		err = resp2.Body.Close()
+		require.NoError(t, err)
+	}()
+
+	data2, err := io.ReadAll(resp2.Body)
+	require.NoError(t, err)
+	checkZip(t, data2, resp2.ContentLength, names[:1], contents[:1])
+}
+
+func checkZip(t *testing.T, data []byte, length int64, names, contents []string) {
+	readerAt := bytes.NewReader(data)
+
+	zipReader, err := zip.NewReader(readerAt, length)
+	require.NoError(t, err)
+
+	require.Equal(t, len(names), len(zipReader.File))
+
+	sort.Slice(zipReader.File, func(i, j int) bool {
+		return zipReader.File[i].FileHeader.Name < zipReader.File[j].FileHeader.Name
+	})
+
+	for i, f := range zipReader.File {
+		require.Equal(t, names[i], f.FileHeader.Name)
+
+		rc, err := f.Open()
+		require.NoError(t, err)
+
+		all, err := io.ReadAll(rc)
+		require.NoError(t, err)
+		require.Equal(t, contents[i], string(all))
+
+		err = rc.Close()
+		require.NoError(t, err)
 	}
 }
 
