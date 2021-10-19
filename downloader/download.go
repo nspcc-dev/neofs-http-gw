@@ -1,6 +1,7 @@
 package downloader
 
 import (
+	"archive/zip"
 	"context"
 	"errors"
 	"fmt"
@@ -308,9 +309,30 @@ func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, client.
 }
 
 func (d *Downloader) searchObject(c *fasthttp.RequestCtx, log *zap.Logger, cid *cid.ID, key, val string) (*object.Address, error) {
+	ids, err := d.searchByAttr(c, cid, key, val)
+	if err != nil {
+		return nil, err
+	}
+	if len(ids) > 1 {
+		log.Debug("found multiple objects",
+			zap.Strings("object_ids", objectIDs(ids).Slice()),
+			zap.Stringer("show_object_id", ids[0]))
+	}
+
+	return formAddress(cid, ids[0]), nil
+}
+
+func formAddress(cid *cid.ID, oid *object.ID) *object.Address {
+	address := object.NewAddress()
+	address.SetContainerID(cid)
+	address.SetObjectID(oid)
+	return address
+}
+
+func (d *Downloader) search(c *fasthttp.RequestCtx, cid *cid.ID, key, val string, op object.SearchMatchType) ([]*object.ID, error) {
 	options := object.NewSearchFilters()
 	options.AddRootFilter()
-	options.AddFilter(key, val, object.MatchStringEqual)
+	options.AddFilter(key, val, op)
 
 	sops := new(client.SearchObjectParams).WithContainerID(cid).WithSearchFilters(options)
 	ids, err := d.pool.SearchObject(c, sops)
@@ -320,13 +342,105 @@ func (d *Downloader) searchObject(c *fasthttp.RequestCtx, log *zap.Logger, cid *
 	if len(ids) == 0 {
 		return nil, errObjectNotFound
 	}
-	if len(ids) > 1 {
-		log.Debug("found multiple objects",
-			zap.Strings("object_ids", objectIDs(ids).Slice()),
-			zap.Stringer("show_object_id", ids[0]))
+	return ids, nil
+}
+
+func (d *Downloader) searchByPrefix(c *fasthttp.RequestCtx, cid *cid.ID, val string) ([]*object.ID, error) {
+	return d.search(c, cid, object.AttributeFileName, val, object.MatchCommonPrefix)
+}
+
+func (d *Downloader) searchByAttr(c *fasthttp.RequestCtx, cid *cid.ID, key, val string) ([]*object.ID, error) {
+	return d.search(c, cid, key, val, object.MatchStringEqual)
+}
+
+// DownloadZipped handles zip by prefix requests.
+func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
+	status := fasthttp.StatusBadRequest
+	scid, _ := c.UserValue("cid").(string)
+	prefix, _ := c.UserValue("prefix").(string)
+	log := d.log.With(zap.String("cid", scid), zap.String("prefix", prefix))
+
+	containerID := cid.New()
+	if err := containerID.Parse(scid); err != nil {
+		log.Error("wrong container id", zap.Error(err))
+		c.Error("wrong container id", status)
+		return
 	}
-	address := object.NewAddress()
-	address.SetContainerID(cid)
-	address.SetObjectID(ids[0])
-	return address, nil
+
+	if err := tokens.StoreBearerToken(c); err != nil {
+		log.Error("could not fetch and store bearer token", zap.Error(err))
+		c.Error("could not fetch and store bearer token", fasthttp.StatusBadRequest)
+		return
+	}
+
+	ids, err := d.searchByPrefix(c, containerID, prefix)
+	if err != nil {
+		log.Error("couldn't find objects", zap.Error(err))
+		if errors.Is(err, errObjectNotFound) {
+			status = fasthttp.StatusNotFound
+		}
+		c.Error("couldn't find objects", status)
+		return
+	}
+
+	c.Response.Header.Set("Content-Type", "application/zip")
+	c.Response.Header.Set("Content-Disposition", "attachment; filename=\"archive.zip\"")
+	c.Response.SetStatusCode(http.StatusOK)
+
+	if err = d.streamFiles(c, containerID, ids); err != nil {
+		log.Error("couldn't stream files", zap.Error(err))
+		c.Error("couldn't stream", fasthttp.StatusInternalServerError)
+		return
+	}
+}
+
+func (d *Downloader) streamFiles(c *fasthttp.RequestCtx, cid *cid.ID, ids []*object.ID) error {
+	zipWriter := zip.NewWriter(c)
+	for _, id := range ids {
+		var r io.Reader
+		readerInitCtx, initReader := context.WithCancel(c)
+		options := new(client.GetObjectParams).
+			WithAddress(formAddress(cid, id)).
+			WithPayloadReaderHandler(func(reader io.Reader) {
+				r = reader
+				initReader()
+			})
+
+		obj, err := d.pool.GetObject(c, options, bearerOpts(c))
+		if err != nil {
+			return err
+		}
+
+		header := &zip.FileHeader{
+			Name:     getFilename(obj),
+			Method:   zip.Store,
+			Modified: time.Now(),
+		}
+		entryWriter, err := zipWriter.CreateHeader(header)
+		if err != nil {
+			return err
+		}
+
+		<-readerInitCtx.Done()
+		_, err = io.Copy(entryWriter, r)
+		if err != nil {
+			return err
+		}
+
+		if err = zipWriter.Flush(); err != nil {
+			return err
+		}
+	}
+
+	return zipWriter.Close()
+}
+
+func getFilename(obj *object.Object) string {
+	for _, attr := range obj.Attributes() {
+		if attr.Key() == object.AttributeFileName {
+			return attr.Value()
+		}
+	}
+
+	return ""
 }
