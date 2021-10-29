@@ -190,7 +190,7 @@ func (a *app) Serve(ctx context.Context) {
 	}()
 	edts := a.cfg.GetBool(cfgUploaderHeaderEnableDefaultTimestamp)
 	uploader := uploader.New(a.log, a.pool, edts)
-	downloader, err := downloader.New(ctx, a.log, a.pool)
+	downloader, err := downloader.New(a.log, downloader.Settings{ZipCompression: a.cfg.GetBool(cfgZipCompression)}, a.pool)
 	if err != nil {
 		a.log.Fatal("failed to create downloader", zap.Error(err))
 	}
