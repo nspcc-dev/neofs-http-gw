@@ -156,6 +156,10 @@ if needed.
 All timing options accept values with suffixes, so "15s" is 15 seconds and
 "2m" is 2 minutes.
 
+### Zip streaming
+The gateway supports downloading files by common prefix (like dir) in zip format. You can enable compression 
+using config or `HTTP_GW_ZIP_COMPRESSION=true` environment variable.
+
 ### Logging
 
 `--verbose` flag enables gRPC logging and there is a number of environment
@@ -192,6 +196,9 @@ peers:
   0:
     address: grpc://s01.neofs.devenv:8080
     weight: 1
+    
+zip:
+  compression: false 
 ```
 
 To know nesting level of variable you need to cut off the prefix `HTTP_GW` from variable and split the rest parts by `_`.
@@ -309,6 +316,12 @@ also supported (more on that below):
 ```
 $ wget http://localhost:8082/get/Dxhf4PNprrJHWWTG5RGLdfLkJiSQ3AQqit1MSnEPRkDZ/2m8PtaoricLouCn5zE8hAFr3gZEBDCZFe9BEgVJTSocY?download=true
 
+```
+
+##### Zip
+You can dowmload some dir (files with the same prefix) in zip (it will be compressed if config contains appropriate param):
+```
+$ wget http://localhost:8082/zip/Dxhf4PNprrJHWWTG5RGLdfLkJiSQ3AQqit1MSnEPRkDZ/common/prefix
 ```
 
 #### Replies

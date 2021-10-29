@@ -53,6 +53,9 @@ const (
 	// Peers.
 	cfgPeers = "peers"
 
+	// Zip compression
+	cfgZipCompression = "zip.compression"
+
 	// Application.
 	cfgApplicationName    = "app.name"
 	cfgApplicationVersion = "app.version"
@@ -133,6 +136,9 @@ func settings() *viper.Viper {
 
 	// upload header
 	v.SetDefault(cfgUploaderHeaderEnableDefaultTimestamp, false)
+
+	// zip:
+	v.SetDefault(cfgZipCompression, false)
 
 	if err := v.BindPFlags(flags); err != nil {
 		panic(err)
