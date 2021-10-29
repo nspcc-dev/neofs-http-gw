@@ -229,14 +229,19 @@ func (o objectIDs) Slice() []string {
 
 // Downloader is a download request handler.
 type Downloader struct {
-	log  *zap.Logger
-	pool pool.Pool
+	log      *zap.Logger
+	pool     pool.Pool
+	settings Settings
+}
+
+type Settings struct {
+	ZipCompression bool
 }
 
 // New creates an instance of Downloader using specified options.
-func New(ctx context.Context, log *zap.Logger, conns pool.Pool) (*Downloader, error) {
+func New(log *zap.Logger, settings Settings, conns pool.Pool) (*Downloader, error) {
 	var err error
-	d := &Downloader{log: log, pool: conns}
+	d := &Downloader{log: log, pool: conns, settings: settings}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get neofs client's reusable artifacts: %w", err)
 	}
@@ -396,6 +401,11 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 
 func (d *Downloader) streamFiles(c *fasthttp.RequestCtx, cid *cid.ID, ids []*object.ID) error {
 	zipWriter := zip.NewWriter(c)
+	compression := zip.Store
+	if d.settings.ZipCompression {
+		compression = zip.Deflate
+	}
+
 	for _, id := range ids {
 		var r io.Reader
 		readerInitCtx, initReader := context.WithCancel(c)
@@ -413,7 +423,7 @@ func (d *Downloader) streamFiles(c *fasthttp.RequestCtx, cid *cid.ID, ids []*obj
 
 		header := &zip.FileHeader{
 			Name:     getFilename(obj),
-			Method:   zip.Store,
+			Method:   compression,
 			Modified: time.Now(),
 		}
 		entryWriter, err := zipWriter.CreateHeader(header)
