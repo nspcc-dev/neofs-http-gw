@@ -33,13 +33,15 @@ type putResponse struct {
 }
 
 func TestIntegration(t *testing.T) {
-	ctx := context.Background()
+	rootCtx := context.Background()
 	aioImage := "nspccdev/neofs-aio-testcontainer:"
-	versions := []string{"latest"}
+	versions := []string{"0.24.0", "0.25.1", "latest"}
 	key, err := keys.NewPrivateKeyFromHex("1dd37fba80fec4e6a6f13fd708d8dcb3b29def768017052f6c930fa1c5d90bbb")
 	require.NoError(t, err)
 
 	for _, version := range versions {
+		ctx, cancel2 := context.WithCancel(rootCtx)
+
 		aioContainer := createDockerContainer(ctx, t, aioImage+version)
 		cancel := runServer()
 		clientPool := getPool(ctx, t, key)
@@ -53,6 +55,7 @@ func TestIntegration(t *testing.T) {
 		cancel()
 		err = aioContainer.Terminate(ctx)
 		require.NoError(t, err)
+		cancel2()
 	}
 }
 
