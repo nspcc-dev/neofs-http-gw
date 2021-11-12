@@ -15,6 +15,7 @@ import (
 	"github.com/nspcc-dev/neofs-api-go/pkg/client"
 	cid "github.com/nspcc-dev/neofs-api-go/pkg/container/id"
 	"github.com/nspcc-dev/neofs-api-go/pkg/object"
+	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/nspcc-dev/neofs-sdk-go/pkg/pool"
 	"github.com/valyala/fasthttp"
@@ -123,7 +124,7 @@ func (r request) receiveFile(clnt client.Object, objectAddress *object.Address) 
 	)
 	if err = tokens.StoreBearerToken(r.RequestCtx); err != nil {
 		r.log.Error("could not fetch and store bearer token", zap.Error(err))
-		r.Error("could not fetch and store bearer token", fasthttp.StatusBadRequest)
+		response.Error(r.RequestCtx, "could not fetch and store bearer token", fasthttp.StatusBadRequest)
 		return
 	}
 	readDetector := newDetector()
@@ -177,7 +178,7 @@ func (r request) receiveFile(clnt client.Object, objectAddress *object.Address) 
 	if len(contentType) == 0 {
 		if readDetector.err != nil {
 			r.log.Error("could not read object", zap.Error(err))
-			r.Error("could not read object", fasthttp.StatusBadRequest)
+			response.Error(r.RequestCtx, "could not read object", fasthttp.StatusBadRequest)
 			return
 		}
 		readDetector.Wait()
@@ -216,7 +217,7 @@ func (r *request) handleNeoFSErr(err error, start time.Time) {
 		msg = errObjectNotFound.Error()
 	}
 
-	r.Error(msg, code)
+	response.Error(r.RequestCtx, msg, code)
 }
 
 func (o objectIDs) Slice() []string {
@@ -272,7 +273,7 @@ func (d *Downloader) byAddress(c *fasthttp.RequestCtx, f func(request, client.Ob
 	)
 	if err := address.Parse(val); err != nil {
 		log.Error("wrong object address", zap.Error(err))
-		c.Error("wrong object address", fasthttp.StatusBadRequest)
+		response.Error(c, "wrong object address", fasthttp.StatusBadRequest)
 		return
 	}
 
@@ -296,7 +297,7 @@ func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, client.
 	containerID := cid.New()
 	if err := containerID.Parse(scid); err != nil {
 		log.Error("wrong container id", zap.Error(err))
-		c.Error("wrong container id", httpStatus)
+		response.Error(c, "wrong container id", httpStatus)
 		return
 	}
 
@@ -306,7 +307,7 @@ func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, client.
 		if errors.Is(err, errObjectNotFound) {
 			httpStatus = fasthttp.StatusNotFound
 		}
-		c.Error("couldn't search object", httpStatus)
+		response.Error(c, "couldn't search object", httpStatus)
 		return
 	}
 
@@ -368,13 +369,13 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 	containerID := cid.New()
 	if err := containerID.Parse(scid); err != nil {
 		log.Error("wrong container id", zap.Error(err))
-		c.Error("wrong container id", status)
+		response.Error(c, "wrong container id", status)
 		return
 	}
 
 	if err := tokens.StoreBearerToken(c); err != nil {
 		log.Error("could not fetch and store bearer token", zap.Error(err))
-		c.Error("could not fetch and store bearer token", fasthttp.StatusBadRequest)
+		response.Error(c, "could not fetch and store bearer token", fasthttp.StatusBadRequest)
 		return
 	}
 
@@ -384,7 +385,7 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 		if errors.Is(err, errObjectNotFound) {
 			status = fasthttp.StatusNotFound
 		}
-		c.Error("couldn't find objects", status)
+		response.Error(c, "couldn't find objects", status)
 		return
 	}
 
@@ -394,7 +395,7 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 
 	if err = d.streamFiles(c, containerID, ids); err != nil {
 		log.Error("couldn't stream files", zap.Error(err))
-		c.Error("couldn't stream", fasthttp.StatusInternalServerError)
+		response.Error(c, "couldn't stream", fasthttp.StatusInternalServerError)
 		return
 	}
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/nspcc-dev/neofs-api-go/pkg/object"
 	"github.com/nspcc-dev/neofs-api-go/pkg/owner"
 	"github.com/nspcc-dev/neofs-api-go/pkg/token"
+	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/nspcc-dev/neofs-sdk-go/pkg/pool"
 	"github.com/valyala/fasthttp"
@@ -51,12 +52,12 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	)
 	if err = tokens.StoreBearerToken(c); err != nil {
 		log.Error("could not fetch bearer token", zap.Error(err))
-		c.Error("could not fetch bearer token", fasthttp.StatusBadRequest)
+		response.Error(c, "could not fetch bearer token", fasthttp.StatusBadRequest)
 		return
 	}
 	if err = cid.Parse(scid); err != nil {
 		log.Error("wrong container id", zap.Error(err))
-		c.Error("wrong container id", fasthttp.StatusBadRequest)
+		response.Error(c, "wrong container id", fasthttp.StatusBadRequest)
 		return
 	}
 	defer func() {
@@ -75,7 +76,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	boundary := string(c.Request.Header.MultipartFormBoundary())
 	if file, err = fetchMultipartFile(u.log, bodyStream, boundary); err != nil {
 		log.Error("could not receive multipart/form", zap.Error(err))
-		c.Error("could not receive multipart/form: "+err.Error(), fasthttp.StatusBadRequest)
+		response.Error(c, "could not receive multipart/form: "+err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
 	filtered := filterHeaders(u.log, &c.Request.Header)
@@ -112,7 +113,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 
 	if obj, err = u.pool.PutObject(c, ops, client.WithBearer(bt)); err != nil {
 		log.Error("could not store file in neofs", zap.Error(err))
-		c.Error("could not store file in neofs", fasthttp.StatusBadRequest)
+		response.Error(c, "could not store file in neofs", fasthttp.StatusBadRequest)
 		return
 	}
 
@@ -122,7 +123,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	// Try to return the response, otherwise, if something went wrong, throw an error.
 	if err = newPutResponse(addr).encode(c); err != nil {
 		log.Error("could not prepare response", zap.Error(err))
-		c.Error("could not prepare response", fasthttp.StatusBadRequest)
+		response.Error(c, "could not prepare response", fasthttp.StatusBadRequest)
 
 		return
 	}

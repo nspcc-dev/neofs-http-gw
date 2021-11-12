@@ -5,6 +5,7 @@ import (
 	rtp "runtime/pprof"
 
 	"github.com/fasthttp/router"
+	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
 )
@@ -38,6 +39,6 @@ func pprofHandler() fasthttp.RequestHandler {
 			return
 		}
 
-		ctx.Error("Not found", fasthttp.StatusNotFound)
+		response.Error(ctx, "Not found", fasthttp.StatusNotFound)
 	}
 }
