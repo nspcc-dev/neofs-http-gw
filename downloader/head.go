@@ -7,6 +7,7 @@ import (
 
 	"github.com/nspcc-dev/neofs-api-go/pkg/client"
 	"github.com/nspcc-dev/neofs-api-go/pkg/object"
+	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
@@ -18,7 +19,7 @@ func (r request) headObject(clnt client.Object, objectAddress *object.Address) {
 	var start = time.Now()
 	if err := tokens.StoreBearerToken(r.RequestCtx); err != nil {
 		r.log.Error("could not fetch and store bearer token", zap.Error(err))
-		r.Error("could not fetch and store bearer token", fasthttp.StatusBadRequest)
+		response.Error(r.RequestCtx, "could not fetch and store bearer token", fasthttp.StatusBadRequest)
 		return
 	}
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/fasthttp/router"
+	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/expfmt"
@@ -57,7 +58,7 @@ func metricsHandler(reg prometheus.Gatherer, opts promhttp.HandlerOpts) fasthttp
 				defer func() { <-inFlightSem }()
 			default:
 
-				c.Error(fmt.Sprintf(
+				response.Error(c, fmt.Sprintf(
 					"Limit of concurrent requests reached (%d), try again later.", opts.MaxRequestsInFlight,
 				), fasthttp.StatusServiceUnavailable)
 				return
@@ -76,11 +77,11 @@ func metricsHandler(reg prometheus.Gatherer, opts promhttp.HandlerOpts) fasthttp
 			case promhttp.ContinueOnError:
 				if len(mfs) == 0 {
 					// Still report the error if no metrics have been gathered.
-					c.Error(err.Error(), fasthttp.StatusServiceUnavailable)
+					response.Error(c, err.Error(), fasthttp.StatusServiceUnavailable)
 					return
 				}
 			case promhttp.HTTPErrorOnError:
-				c.Error(err.Error(), fasthttp.StatusServiceUnavailable)
+				response.Error(c, err.Error(), fasthttp.StatusServiceUnavailable)
 				return
 			}
 		}
@@ -106,7 +107,7 @@ func metricsHandler(reg prometheus.Gatherer, opts promhttp.HandlerOpts) fasthttp
 			case promhttp.PanicOnError:
 				panic(err)
 			case promhttp.HTTPErrorOnError:
-				c.Error(err.Error(), fasthttp.StatusServiceUnavailable)
+				response.Error(c, err.Error(), fasthttp.StatusServiceUnavailable)
 				return true
 			default:
 				// Do nothing in all other cases, including ContinueOnError.

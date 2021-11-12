@@ -13,6 +13,7 @@ import (
 	"github.com/nspcc-dev/neo-go/pkg/util"
 	"github.com/nspcc-dev/neo-go/pkg/wallet"
 	"github.com/nspcc-dev/neofs-http-gw/downloader"
+	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/uploader"
 	"github.com/nspcc-dev/neofs-sdk-go/pkg/logger"
 	"github.com/nspcc-dev/neofs-sdk-go/pkg/pool"
@@ -197,6 +198,12 @@ func (a *app) Serve(ctx context.Context) {
 	// Configure router.
 	r := router.New()
 	r.RedirectTrailingSlash = true
+	r.NotFound = func(r *fasthttp.RequestCtx) {
+		response.Error(r, "Not found", fasthttp.StatusNotFound)
+	}
+	r.MethodNotAllowed = func(r *fasthttp.RequestCtx) {
+		response.Error(r, "Method Not Allowed", fasthttp.StatusMethodNotAllowed)
+	}
 	r.POST("/upload/{cid}", a.logger(uploader.Upload))
 	a.log.Info("added path /upload/{cid}")
 	r.GET("/get/{cid}/{oid}", a.logger(downloader.DownloadByAddress))
