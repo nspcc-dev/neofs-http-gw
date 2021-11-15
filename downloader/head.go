@@ -5,17 +5,18 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/nspcc-dev/neofs-api-go/pkg/client"
-	"github.com/nspcc-dev/neofs-api-go/pkg/object"
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
+	"github.com/nspcc-dev/neofs-sdk-go/client"
+	"github.com/nspcc-dev/neofs-sdk-go/object"
+	"github.com/nspcc-dev/neofs-sdk-go/pool"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
 
 const sizeToDetectType = 512
 
-func (r request) headObject(clnt client.Object, objectAddress *object.Address) {
+func (r request) headObject(clnt pool.Object, objectAddress *object.Address) {
 	var start = time.Now()
 	if err := tokens.StoreBearerToken(r.RequestCtx); err != nil {
 		r.log.Error("could not fetch and store bearer token", zap.Error(err))

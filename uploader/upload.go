@@ -7,14 +7,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/nspcc-dev/neofs-api-go/pkg/client"
-	cid "github.com/nspcc-dev/neofs-api-go/pkg/container/id"
-	"github.com/nspcc-dev/neofs-api-go/pkg/object"
-	"github.com/nspcc-dev/neofs-api-go/pkg/owner"
-	"github.com/nspcc-dev/neofs-api-go/pkg/token"
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
-	"github.com/nspcc-dev/neofs-sdk-go/pkg/pool"
+	"github.com/nspcc-dev/neofs-sdk-go/client"
+	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
+	"github.com/nspcc-dev/neofs-sdk-go/object"
+	"github.com/nspcc-dev/neofs-sdk-go/owner"
+	"github.com/nspcc-dev/neofs-sdk-go/pool"
+	"github.com/nspcc-dev/neofs-sdk-go/token"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
@@ -111,7 +111,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 
 	ops := new(client.PutObjectParams).WithObject(rawObject.Object()).WithPayloadReader(file)
 
-	if obj, err = u.pool.PutObject(c, ops, client.WithBearer(bt)); err != nil {
+	if obj, err = u.pool.PutObject(c, ops, pool.WithBearer(bt)); err != nil {
 		log.Error("could not store file in neofs", zap.Error(err))
 		response.Error(c, "could not store file in neofs", fasthttp.StatusBadRequest)
 		return

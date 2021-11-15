@@ -3,7 +3,7 @@ package uploader
 import (
 	"testing"
 
-	"github.com/nspcc-dev/neofs-sdk-go/pkg/logger"
+	"github.com/nspcc-dev/neofs-sdk-go/logger"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
 )

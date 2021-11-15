@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/nspcc-dev/neofs-api-go/pkg/token"
+	"github.com/nspcc-dev/neofs-sdk-go/token"
 	"github.com/valyala/fasthttp"
 )
 
