@@ -14,7 +14,7 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/klauspost/compress v1.13.1 // indirect
-	github.com/nspcc-dev/neo-go v0.96.1
+	github.com/nspcc-dev/neo-go v0.97.3
 	github.com/nspcc-dev/neofs-sdk-go v0.0.0-20211115110427-df6a622c20e8
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/common v0.29.0
