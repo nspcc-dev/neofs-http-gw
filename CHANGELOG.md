@@ -2,6 +2,23 @@
 
 This document outlines major changes between releases.
 
+## [0.17.0] - 2021-11-15
+
+Support of bulk file download with zip streams and various bug fixes.
+
+### Fixed
+- Allow canonical `X-Attribute-Neofs-*` headers (#87)
+- Responses with error message now end with `\n` character (#105)
+- Application does not require all neofs endpoints to be healthy at start now
+  (#103)
+- Application now tracks session token errors and recreates tokens in runtime
+  (#95)
+
+### Added
+- Integration tests with [all-in-one](https://github.com/nspcc-dev/neofs-aio/)
+  test containers (#85, #94)
+- Bulk download support with zip streams (#92, #96)
+
 ## 0.16.1 (28 Jul 2021)
 
 New features:
@@ -96,3 +113,5 @@ Bugs fixed:
 Please refer to [Github
 releases](https://github.com/nspcc-dev/neofs-http-gw/releases/) for older
 releases.
+
+[0.17.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.16.1...v0.17.0
