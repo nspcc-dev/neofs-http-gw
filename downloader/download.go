@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nspcc-dev/neofs-api-go/pkg/client"
-	cid "github.com/nspcc-dev/neofs-api-go/pkg/container/id"
-	"github.com/nspcc-dev/neofs-api-go/pkg/object"
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
-	"github.com/nspcc-dev/neofs-sdk-go/pkg/pool"
+	"github.com/nspcc-dev/neofs-sdk-go/client"
+	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
+	"github.com/nspcc-dev/neofs-sdk-go/object"
+	"github.com/nspcc-dev/neofs-sdk-go/pool"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
@@ -114,7 +114,7 @@ func isValidValue(s string) bool {
 	return true
 }
 
-func (r request) receiveFile(clnt client.Object, objectAddress *object.Address) {
+func (r request) receiveFile(clnt pool.Object, objectAddress *object.Address) {
 	var (
 		err      error
 		dis      = "inline"
@@ -189,11 +189,11 @@ func (r request) receiveFile(clnt client.Object, objectAddress *object.Address) 
 	r.Response.Header.Set("Content-Disposition", dis+"; filename="+path.Base(filename))
 }
 
-func bearerOpts(ctx context.Context) client.CallOption {
+func bearerOpts(ctx context.Context) pool.CallOption {
 	if tkn, err := tokens.LoadBearerToken(ctx); err == nil {
-		return client.WithBearer(tkn)
+		return pool.WithBearer(tkn)
 	}
-	return client.WithBearer(nil)
+	return pool.WithBearer(nil)
 }
 
 func (r *request) handleNeoFSErr(err error, start time.Time) {
@@ -263,7 +263,7 @@ func (d *Downloader) DownloadByAddress(c *fasthttp.RequestCtx) {
 
 // byAddress is wrapper for function (e.g. request.headObject, request.receiveFile) that
 // prepares request and object address to it.
-func (d *Downloader) byAddress(c *fasthttp.RequestCtx, f func(request, client.Object, *object.Address)) {
+func (d *Downloader) byAddress(c *fasthttp.RequestCtx, f func(request, pool.Object, *object.Address)) {
 	var (
 		address = object.NewAddress()
 		cid, _  = c.UserValue("cid").(string)
@@ -286,7 +286,7 @@ func (d *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
 }
 
 // byAttribute is wrapper similar to byAddress.
-func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, client.Object, *object.Address)) {
+func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, pool.Object, *object.Address)) {
 	var (
 		httpStatus = fasthttp.StatusBadRequest
 		scid, _    = c.UserValue("cid").(string)
