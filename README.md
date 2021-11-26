@@ -382,6 +382,19 @@ You can also add some attributes to your file using the following rules:
    HTTP_GW_UPLOAD_HEADER_USE_DEFAULT_TIMESTAMP option and if request doesn't
    provide `X-Attribute-Timestamp` header of its own
 
+---
+**NOTE**
+
+There are some reserved headers type of `X-Attribute-NEOFS-*` (headers are arranged in descending order of priority):
+1. `X-Attribute-Neofs-Expiration-Epoch: 100`
+2. `X-Attribute-Neofs-Expiration-Duration: 24h30m`
+3. `X-Attribute-Neofs-Expiration-Timestamp: 1637574797`
+4. `X-Attribute-Neofs-Expiration-RFC3339: 2021-11-22T09:55:49Z`
+
+which transforms to `X-Attribute-Neofs-Expiration-Epoch`. So you can provide expiration any convenient way. 
+
+---
+
 For successful uploads you get JSON data in reply body with container and
 object ID, like this:
 ```
