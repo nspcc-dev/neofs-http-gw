@@ -2,7 +2,9 @@ package uploader
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"io"
 	"strconv"
 	"time"
@@ -11,6 +13,7 @@ import (
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/nspcc-dev/neofs-sdk-go/client"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
+	"github.com/nspcc-dev/neofs-sdk-go/netmap"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
 	"github.com/nspcc-dev/neofs-sdk-go/owner"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
@@ -29,6 +32,12 @@ type Uploader struct {
 	log                    *zap.Logger
 	pool                   pool.Pool
 	enableDefaultTimestamp bool
+}
+
+type epochDurations struct {
+	currentEpoch  uint64
+	msPerBlock    int64
+	blockPerEpoch uint64
 }
 
 // New creates a new Uploader using specified logger, connection pool and
@@ -80,6 +89,20 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		return
 	}
 	filtered := filterHeaders(u.log, &c.Request.Header)
+	if needParseExpiration(filtered) {
+		epochDuration, err := getEpochDurations(c, u.pool)
+		if err != nil {
+			log.Error("could not get epoch durations from network info", zap.Error(err))
+			response.Error(c, "could parse expiration header, try expiration in epoch", fasthttp.StatusBadRequest)
+			return
+		}
+		if err = prepareExpirationHeader(filtered, epochDuration); err != nil {
+			log.Error("could not prepare expiration header", zap.Error(err))
+			response.Error(c, "could parse expiration header, try expiration in epoch", fasthttp.StatusBadRequest)
+			return
+		}
+	}
+
 	attributes := make([]*object.Attribute, 0, len(filtered))
 	// prepares attributes from filtered headers
 	for key, val := range filtered {
@@ -167,4 +190,38 @@ func (pr *putResponse) encode(w io.Writer) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "\t")
 	return enc.Encode(pr)
+}
+
+func getEpochDurations(ctx context.Context, p pool.Pool) (*epochDurations, error) {
+	if conn, _, err := p.Connection(); err != nil {
+		return nil, err
+	} else if networkInfo, err := conn.NetworkInfo(ctx); err != nil {
+		return nil, err
+	} else {
+		res := &epochDurations{
+			currentEpoch: networkInfo.CurrentEpoch(),
+			msPerBlock:   networkInfo.MsPerBlock(),
+		}
+
+		networkInfo.NetworkConfig().IterateParameters(func(parameter *netmap.NetworkParameter) bool {
+			if string(parameter.Key()) == "EpochDuration" {
+				data := make([]byte, 8)
+				copy(data, parameter.Value())
+				res.blockPerEpoch = binary.LittleEndian.Uint64(data)
+				return true
+			}
+			return false
+		})
+		if res.blockPerEpoch == 0 {
+			return nil, fmt.Errorf("not found param: EpochDuration")
+		}
+		return res, nil
+	}
+}
+
+func needParseExpiration(headers map[string]string) bool {
+	_, ok1 := headers[expirationDurationAttr]
+	_, ok2 := headers[expirationRFC3339Attr]
+	_, ok3 := headers[expirationTimestampAttr]
+	return ok1 || ok2 || ok3
 }
