@@ -175,9 +175,9 @@ func (r request) receiveFile(clnt pool.Object, objectAddress *object.Address) {
 			contentType = val
 		}
 	}
-	r.Response.Header.Set("x-object-id", obj.ID().String())
-	r.Response.Header.Set("x-owner-id", obj.OwnerID().String())
-	r.Response.Header.Set("x-container-id", obj.ContainerID().String())
+	r.Response.Header.Set("X-Object-Id", obj.ID().String())
+	r.Response.Header.Set("X-Owner-Id", obj.OwnerID().String())
+	r.Response.Header.Set("X-Container-Id", obj.ContainerID().String())
 
 	if len(contentType) == 0 {
 		if readDetector.err != nil {
