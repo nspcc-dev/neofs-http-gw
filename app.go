@@ -179,7 +179,7 @@ func getKeyFromWallet(w *wallet.Wallet, addrStr string, password *string) (*ecds
 }
 
 func (a *app) Wait() {
-	a.log.Info("starting application")
+	a.log.Info("starting application", zap.String("version", a.cfg.GetString(cfgApplicationVersion)))
 	<-a.webDone // wait for web-server to be stopped
 }
 
