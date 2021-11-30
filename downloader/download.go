@@ -153,6 +153,9 @@ func (r request) receiveFile(clnt pool.Object, objectAddress *object.Address) {
 		if !isValidToken(key) || !isValidValue(val) {
 			continue
 		}
+		if strings.HasPrefix(key, utils.SystemAttributePrefix) {
+			key = systemBackwardTranslator(key)
+		}
 		r.Response.Header.Set(utils.UserAttributeHeaderPrefix+key, val)
 		switch key {
 		case object.AttributeFileName:
@@ -188,6 +191,26 @@ func (r request) receiveFile(clnt pool.Object, objectAddress *object.Address) {
 	r.SetContentType(contentType)
 
 	r.Response.Header.Set("Content-Disposition", dis+"; filename="+path.Base(filename))
+}
+
+// systemBackwardTranslator is used to convert headers looking like '__NEOFS__ATTR_NAME' to 'Neofs-Attr-Name'.
+func systemBackwardTranslator(key string) string {
+	// trim specified prefix '__NEOFS__'
+	key = strings.TrimPrefix(key, utils.SystemAttributePrefix)
+
+	var res strings.Builder
+	res.WriteString("Neofs-")
+
+	strs := strings.Split(key, "_")
+	for i, s := range strs {
+		s = strings.Title(strings.ToLower(s))
+		res.WriteString(s)
+		if i != len(strs)-1 {
+			res.WriteString("-")
+		}
+	}
+
+	return res.String()
 }
 
 func bearerOpts(ctx context.Context) pool.CallOption {
