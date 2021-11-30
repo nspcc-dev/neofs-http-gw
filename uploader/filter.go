@@ -7,24 +7,16 @@ import (
 	"time"
 
 	"github.com/nspcc-dev/neofs-api-go/v2/object"
+	"github.com/nspcc-dev/neofs-http-gw/utils"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
-)
-
-const (
-	userAttributeHeaderPrefix = "X-Attribute-"
-	systemAttributePrefix     = "__NEOFS__"
-
-	expirationDurationAttr  = systemAttributePrefix + "EXPIRATION_DURATION"
-	expirationTimestampAttr = systemAttributePrefix + "EXPIRATION_TIMESTAMP"
-	expirationRFC3339Attr   = systemAttributePrefix + "EXPIRATION_RFC3339"
 )
 
 var neofsAttributeHeaderPrefixes = [...][]byte{[]byte("Neofs-"), []byte("NEOFS-"), []byte("neofs-")}
 
 func systemTranslator(key, prefix []byte) []byte {
 	// replace specified prefix with `__NEOFS__`
-	key = bytes.Replace(key, prefix, []byte(systemAttributePrefix), 1)
+	key = bytes.Replace(key, prefix, []byte(utils.SystemAttributePrefix), 1)
 
 	// replace `-` with `_`
 	key = bytes.ReplaceAll(key, []byte("-"), []byte("_"))
@@ -35,7 +27,7 @@ func systemTranslator(key, prefix []byte) []byte {
 
 func filterHeaders(l *zap.Logger, header *fasthttp.RequestHeader) map[string]string {
 	result := make(map[string]string)
-	prefix := []byte(userAttributeHeaderPrefix)
+	prefix := []byte(utils.UserAttributeHeaderPrefix)
 
 	header.VisitAll(func(key, val []byte) {
 		// checks that key and val not empty
@@ -80,45 +72,45 @@ func filterHeaders(l *zap.Logger, header *fasthttp.RequestHeader) map[string]str
 func prepareExpirationHeader(headers map[string]string, epochDurations *epochDurations) error {
 	expirationInEpoch := headers[object.SysAttributeExpEpoch]
 
-	if timeRFC3339, ok := headers[expirationRFC3339Attr]; ok {
+	if timeRFC3339, ok := headers[utils.ExpirationRFC3339Attr]; ok {
 		expTime, err := time.Parse(time.RFC3339, timeRFC3339)
 		if err != nil {
-			return fmt.Errorf("couldn't parse value %s of header %s", timeRFC3339, expirationRFC3339Attr)
+			return fmt.Errorf("couldn't parse value %s of header %s", timeRFC3339, utils.ExpirationRFC3339Attr)
 		}
 
 		now := time.Now().UTC()
 		if expTime.Before(now) {
-			return fmt.Errorf("value %s of header %s must be in the future", timeRFC3339, expirationRFC3339Attr)
+			return fmt.Errorf("value %s of header %s must be in the future", timeRFC3339, utils.ExpirationRFC3339Attr)
 		}
 		updateExpirationHeader(headers, epochDurations, expTime.Sub(now))
-		delete(headers, expirationRFC3339Attr)
+		delete(headers, utils.ExpirationRFC3339Attr)
 	}
 
-	if timestamp, ok := headers[expirationTimestampAttr]; ok {
+	if timestamp, ok := headers[utils.ExpirationTimestampAttr]; ok {
 		value, err := strconv.ParseInt(timestamp, 10, 64)
 		if err != nil {
-			return fmt.Errorf("couldn't parse value %s of header %s", timestamp, expirationTimestampAttr)
+			return fmt.Errorf("couldn't parse value %s of header %s", timestamp, utils.ExpirationTimestampAttr)
 		}
 		expTime := time.Unix(value, 0)
 
 		now := time.Now()
 		if expTime.Before(now) {
-			return fmt.Errorf("value %s of header %s must be in the future", timestamp, expirationTimestampAttr)
+			return fmt.Errorf("value %s of header %s must be in the future", timestamp, utils.ExpirationTimestampAttr)
 		}
 		updateExpirationHeader(headers, epochDurations, expTime.Sub(now))
-		delete(headers, expirationTimestampAttr)
+		delete(headers, utils.ExpirationTimestampAttr)
 	}
 
-	if duration, ok := headers[expirationDurationAttr]; ok {
+	if duration, ok := headers[utils.ExpirationDurationAttr]; ok {
 		expDuration, err := time.ParseDuration(duration)
 		if err != nil {
-			return fmt.Errorf("couldn't parse value %s of header %s", duration, expirationDurationAttr)
+			return fmt.Errorf("couldn't parse value %s of header %s", duration, utils.ExpirationDurationAttr)
 		}
 		if expDuration <= 0 {
-			return fmt.Errorf("value %s of header %s must be positive", expDuration, expirationDurationAttr)
+			return fmt.Errorf("value %s of header %s must be positive", expDuration, utils.ExpirationDurationAttr)
 		}
 		updateExpirationHeader(headers, epochDurations, expDuration)
-		delete(headers, expirationDurationAttr)
+		delete(headers, utils.ExpirationDurationAttr)
 	}
 
 	if expirationInEpoch != "" {

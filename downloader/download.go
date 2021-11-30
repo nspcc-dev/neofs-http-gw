@@ -14,6 +14,7 @@ import (
 
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
+	"github.com/nspcc-dev/neofs-http-gw/utils"
 	"github.com/nspcc-dev/neofs-sdk-go/client"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
@@ -152,7 +153,7 @@ func (r request) receiveFile(clnt pool.Object, objectAddress *object.Address) {
 		if !isValidToken(key) || !isValidValue(val) {
 			continue
 		}
-		r.Response.Header.Set("X-Attribute-"+key, val)
+		r.Response.Header.Set(utils.UserAttributeHeaderPrefix+key, val)
 		switch key {
 		case object.AttributeFileName:
 			filename = val

@@ -7,6 +7,7 @@ import (
 
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
+	"github.com/nspcc-dev/neofs-http-gw/utils"
 	"github.com/nspcc-dev/neofs-sdk-go/client"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
@@ -40,7 +41,7 @@ func (r request) headObject(clnt pool.Object, objectAddress *object.Address) {
 		if !isValidToken(key) || !isValidValue(val) {
 			continue
 		}
-		r.Response.Header.Set("X-Attribute-"+key, val)
+		r.Response.Header.Set(utils.UserAttributeHeaderPrefix+key, val)
 		switch key {
 		case object.AttributeTimestamp:
 			value, err := strconv.ParseInt(val, 10, 64)
