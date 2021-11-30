@@ -11,6 +11,7 @@ import (
 
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
+	"github.com/nspcc-dev/neofs-http-gw/utils"
 	"github.com/nspcc-dev/neofs-sdk-go/client"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
 	"github.com/nspcc-dev/neofs-sdk-go/netmap"
@@ -220,8 +221,8 @@ func getEpochDurations(ctx context.Context, p pool.Pool) (*epochDurations, error
 }
 
 func needParseExpiration(headers map[string]string) bool {
-	_, ok1 := headers[expirationDurationAttr]
-	_, ok2 := headers[expirationRFC3339Attr]
-	_, ok3 := headers[expirationTimestampAttr]
+	_, ok1 := headers[utils.ExpirationDurationAttr]
+	_, ok2 := headers[utils.ExpirationRFC3339Attr]
+	_, ok3 := headers[utils.ExpirationTimestampAttr]
 	return ok1 || ok2 || ok3
 }
