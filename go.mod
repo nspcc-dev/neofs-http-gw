@@ -12,7 +12,6 @@ require (
 	github.com/fasthttp/router v1.4.1
 	github.com/golang/glog v0.0.0-20210429001901-424d2337a529 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/klauspost/compress v1.13.1 // indirect
 	github.com/nspcc-dev/neo-go v0.97.3
 	github.com/nspcc-dev/neofs-api-go v1.30.0
@@ -23,7 +22,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
 	github.com/stretchr/testify v1.7.0
-	github.com/testcontainers/testcontainers-go v0.11.1
+	github.com/testcontainers/testcontainers-go v0.12.0
 	github.com/valyala/fasthttp v1.28.0
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.18.1
