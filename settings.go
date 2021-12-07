@@ -193,6 +193,7 @@ func settings() *viper.Viper {
 		for i := range *peers {
 			v.SetDefault(cfgPeers+"."+strconv.Itoa(i)+".address", (*peers)[i])
 			v.SetDefault(cfgPeers+"."+strconv.Itoa(i)+".weight", 1)
+			v.SetDefault(cfgPeers+"."+strconv.Itoa(i)+".priority", 1)
 		}
 	}
 

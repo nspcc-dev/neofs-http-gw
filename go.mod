@@ -3,19 +3,15 @@ module github.com/nspcc-dev/neofs-http-gw
 go 1.16
 
 require (
-	github.com/DataDog/zstd v1.4.8 // indirect
 	github.com/andybalholm/brotli v1.0.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
-	github.com/dgraph-io/badger/v2 v2.2007.3 // indirect
-	github.com/dgraph-io/ristretto v0.1.0 // indirect
-	github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 // indirect
 	github.com/fasthttp/router v1.4.1
-	github.com/golang/glog v0.0.0-20210429001901-424d2337a529 // indirect
+	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/klauspost/compress v1.13.1 // indirect
-	github.com/nspcc-dev/neo-go v0.97.3
-	github.com/nspcc-dev/neofs-api-go v1.30.0
-	github.com/nspcc-dev/neofs-sdk-go v0.0.0-20211115110427-df6a622c20e8
+	github.com/nspcc-dev/neo-go v0.98.0
+	github.com/nspcc-dev/neofs-api-go/v2 v2.11.0-pre.0.20211201134523-3604d96f3fe1
+	github.com/nspcc-dev/neofs-sdk-go v0.0.0-20211201182451-a5b61c4f6477
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/common v0.29.0
 	github.com/prometheus/procfs v0.7.1 // indirect

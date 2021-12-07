@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	apistatus "github.com/nspcc-dev/neofs-sdk-go/client/status"
+
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/nspcc-dev/neofs-sdk-go/client"
@@ -195,9 +197,12 @@ func (pr *putResponse) encode(w io.Writer) error {
 func getEpochDurations(ctx context.Context, p pool.Pool) (*epochDurations, error) {
 	if conn, _, err := p.Connection(); err != nil {
 		return nil, err
-	} else if networkInfo, err := conn.NetworkInfo(ctx); err != nil {
+	} else if networkInfoRes, err := conn.NetworkInfo(ctx); err != nil {
+		return nil, err
+	} else if err = apistatus.ErrFromStatus(networkInfoRes.Status()); err != nil {
 		return nil, err
 	} else {
+		networkInfo := networkInfoRes.Info()
 		res := &epochDurations{
 			currentEpoch: networkInfo.CurrentEpoch(),
 			msPerBlock:   networkInfo.MsPerBlock(),

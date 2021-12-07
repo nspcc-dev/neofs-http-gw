@@ -103,14 +103,19 @@ func newApp(ctx context.Context, opt ...Option) App {
 	for i := 0; ; i++ {
 		address := a.cfg.GetString(cfgPeers + "." + strconv.Itoa(i) + ".address")
 		weight := a.cfg.GetFloat64(cfgPeers + "." + strconv.Itoa(i) + ".weight")
+		priority := a.cfg.GetInt(cfgPeers + "." + strconv.Itoa(i) + ".priority")
 		if address == "" {
 			break
 		}
 		if weight <= 0 { // unspecified or wrong
 			weight = 1
 		}
-		pb.AddNode(address, weight)
-		a.log.Info("add connection", zap.String("address", address), zap.Float64("weight", weight))
+		if priority <= 0 { // unspecified or wrong
+			priority = 1
+		}
+		pb.AddNode(address, priority, weight)
+		a.log.Info("add connection", zap.String("address", address),
+			zap.Float64("weight", weight), zap.Int("priority", priority))
 	}
 	opts := &pool.BuilderOptions{
 		Key:                     key,
