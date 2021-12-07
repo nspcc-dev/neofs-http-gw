@@ -261,13 +261,14 @@ func getDefaultConfig() *viper.Viper {
 	v := settings()
 	v.SetDefault(cfgPeers+".0.address", "127.0.0.1:8080")
 	v.SetDefault(cfgPeers+".0.weight", 1)
+	v.SetDefault(cfgPeers+".0.priority", 1)
 
 	return v
 }
 
 func getPool(ctx context.Context, t *testing.T, key *keys.PrivateKey) pool.Pool {
 	pb := new(pool.Builder)
-	pb.AddNode("localhost:8080", 1)
+	pb.AddNode("localhost:8080", 1, 1)
 
 	opts := &pool.BuilderOptions{
 		Key:                    &key.PrivateKey,

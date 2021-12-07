@@ -69,23 +69,24 @@ In general, everything available as CLI parameter can also be specified via
 environment variables, so they're not specifically mentioned in most cases
 (see `--help` also). If you prefer a config file you can use it in yaml format.
 
-### Nodes and weights
+### Nodes: weights and priorities
 
 You can specify multiple `-p` options to add more NeoFS nodes, this will make
-gateway spread requests equally among them (using weight 1 for every node):
+gateway spread requests equally among them (using weight 1 and priority 1 for every node):
 
 ```
 $ neofs-http-gw -p 192.168.130.72:8080 -p 192.168.130.71:8080
 ```
-If you want some specific load distribution proportions, use weights, but they
-can only be specified via environment variables:
+If you want some specific load distribution proportions, use weights and priorities:
 
 ```
-$ HTTP_GW_PEERS_0_ADDRESS=192.168.130.72:8080 HTTP_GW_PEERS_0_WEIGHT=9 \
-  HTTP_GW_PEERS_1_ADDRESS=192.168.130.71:8080 HTTP_GW_PEERS_1_WEIGHT=1 neofs-http-gw
+$ HTTP_GW_PEERS_0_ADDRESS=192.168.130.71:8080 HTTP_GW_PEERS_0_WEIGHT=1 HTTP_GW_PEERS_0_PRIORITY=1 \
+  HTTP_GW_PEERS_1_ADDRESS=192.168.130.72:8080 HTTP_GW_PEERS_1_WEIGHT=9 HTTP_GW_PEERS_1_PRIORITY=2 \
+  HTTP_GW_PEERS_2_ADDRESS=192.168.130.73:8080 HTTP_GW_PEERS_2_WEIGHT=1 HTTP_GW_PEERS_2_PRIORITY=2 \
+  neofs-http-gw
 ```
-This command will make gateway use 192.168.130.72 for 90% of requests and
-192.168.130.71 for remaining 10%.
+This command will make gateway use 192.168.130.71 while it is healthy. Otherwise, it will make the gateway use 
+192.168.130.72 for 90% of requests and 192.168.130.73 for remaining 10%.
 
 ### Keys
 You can provide wallet via `--wallet` or `-w` flag also you can specify account address using `--address` 
@@ -196,6 +197,7 @@ peers:
   0:
     address: grpc://s01.neofs.devenv:8080
     weight: 1
+    priority: 1
     
 zip:
   compression: false 
@@ -207,6 +209,7 @@ For example variable `HTTP_GW_PEERS_0_WEIGHT=1` will be transformed to:
 peers:
   0:
     weight: 1
+    priority: 1
 ```
 
 If parameter doesn't support environment variable (e.g. `--listen_address 0.0.0.0:8082`) form it is used as is:
