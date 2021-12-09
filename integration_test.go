@@ -36,7 +36,7 @@ type putResponse struct {
 func TestIntegration(t *testing.T) {
 	rootCtx := context.Background()
 	aioImage := "nspccdev/neofs-aio-testcontainer:"
-	versions := []string{"0.24.0", "0.25.1", "0.26.1", "latest"}
+	versions := []string{"0.24.0", "0.25.1", "0.26.1", "0.27.0", "latest"}
 	key, err := keys.NewPrivateKeyFromHex("1dd37fba80fec4e6a6f13fd708d8dcb3b29def768017052f6c930fa1c5d90bbb")
 	require.NoError(t, err)
 
