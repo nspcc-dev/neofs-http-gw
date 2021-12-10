@@ -2,6 +2,19 @@
 
 This document outlines major changes between releases.
 
+## [0.18.0] - 2021-12-10
+
+### Fixed
+- System headers format (#111)
+
+### Added
+- Different formats to set object's expiration: in epoch, duration, timestamp, 
+  RFC3339 (#108)
+- Support of nodes priority (#115)
+
+### Changed 
+- Updated testcontainers dependency (#100)
+
 ## [0.17.0] - 2021-11-15
 
 Support of bulk file download with zip streams and various bug fixes.
@@ -115,3 +128,4 @@ releases](https://github.com/nspcc-dev/neofs-http-gw/releases/) for older
 releases.
 
 [0.17.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.16.1...v0.17.0
+[0.18.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.17.0...v0.18.0
