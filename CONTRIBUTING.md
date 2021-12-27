@@ -28,7 +28,7 @@ send a pull request. We encourage pull requests to discuss code changes. Here
 are the steps in details:
 
 ### Set up your GitHub Repository
-Fork [NeoFS HTTP Protocol Gateway
+Fork [NeoFS HTTP Gateway
 upstream](https://github.com/nspcc-dev/neofs-http-gw/fork) source repository
 to your own personal repository. Copy the URL of your fork (you will need it for
 the `git clone` command below).
