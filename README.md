@@ -10,9 +10,9 @@
 ![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/nspcc-dev/neofs-http-gw?sort=semver)
 ![License](https://img.shields.io/github/license/nspcc-dev/neofs-http-gw.svg?style=popout)
 
-# NeoFS HTTP Protocol Gateway
+# NeoFS HTTP Gateway
 
-NeoFS HTTP Protocol Gateway bridges NeoFS internal protocol and HTTP standard.
+NeoFS HTTP Gateway bridges NeoFS internal protocol and HTTP standard.
 - you can download one file per request from NeoFS Network
 - you can upload one file per request into the NeoFS Network
 
@@ -411,7 +411,7 @@ object ID, like this:
 
 You can always upload files to public containers (open for anyone to put
 objects into), but for restricted containers you need to explicitly allow PUT
-operations for request signed with your HTTP Protocol Gateway keys.
+operations for request signed with your HTTP Gateway keys.
 
 If your don't want to manage gateway's secret keys and adjust eACL rules when
 gateway configuration changes (new gate, key rotation, etc) or you plan to use
@@ -428,7 +428,7 @@ documentation for more details). There are two options to pass them to gateway:
 For example you have a mobile application frontend with a backend part storing
 data in NeoFS. When user authorizes in mobile app, the backend issues a NeoFS
 Bearer token and provides it to the frontend. Then the mobile app may generate
-some data and upload it via any available NeoFS HTTP Protocol Gateway by adding
+some data and upload it via any available NeoFS HTTP Gateway by adding
 the corresponding header to the upload request. Accessing the ACL protected data
 works the same way.
 
