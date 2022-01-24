@@ -298,6 +298,9 @@ where
 `$ATTRIBUTE_NAME` is the name of the attribute we want to use,
 `$ATTRIBUTE_VALUE` is the value of this attribute that the target object should have.
 
+**NB!** The attribute key and value must be url encoded, i.e., if you want to download an object with the attribute value 
+`a cat`, the value in the request must be `a+cat`. In the same way with the attribute key.
+
 If multiple objects have specified attribute with specified value, then the
 first one of them is returned (and you can't get others via this interface).
 
@@ -306,11 +309,21 @@ Example for file name attribute:
 ```
 $ wget http://localhost:8082/get_by_attribute/88GdaZFTcYJn1dqiSECss8kKPmmun6d6BfvC4zhwfLYM/FileName/cat.jpeg
 ```
+Or when the filename includes special symbols:
+```
+$ wget http://localhost:8082/get_by_attribute/88GdaZFTcYJn1dqiSECss8kKPmmun6d6BfvC4zhwfLYM/FileName/cat+jpeg # means 'cat jpeg'
+$ wget http://localhost:8082/get_by_attribute/88GdaZFTcYJn1dqiSECss8kKPmmun6d6BfvC4zhwfLYM/FileName/cat%25jpeg # means 'cat%jpeg'
+```
 
 Some other user-defined attribute:
 
 ```
 $ wget http://localhost:8082/get_by_attribute/Dxhf4PNprrJHWWTG5RGLdfLkJiSQ3AQqit1MSnEPRkDZ/Ololo/100500
+```
+
+Or when the attribute includes special symbols: 
+```
+$ wget http://localhost:8082/get_by_attribute/Dxhf4PNprrJHWWTG5RGLdfLkJiSQ3AQqit1MSnEPRkDZ/Olo%2Blo/100500 # means Olo+lo
 ```
 
 An optional `download=true` argument for `Content-Disposition` management is

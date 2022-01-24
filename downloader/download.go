@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"path"
 	"strconv"
 	"strings"
@@ -314,8 +315,8 @@ func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, pool.Ob
 	var (
 		httpStatus = fasthttp.StatusBadRequest
 		scid, _    = c.UserValue("cid").(string)
-		key, _     = c.UserValue("attr_key").(string)
-		val, _     = c.UserValue("attr_val").(string)
+		key, _     = url.QueryUnescape(c.UserValue("attr_key").(string))
+		val, _     = url.QueryUnescape(c.UserValue("attr_val").(string))
 		log        = d.log.With(zap.String("cid", scid), zap.String("attr_key", key), zap.String("attr_val", val))
 	)
 	containerID := cid.New()
