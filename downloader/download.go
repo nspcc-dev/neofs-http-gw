@@ -388,7 +388,7 @@ func (d *Downloader) searchByAttr(c *fasthttp.RequestCtx, cid *cid.ID, key, val 
 func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 	status := fasthttp.StatusBadRequest
 	scid, _ := c.UserValue("cid").(string)
-	prefix, _ := c.UserValue("prefix").(string)
+	prefix, _ := url.QueryUnescape(c.UserValue("prefix").(string))
 	log := d.log.With(zap.String("cid", scid), zap.String("prefix", prefix))
 
 	containerID := cid.New()
