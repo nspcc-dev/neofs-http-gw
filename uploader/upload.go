@@ -17,6 +17,8 @@ import (
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
 	"github.com/nspcc-dev/neofs-sdk-go/netmap"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
+	"github.com/nspcc-dev/neofs-sdk-go/object/address"
+	oid "github.com/nspcc-dev/neofs-sdk-go/object/id"
 	"github.com/nspcc-dev/neofs-sdk-go/owner"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
 	"github.com/nspcc-dev/neofs-sdk-go/token"
@@ -53,9 +55,9 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	var (
 		err        error
 		file       MultipartFile
-		obj        *object.ID
-		addr       = object.NewAddress()
-		cid        = cid.New()
+		obj        *oid.ID
+		addr       = address.NewAddress()
+		idCnr      = cid.New()
 		scid, _    = c.UserValue("cid").(string)
 		log        = u.log.With(zap.String("cid", scid))
 		bodyStream = c.RequestBodyStream()
@@ -66,7 +68,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		response.Error(c, "could not fetch bearer token", fasthttp.StatusBadRequest)
 		return
 	}
-	if err = cid.Parse(scid); err != nil {
+	if err = idCnr.Parse(scid); err != nil {
 		log.Error("wrong container id", zap.Error(err))
 		response.Error(c, "wrong container id", fasthttp.StatusBadRequest)
 		return
@@ -127,23 +129,21 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		timestamp.SetValue(strconv.FormatInt(time.Now().Unix(), 10))
 		attributes = append(attributes, timestamp)
 	}
-	oid, bt := u.fetchOwnerAndBearerToken(c)
+	id, bt := u.fetchOwnerAndBearerToken(c)
 
 	rawObject := object.NewRaw()
-	rawObject.SetContainerID(cid)
-	rawObject.SetOwnerID(oid)
+	rawObject.SetContainerID(idCnr)
+	rawObject.SetOwnerID(id)
 	rawObject.SetAttributes(attributes...)
 
-	ops := new(client.PutObjectParams).WithObject(rawObject.Object()).WithPayloadReader(file)
-
-	if obj, err = u.pool.PutObject(c, ops, pool.WithBearer(bt)); err != nil {
+	if obj, err = u.pool.PutObject(c, *rawObject.Object(), file, pool.WithBearer(bt)); err != nil {
 		log.Error("could not store file in neofs", zap.Error(err))
 		response.Error(c, "could not store file in neofs", fasthttp.StatusBadRequest)
 		return
 	}
 
 	addr.SetObjectID(obj)
-	addr.SetContainerID(cid)
+	addr.SetContainerID(idCnr)
 
 	// Try to return the response, otherwise, if something went wrong, throw an error.
 	if err = newPutResponse(addr).encode(c); err != nil {
@@ -181,7 +181,7 @@ type putResponse struct {
 	ContainerID string `json:"container_id"`
 }
 
-func newPutResponse(addr *object.Address) *putResponse {
+func newPutResponse(addr *address.Address) *putResponse {
 	return &putResponse{
 		ObjectID:    addr.ObjectID().String(),
 		ContainerID: addr.ContainerID().String(),
@@ -197,7 +197,7 @@ func (pr *putResponse) encode(w io.Writer) error {
 func getEpochDurations(ctx context.Context, p pool.Pool) (*epochDurations, error) {
 	if conn, _, err := p.Connection(); err != nil {
 		return nil, err
-	} else if networkInfoRes, err := conn.NetworkInfo(ctx); err != nil {
+	} else if networkInfoRes, err := conn.NetworkInfo(ctx, client.PrmNetworkInfo{}); err != nil {
 		return nil, err
 	} else if err = apistatus.ErrFromStatus(networkInfoRes.Status()); err != nil {
 		return nil, err

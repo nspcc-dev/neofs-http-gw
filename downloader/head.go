@@ -1,6 +1,7 @@
 package downloader
 
 import (
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -8,8 +9,8 @@ import (
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/nspcc-dev/neofs-http-gw/utils"
-	"github.com/nspcc-dev/neofs-sdk-go/client"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
+	"github.com/nspcc-dev/neofs-sdk-go/object/address"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
@@ -23,7 +24,7 @@ const (
 	hdrContainerID = "X-Container-Id"
 )
 
-func (r request) headObject(clnt pool.Object, objectAddress *object.Address) {
+func (r request) headObject(clnt pool.Object, objectAddress *address.Address) {
 	var start = time.Now()
 	if err := tokens.StoreBearerToken(r.RequestCtx); err != nil {
 		r.log.Error("could not fetch and store bearer token", zap.Error(err))
@@ -31,9 +32,8 @@ func (r request) headObject(clnt pool.Object, objectAddress *object.Address) {
 		return
 	}
 
-	options := new(client.ObjectHeaderParams).WithAddress(objectAddress)
 	bearerOpt := bearerOpts(r.RequestCtx)
-	obj, err := clnt.GetObjectHeader(r.RequestCtx, options, bearerOpt)
+	obj, err := clnt.HeadObject(r.RequestCtx, *objectAddress, bearerOpt)
 	if err != nil {
 		r.handleNeoFSErr(err, start)
 		return
@@ -67,15 +67,22 @@ func (r request) headObject(clnt pool.Object, objectAddress *object.Address) {
 	idsToResponse(&r.Response, obj)
 
 	if len(contentType) == 0 {
-		objRange := object.NewRange()
-		objRange.SetOffset(0)
-		if sizeToDetectType < obj.PayloadSize() {
-			objRange.SetLength(sizeToDetectType)
-		} else {
-			objRange.SetLength(obj.PayloadSize())
+		sz := obj.PayloadSize()
+		if sz > sizeToDetectType {
+			sz = sizeToDetectType
 		}
-		ops := new(client.RangeDataParams).WithAddress(objectAddress).WithRange(objRange)
-		data, err := clnt.ObjectPayloadRangeData(r.RequestCtx, ops, bearerOpt)
+
+		res, err := clnt.ObjectRange(r.RequestCtx, *objectAddress, 0, sz, bearerOpt)
+		if err != nil {
+			r.handleNeoFSErr(err, start)
+			return
+		}
+
+		defer res.Close()
+
+		data := make([]byte, sz) // sync-pool it?
+
+		_, err = io.ReadFull(res, data)
 		if err != nil {
 			r.handleNeoFSErr(err, start)
 			return
