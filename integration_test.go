@@ -16,10 +16,11 @@ import (
 	"time"
 
 	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
-	"github.com/nspcc-dev/neofs-sdk-go/client"
 	"github.com/nspcc-dev/neofs-sdk-go/container"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
+	"github.com/nspcc-dev/neofs-sdk-go/object/address"
+	oid "github.com/nspcc-dev/neofs-sdk-go/object/id"
 	"github.com/nspcc-dev/neofs-sdk-go/policy"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
 	"github.com/spf13/viper"
@@ -108,21 +109,25 @@ func simplePut(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid
 	err = CID.Parse(addr.CID)
 	require.NoError(t, err)
 
-	oid := object.NewID()
-	err = oid.Parse(addr.OID)
+	id := oid.NewID()
+	err = id.Parse(addr.OID)
 	require.NoError(t, err)
 
-	objectAddress := object.NewAddress()
+	objectAddress := address.NewAddress()
 	objectAddress.SetContainerID(CID)
-	objectAddress.SetObjectID(oid)
+	objectAddress.SetObjectID(id)
 
 	payload := bytes.NewBuffer(nil)
-	ops := new(client.GetObjectParams).WithAddress(objectAddress).WithPayloadWriter(payload)
-	obj, err := clientPool.GetObject(ctx, ops)
+
+	res, err := clientPool.GetObject(ctx, *objectAddress)
 	require.NoError(t, err)
+
+	_, err = io.Copy(payload, res.Payload)
+	require.NoError(t, err)
+
 	require.Equal(t, content, payload.String())
 
-	for _, attribute := range obj.Attributes() {
+	for _, attribute := range res.Header.Attributes() {
 		require.Equal(t, attributes[attribute.Key()], attribute.Value())
 	}
 }
@@ -133,9 +138,9 @@ func simpleGet(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid
 		"some-attr": "some-get-value",
 	}
 
-	oid := putObject(ctx, t, clientPool, CID, content, attributes)
+	id := putObject(ctx, t, clientPool, CID, content, attributes)
 
-	resp, err := http.Get("http://localhost:8082/get/" + CID.String() + "/" + oid.String())
+	resp, err := http.Get("http://localhost:8082/get/" + CID.String() + "/" + id.String())
 	require.NoError(t, err)
 	defer func() {
 		err = resp.Body.Close()
@@ -156,11 +161,11 @@ func getByAttr(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid
 	content := "content of file"
 	attributes := map[string]string{keyAttr: valAttr}
 
-	oid := putObject(ctx, t, clientPool, CID, content, attributes)
+	id := putObject(ctx, t, clientPool, CID, content, attributes)
 
 	expectedAttr := map[string]string{
 		"X-Attribute-" + keyAttr: valAttr,
-		"x-object-id":            oid.String(),
+		"x-object-id":            id.String(),
 		"x-container-id":         CID.String(),
 	}
 
@@ -271,10 +276,9 @@ func getPool(ctx context.Context, t *testing.T, key *keys.PrivateKey) pool.Pool 
 	pb.AddNode("localhost:8080", 1, 1)
 
 	opts := &pool.BuilderOptions{
-		Key:                    &key.PrivateKey,
-		NodeConnectionTimeout:  5 * time.Second,
-		NodeRequestTimeout:     5 * time.Second,
-		SessionExpirationEpoch: math.MaxUint64,
+		Key:                   &key.PrivateKey,
+		NodeConnectionTimeout: 5 * time.Second,
+		NodeRequestTimeout:    5 * time.Second,
 	}
 	clientPool, err := pb.Build(ctx, opts)
 	require.NoError(t, err)
@@ -305,7 +309,7 @@ func createContainer(ctx context.Context, t *testing.T, clientPool pool.Pool) *c
 	return CID
 }
 
-func putObject(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid.ID, content string, attributes map[string]string) *object.ID {
+func putObject(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid.ID, content string, attributes map[string]string) *oid.ID {
 	rawObject := object.NewRaw()
 	rawObject.SetContainerID(CID)
 	rawObject.SetOwnerID(clientPool.OwnerID())
@@ -319,9 +323,8 @@ func putObject(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid
 	}
 	rawObject.SetAttributes(attrs...)
 
-	ops := new(client.PutObjectParams).WithObject(rawObject.Object()).WithPayloadReader(bytes.NewBufferString(content))
-	oid, err := clientPool.PutObject(ctx, ops)
+	id, err := clientPool.PutObject(ctx, *rawObject.Object(), bytes.NewBufferString(content))
 	require.NoError(t, err)
 
-	return oid
+	return id
 }

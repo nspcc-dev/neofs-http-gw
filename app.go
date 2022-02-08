@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
-	"math"
 	"strconv"
 
 	"github.com/fasthttp/router"
@@ -122,7 +121,6 @@ func newApp(ctx context.Context, opt ...Option) App {
 		NodeConnectionTimeout:   a.cfg.GetDuration(cfgConTimeout),
 		NodeRequestTimeout:      a.cfg.GetDuration(cfgReqTimeout),
 		ClientRebalanceInterval: a.cfg.GetDuration(cfgRebalance),
-		SessionExpirationEpoch:  math.MaxUint64,
 	}
 	a.pool, err = pb.Build(ctx, opts)
 	if err != nil {
