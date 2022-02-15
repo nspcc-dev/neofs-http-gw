@@ -63,9 +63,8 @@ func (r request) headObject(clnt pool.Object, objectAddress *object.Address) {
 			contentType = val
 		}
 	}
-	r.Response.Header.Set(hdrObjectID, obj.ID().String())
-	r.Response.Header.Set(hdrOwnerID, obj.OwnerID().String())
-	r.Response.Header.Set(hdrContainerID, obj.ContainerID().String())
+
+	idsToResponse(&r.Response, obj)
 
 	if len(contentType) == 0 {
 		objRange := object.NewRange()
@@ -84,6 +83,12 @@ func (r request) headObject(clnt pool.Object, objectAddress *object.Address) {
 		contentType = http.DetectContentType(data)
 	}
 	r.SetContentType(contentType)
+}
+
+func idsToResponse(resp *fasthttp.Response, obj *object.Object) {
+	resp.Header.Set(hdrObjectID, obj.ID().String())
+	resp.Header.Set(hdrOwnerID, obj.OwnerID().String())
+	resp.Header.Set(hdrContainerID, obj.ContainerID().String())
 }
 
 // HeadByAddress handles head requests using simple cid/oid format.
