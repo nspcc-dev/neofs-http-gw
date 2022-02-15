@@ -17,6 +17,12 @@ import (
 
 const sizeToDetectType = 512
 
+const (
+	hdrObjectID    = "X-Object-Id"
+	hdrOwnerID     = "X-Owner-Id"
+	hdrContainerID = "X-Container-Id"
+)
+
 func (r request) headObject(clnt pool.Object, objectAddress *object.Address) {
 	var start = time.Now()
 	if err := tokens.StoreBearerToken(r.RequestCtx); err != nil {
@@ -33,7 +39,7 @@ func (r request) headObject(clnt pool.Object, objectAddress *object.Address) {
 		return
 	}
 
-	r.Response.Header.Set("Content-Length", strconv.FormatUint(obj.PayloadSize(), 10))
+	r.Response.Header.Set(fasthttp.HeaderContentLength, strconv.FormatUint(obj.PayloadSize(), 10))
 	var contentType string
 	for _, attr := range obj.Attributes() {
 		key := attr.Key()
@@ -52,14 +58,14 @@ func (r request) headObject(clnt pool.Object, objectAddress *object.Address) {
 					zap.Error(err))
 				continue
 			}
-			r.Response.Header.Set("Last-Modified", time.Unix(value, 0).UTC().Format(http.TimeFormat))
+			r.Response.Header.Set(fasthttp.HeaderLastModified, time.Unix(value, 0).UTC().Format(http.TimeFormat))
 		case object.AttributeContentType:
 			contentType = val
 		}
 	}
-	r.Response.Header.Set("x-object-id", obj.ID().String())
-	r.Response.Header.Set("x-owner-id", obj.OwnerID().String())
-	r.Response.Header.Set("x-container-id", obj.ContainerID().String())
+	r.Response.Header.Set(hdrObjectID, obj.ID().String())
+	r.Response.Header.Set(hdrOwnerID, obj.OwnerID().String())
+	r.Response.Header.Set(hdrContainerID, obj.ContainerID().String())
 
 	if len(contentType) == 0 {
 		objRange := object.NewRange()

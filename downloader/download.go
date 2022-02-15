@@ -146,7 +146,7 @@ func (r request) receiveFile(clnt pool.Object, objectAddress *object.Address) {
 		dis = "attachment"
 	}
 	r.Response.SetBodyStream(readDetector.MultiReader(), int(obj.PayloadSize()))
-	r.Response.Header.Set("Content-Length", strconv.FormatUint(obj.PayloadSize(), 10))
+	r.Response.Header.Set(fasthttp.HeaderContentLength, strconv.FormatUint(obj.PayloadSize(), 10))
 	var contentType string
 	for _, attr := range obj.Attributes() {
 		key := attr.Key()
@@ -170,15 +170,15 @@ func (r request) receiveFile(clnt pool.Object, objectAddress *object.Address) {
 					zap.Error(err))
 				continue
 			}
-			r.Response.Header.Set("Last-Modified",
+			r.Response.Header.Set(fasthttp.HeaderLastModified,
 				time.Unix(value, 0).UTC().Format(http.TimeFormat))
 		case object.AttributeContentType:
 			contentType = val
 		}
 	}
-	r.Response.Header.Set("X-Object-Id", obj.ID().String())
-	r.Response.Header.Set("X-Owner-Id", obj.OwnerID().String())
-	r.Response.Header.Set("X-Container-Id", obj.ContainerID().String())
+	r.Response.Header.Set(hdrObjectID, obj.ID().String())
+	r.Response.Header.Set(hdrOwnerID, obj.OwnerID().String())
+	r.Response.Header.Set(hdrContainerID, obj.ContainerID().String())
 
 	if len(contentType) == 0 {
 		if readDetector.err != nil {
@@ -191,7 +191,7 @@ func (r request) receiveFile(clnt pool.Object, objectAddress *object.Address) {
 	}
 	r.SetContentType(contentType)
 
-	r.Response.Header.Set("Content-Disposition", dis+"; filename="+path.Base(filename))
+	r.Response.Header.Set(fasthttp.HeaderContentDisposition, dis+"; filename="+path.Base(filename))
 }
 
 // systemBackwardTranslator is used to convert headers looking like '__NEOFS__ATTR_NAME' to 'Neofs-Attr-Name'.
@@ -414,8 +414,8 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 		return
 	}
 
-	c.Response.Header.Set("Content-Type", "application/zip")
-	c.Response.Header.Set("Content-Disposition", "attachment; filename=\"archive.zip\"")
+	c.Response.Header.Set(fasthttp.HeaderContentType, "application/zip")
+	c.Response.Header.Set(fasthttp.HeaderContentDisposition, "attachment; filename=\"archive.zip\"")
 	c.Response.SetStatusCode(http.StatusOK)
 
 	if err = d.streamFiles(c, containerID, ids); err != nil {
