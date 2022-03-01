@@ -404,29 +404,10 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 
 	optBearer := bearerOpts(c)
 	empty := true
-	n := 0
-	buf := make([]oid.ID, 10) // configure?
+	called := false
 
-iterator:
-	for {
-		n, err = resSearch.Read(buf)
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				if empty {
-					log.Error("objects not found", zap.Error(err))
-					response.Error(c, "objects not found", fasthttp.StatusNotFound)
-					return
-				}
-
-				err = nil
-
-				break
-			}
-
-			log.Error("read object list failed", zap.Error(err))
-			response.Error(c, "read object list failed", fasthttp.StatusBadRequest) // maybe best effort?
-			return
-		}
+	errIter := resSearch.Iterate(func(id oid.ID) bool {
+		called = true
 
 		if empty {
 			bufZip = make([]byte, 1024) // configure?
@@ -434,39 +415,48 @@ iterator:
 
 		empty = false
 
-		for i := range buf[:n] {
-			addr.SetObjectID(&buf[i])
+		addr.SetObjectID(&id)
 
-			resGet, err = d.pool.GetObject(c, addr, optBearer)
-			if err != nil {
-				err = fmt.Errorf("get NeoFS object: %v", err)
-				break iterator
-			}
-
-			w, err = zipWriter.CreateHeader(&zip.FileHeader{
-				Name:     getFilename(&resGet.Header),
-				Method:   compression,
-				Modified: time.Now(),
-			})
-			if err != nil {
-				err = fmt.Errorf("zip create header: %v", err)
-				break iterator
-			}
-
-			_, err = io.CopyBuffer(w, resGet.Payload, bufZip)
-			if err != nil {
-				err = fmt.Errorf("copy object payload to zip file: %v", err)
-				break iterator
-			}
-
-			_ = resGet.Payload.Close()
-
-			err = zipWriter.Flush()
-			if err != nil {
-				err = fmt.Errorf("flush zip writer: %v", err)
-				break iterator
-			}
+		resGet, err = d.pool.GetObject(c, addr, optBearer)
+		if err != nil {
+			err = fmt.Errorf("get NeoFS object: %v", err)
+			return true
 		}
+
+		w, err = zipWriter.CreateHeader(&zip.FileHeader{
+			Name:     getFilename(&resGet.Header),
+			Method:   compression,
+			Modified: time.Now(),
+		})
+		if err != nil {
+			err = fmt.Errorf("zip create header: %v", err)
+			return true
+		}
+
+		_, err = io.CopyBuffer(w, resGet.Payload, bufZip)
+		if err != nil {
+			err = fmt.Errorf("copy object payload to zip file: %v", err)
+			return true
+		}
+
+		_ = resGet.Payload.Close()
+
+		err = zipWriter.Flush()
+		if err != nil {
+			err = fmt.Errorf("flush zip writer: %v", err)
+			return true
+		}
+
+		return false
+	})
+	if errIter != nil {
+		log.Error("iterating over selected objects failed", zap.Error(errIter))
+		response.Error(c, "iterating over selected objects", fasthttp.StatusBadRequest)
+		return
+	} else if !called {
+		log.Error("objects not found")
+		response.Error(c, "objects not found", fasthttp.StatusNotFound)
+		return
 	}
 
 	if err == nil {

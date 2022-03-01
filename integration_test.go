@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math"
 	"mime/multipart"
 	"net/http"
 	"sort"
@@ -47,7 +46,8 @@ func TestIntegration(t *testing.T) {
 		aioContainer := createDockerContainer(ctx, t, aioImage+version)
 		cancel := runServer()
 		clientPool := getPool(ctx, t, key)
-		CID := createContainer(ctx, t, clientPool)
+		CID, err := createContainer(ctx, t, clientPool)
+		require.NoError(t, err, version)
 
 		t.Run("simple put "+version, func(t *testing.T) { simplePut(ctx, t, clientPool, CID) })
 		t.Run("simple get "+version, func(t *testing.T) { simpleGet(ctx, t, clientPool, CID) })
@@ -285,7 +285,7 @@ func getPool(ctx context.Context, t *testing.T, key *keys.PrivateKey) pool.Pool 
 	return clientPool
 }
 
-func createContainer(ctx context.Context, t *testing.T, clientPool pool.Pool) *cid.ID {
+func createContainer(ctx context.Context, t *testing.T, clientPool pool.Pool) (*cid.ID, error) {
 	pp, err := policy.Parse("REP 1")
 	require.NoError(t, err)
 
@@ -297,16 +297,17 @@ func createContainer(ctx context.Context, t *testing.T, clientPool pool.Pool) *c
 	cnr.SetOwnerID(clientPool.OwnerID())
 
 	CID, err := clientPool.PutContainer(ctx, cnr)
-	require.NoError(t, err)
+	if err != nil {
+		return nil, err
+	}
 	fmt.Println(CID.String())
 
 	err = clientPool.WaitForContainerPresence(ctx, CID, &pool.ContainerPollingParams{
 		CreationTimeout: 15 * time.Second,
 		PollInterval:    3 * time.Second,
 	})
-	require.NoError(t, err)
 
-	return CID
+	return CID, err
 }
 
 func putObject(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid.ID, content string, attributes map[string]string) *oid.ID {
