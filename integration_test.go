@@ -311,9 +311,9 @@ func createContainer(ctx context.Context, t *testing.T, clientPool pool.Pool) (*
 }
 
 func putObject(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid.ID, content string, attributes map[string]string) *oid.ID {
-	rawObject := object.NewRaw()
-	rawObject.SetContainerID(CID)
-	rawObject.SetOwnerID(clientPool.OwnerID())
+	obj := object.New()
+	obj.SetContainerID(CID)
+	obj.SetOwnerID(clientPool.OwnerID())
 
 	var attrs []*object.Attribute
 	for key, val := range attributes {
@@ -322,9 +322,9 @@ func putObject(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid
 		attr.SetValue(val)
 		attrs = append(attrs, attr)
 	}
-	rawObject.SetAttributes(attrs...)
+	obj.SetAttributes(attrs...)
 
-	id, err := clientPool.PutObject(ctx, *rawObject.Object(), bytes.NewBufferString(content))
+	id, err := clientPool.PutObject(ctx, *obj, bytes.NewBufferString(content))
 	require.NoError(t, err)
 
 	return id
