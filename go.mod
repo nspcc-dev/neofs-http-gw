@@ -11,8 +11,8 @@ require (
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/klauspost/compress v1.13.1 // indirect
 	github.com/nspcc-dev/neo-go v0.98.0
-	github.com/nspcc-dev/neofs-api-go/v2 v2.12.0
-	github.com/nspcc-dev/neofs-sdk-go v1.0.0-rc.1.0.20220228071935-07817fb4032d
+	github.com/nspcc-dev/neofs-api-go/v2 v2.11.2-0.20220302134950-d065453bd0a7
+	github.com/nspcc-dev/neofs-sdk-go v1.0.0-rc.2
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/common v0.29.0
 	github.com/prometheus/procfs v0.7.1 // indirect

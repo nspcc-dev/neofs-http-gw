@@ -55,7 +55,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	var (
 		err        error
 		file       MultipartFile
-		obj        *oid.ID
+		idObj      *oid.ID
 		addr       = address.NewAddress()
 		idCnr      = cid.New()
 		scid, _    = c.UserValue("cid").(string)
@@ -131,18 +131,18 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	}
 	id, bt := u.fetchOwnerAndBearerToken(c)
 
-	rawObject := object.NewRaw()
-	rawObject.SetContainerID(idCnr)
-	rawObject.SetOwnerID(id)
-	rawObject.SetAttributes(attributes...)
+	obj := object.New()
+	obj.SetContainerID(idCnr)
+	obj.SetOwnerID(id)
+	obj.SetAttributes(attributes...)
 
-	if obj, err = u.pool.PutObject(c, *rawObject.Object(), file, pool.WithBearer(bt)); err != nil {
+	if idObj, err = u.pool.PutObject(c, *obj, file, pool.WithBearer(bt)); err != nil {
 		log.Error("could not store file in neofs", zap.Error(err))
 		response.Error(c, "could not store file in neofs", fasthttp.StatusBadRequest)
 		return
 	}
 
-	addr.SetObjectID(obj)
+	addr.SetObjectID(idObj)
 	addr.SetContainerID(idCnr)
 
 	// Try to return the response, otherwise, if something went wrong, throw an error.
