@@ -158,15 +158,15 @@ func (r request) receiveFile(clnt pool.Object, objectAddress *address.Address) {
 		}
 
 		// reset payload reader since part of the data has been read
-		var r io.Reader = bytes.NewReader(payloadHead)
+		var headReader io.Reader = bytes.NewReader(payloadHead)
 
 		if err != io.EOF { // otherwise, we've already read full payload
-			r = io.MultiReader(r, rObj.Payload)
+			headReader = io.MultiReader(headReader, rObj.Payload)
 		}
 
 		// note: we could do with io.Reader, but SetBodyStream below closes body stream
 		// if it implements io.Closer and that's useful for us.
-		rObj.Payload = readCloser{r, rObj.Payload}
+		rObj.Payload = readCloser{headReader, rObj.Payload}
 	}
 	r.SetContentType(contentType)
 
