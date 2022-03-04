@@ -16,6 +16,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// max bytes needed to detect content type according to http.DetectContentType docs.
 const sizeToDetectType = 512
 
 const (
@@ -67,27 +68,13 @@ func (r request) headObject(clnt pool.Object, objectAddress *address.Address) {
 	idsToResponse(&r.Response, obj)
 
 	if len(contentType) == 0 {
-		sz := obj.PayloadSize()
-		if sz > sizeToDetectType {
-			sz = sizeToDetectType
-		}
-
-		res, err := clnt.ObjectRange(r.RequestCtx, *objectAddress, 0, sz, bearerOpt)
-		if err != nil {
+		contentType, _, err = readContentType(obj.PayloadSize(), func(sz uint64) (io.Reader, error) {
+			return clnt.ObjectRange(r.RequestCtx, *objectAddress, 0, sz, bearerOpt)
+		})
+		if err != nil && err != io.EOF {
 			r.handleNeoFSErr(err, start)
 			return
 		}
-
-		defer res.Close()
-
-		data := make([]byte, sz) // sync-pool it?
-
-		_, err = io.ReadFull(res, data)
-		if err != nil {
-			r.handleNeoFSErr(err, start)
-			return
-		}
-		contentType = http.DetectContentType(data)
 	}
 	r.SetContentType(contentType)
 }
