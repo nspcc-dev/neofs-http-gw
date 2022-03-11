@@ -136,7 +136,10 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	obj.SetOwnerID(id)
 	obj.SetAttributes(attributes...)
 
-	if idObj, err = u.pool.PutObject(c, *obj, file, pool.WithBearer(bt)); err != nil {
+	ctx, cancel := context.WithCancel(c)
+	defer cancel()
+
+	if idObj, err = u.pool.PutObject(ctx, *obj, file, pool.WithBearer(bt)); err != nil {
 		log.Error("could not store file in neofs", zap.Error(err))
 		response.Error(c, "could not store file in neofs", fasthttp.StatusBadRequest)
 		return
