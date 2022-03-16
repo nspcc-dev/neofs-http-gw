@@ -84,7 +84,7 @@ func readContentType(maxSize uint64, rInit func(uint64) (io.Reader, error)) (str
 	return http.DetectContentType(buf), buf, err // to not lose io.EOF
 }
 
-func (r request) receiveFile(clnt pool.Object, objectAddress *address.Address) {
+func (r request) receiveFile(clnt *pool.Pool, objectAddress *address.Address) {
 	var (
 		err      error
 		dis      = "inline"
@@ -229,7 +229,7 @@ func (r *request) handleNeoFSErr(err error, start time.Time) {
 // Downloader is a download request handler.
 type Downloader struct {
 	log      *zap.Logger
-	pool     pool.Pool
+	pool     *pool.Pool
 	settings Settings
 }
 
@@ -238,7 +238,7 @@ type Settings struct {
 }
 
 // New creates an instance of Downloader using specified options.
-func New(log *zap.Logger, settings Settings, conns pool.Pool) (*Downloader, error) {
+func New(log *zap.Logger, settings Settings, conns *pool.Pool) (*Downloader, error) {
 	var err error
 	d := &Downloader{log: log, pool: conns, settings: settings}
 	if err != nil {
@@ -261,7 +261,7 @@ func (d *Downloader) DownloadByAddress(c *fasthttp.RequestCtx) {
 
 // byAddress is wrapper for function (e.g. request.headObject, request.receiveFile) that
 // prepares request and object address to it.
-func (d *Downloader) byAddress(c *fasthttp.RequestCtx, f func(request, pool.Object, *address.Address)) {
+func (d *Downloader) byAddress(c *fasthttp.RequestCtx, f func(request, *pool.Pool, *address.Address)) {
 	var (
 		addr     = address.NewAddress()
 		idCnr, _ = c.UserValue("cid").(string)
@@ -284,7 +284,7 @@ func (d *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
 }
 
 // byAttribute is wrapper similar to byAddress.
-func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, pool.Object, *address.Address)) {
+func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, *pool.Pool, *address.Address)) {
 	var (
 		httpStatus = fasthttp.StatusBadRequest
 		scid, _    = c.UserValue("cid").(string)

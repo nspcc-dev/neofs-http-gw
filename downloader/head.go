@@ -25,7 +25,7 @@ const (
 	hdrContainerID = "X-Container-Id"
 )
 
-func (r request) headObject(clnt pool.Object, objectAddress *address.Address) {
+func (r request) headObject(clnt *pool.Pool, objectAddress *address.Address) {
 	var start = time.Now()
 	if err := tokens.StoreBearerToken(r.RequestCtx); err != nil {
 		r.log.Error("could not fetch and store bearer token", zap.Error(err))

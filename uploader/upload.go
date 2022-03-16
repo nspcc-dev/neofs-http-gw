@@ -34,7 +34,7 @@ const (
 // Uploader is an upload request handler.
 type Uploader struct {
 	log                    *zap.Logger
-	pool                   pool.Pool
+	pool                   *pool.Pool
 	enableDefaultTimestamp bool
 }
 
@@ -46,7 +46,7 @@ type epochDurations struct {
 
 // New creates a new Uploader using specified logger, connection pool and
 // other options.
-func New(log *zap.Logger, conns pool.Pool, enableDefaultTimestamp bool) *Uploader {
+func New(log *zap.Logger, conns *pool.Pool, enableDefaultTimestamp bool) *Uploader {
 	return &Uploader{log, conns, enableDefaultTimestamp}
 }
 
@@ -107,27 +107,27 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		}
 	}
 
-	attributes := make([]*object.Attribute, 0, len(filtered))
+	attributes := make([]object.Attribute, 0, len(filtered))
 	// prepares attributes from filtered headers
 	for key, val := range filtered {
 		attribute := object.NewAttribute()
 		attribute.SetKey(key)
 		attribute.SetValue(val)
-		attributes = append(attributes, attribute)
+		attributes = append(attributes, *attribute)
 	}
 	// sets FileName attribute if it wasn't set from header
 	if _, ok := filtered[object.AttributeFileName]; !ok {
 		filename := object.NewAttribute()
 		filename.SetKey(object.AttributeFileName)
 		filename.SetValue(file.FileName())
-		attributes = append(attributes, filename)
+		attributes = append(attributes, *filename)
 	}
 	// sets Timestamp attribute if it wasn't set from header and enabled by settings
 	if _, ok := filtered[object.AttributeTimestamp]; !ok && u.enableDefaultTimestamp {
 		timestamp := object.NewAttribute()
 		timestamp.SetKey(object.AttributeTimestamp)
 		timestamp.SetValue(strconv.FormatInt(time.Now().Unix(), 10))
-		attributes = append(attributes, timestamp)
+		attributes = append(attributes, *timestamp)
 	}
 	id, bt := u.fetchOwnerAndBearerToken(c)
 
@@ -197,7 +197,7 @@ func (pr *putResponse) encode(w io.Writer) error {
 	return enc.Encode(pr)
 }
 
-func getEpochDurations(ctx context.Context, p pool.Pool) (*epochDurations, error) {
+func getEpochDurations(ctx context.Context, p *pool.Pool) (*epochDurations, error) {
 	if conn, _, err := p.Connection(); err != nil {
 		return nil, err
 	} else if networkInfoRes, err := conn.NetworkInfo(ctx, client.PrmNetworkInfo{}); err != nil {
