@@ -25,7 +25,7 @@ import (
 type (
 	app struct {
 		log          *zap.Logger
-		pool         pool.Pool
+		pool         *pool.Pool
 		cfg          *viper.Viper
 		auxiliaryLog logger.Logger
 		webServer    *fasthttp.Server

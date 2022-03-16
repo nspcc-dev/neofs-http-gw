@@ -72,7 +72,7 @@ func runServer() context.CancelFunc {
 	return cancel
 }
 
-func simplePut(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid.ID) {
+func simplePut(ctx context.Context, t *testing.T, clientPool *pool.Pool, CID *cid.ID) {
 	content := "content of file"
 	keyAttr, valAttr := "User-Attribute", "user value"
 
@@ -132,7 +132,7 @@ func simplePut(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid
 	}
 }
 
-func simpleGet(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid.ID) {
+func simpleGet(ctx context.Context, t *testing.T, clientPool *pool.Pool, CID *cid.ID) {
 	content := "content of file"
 	attributes := map[string]string{
 		"some-attr": "some-get-value",
@@ -156,7 +156,7 @@ func simpleGet(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid
 	}
 }
 
-func getByAttr(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid.ID) {
+func getByAttr(ctx context.Context, t *testing.T, clientPool *pool.Pool, CID *cid.ID) {
 	keyAttr, valAttr := "some-attr", "some-get-by-attr-value"
 	content := "content of file"
 	attributes := map[string]string{keyAttr: valAttr}
@@ -185,7 +185,7 @@ func getByAttr(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid
 	}
 }
 
-func getZip(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid.ID) {
+func getZip(ctx context.Context, t *testing.T, clientPool *pool.Pool, CID *cid.ID) {
 	names := []string{"zipfolder/dir/name1.txt", "zipfolder/name2.txt"}
 	contents := []string{"content of file1", "content of file2"}
 	attributes1 := map[string]string{object.AttributeFileName: names[0]}
@@ -271,7 +271,7 @@ func getDefaultConfig() *viper.Viper {
 	return v
 }
 
-func getPool(ctx context.Context, t *testing.T, key *keys.PrivateKey) pool.Pool {
+func getPool(ctx context.Context, t *testing.T, key *keys.PrivateKey) *pool.Pool {
 	pb := new(pool.Builder)
 	pb.AddNode("localhost:8080", 1, 1)
 
@@ -285,7 +285,7 @@ func getPool(ctx context.Context, t *testing.T, key *keys.PrivateKey) pool.Pool 
 	return clientPool
 }
 
-func createContainer(ctx context.Context, t *testing.T, clientPool pool.Pool) (*cid.ID, error) {
+func createContainer(ctx context.Context, t *testing.T, clientPool *pool.Pool) (*cid.ID, error) {
 	pp, err := policy.Parse("REP 1")
 	require.NoError(t, err)
 
@@ -310,17 +310,17 @@ func createContainer(ctx context.Context, t *testing.T, clientPool pool.Pool) (*
 	return CID, err
 }
 
-func putObject(ctx context.Context, t *testing.T, clientPool pool.Pool, CID *cid.ID, content string, attributes map[string]string) *oid.ID {
+func putObject(ctx context.Context, t *testing.T, clientPool *pool.Pool, CID *cid.ID, content string, attributes map[string]string) *oid.ID {
 	obj := object.New()
 	obj.SetContainerID(CID)
 	obj.SetOwnerID(clientPool.OwnerID())
 
-	var attrs []*object.Attribute
+	var attrs []object.Attribute
 	for key, val := range attributes {
 		attr := object.NewAttribute()
 		attr.SetKey(key)
 		attr.SetValue(val)
-		attrs = append(attrs, attr)
+		attrs = append(attrs, *attr)
 	}
 	obj.SetAttributes(attrs...)
 
