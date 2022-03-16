@@ -2,6 +2,22 @@
 
 This document outlines major changes between releases.
 
+## [0.19.0] - 2022-03-16
+
+### Fixed
+- Uploading object with zero payload (#122)
+- Different headers format in GET and HEAD (#125)
+- Fixed project name in docs (#120)
+
+### Added
+- Support object attributes with spaces (#123)
+
+### Changed
+- Updated fasthttp to v1.34.0 (#129)
+- Updated NeoFS SDK to v1.0.0-rc.3 (#126, #132)
+- Refactored content type detecting (#128)
+
+
 ## [0.18.0] - 2021-12-10
 
 ### Fixed
@@ -129,3 +145,4 @@ releases.
 
 [0.17.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.16.1...v0.17.0
 [0.18.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.17.0...v0.18.0
+[0.19.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.18.0...v0.19.0
