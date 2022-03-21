@@ -18,7 +18,7 @@ NeoFS HTTP Gateway bridges NeoFS internal protocol and HTTP standard.
 
 ## Installation
 
-```go get -u github.com/nspcc-dev/neofs-http-gw```
+```go install github.com/nspcc-dev/neofs-http-gw```
 
 Or you can call `make` to build it from the cloned repository (the binary will
 end up in `bin/neofs-http-gw`).
