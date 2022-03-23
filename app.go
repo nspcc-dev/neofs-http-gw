@@ -13,6 +13,7 @@ import (
 	"github.com/nspcc-dev/neo-go/pkg/wallet"
 	"github.com/nspcc-dev/neofs-http-gw/downloader"
 	"github.com/nspcc-dev/neofs-http-gw/response"
+	restv1 "github.com/nspcc-dev/neofs-http-gw/rest/v1/handlers"
 	"github.com/nspcc-dev/neofs-http-gw/uploader"
 	"github.com/nspcc-dev/neofs-sdk-go/logger"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
@@ -217,6 +218,9 @@ func (a *app) Serve(ctx context.Context) {
 	a.log.Info("added path /get_by_attribute/{cid}/{attr_key}/{attr_val:*}")
 	r.GET("/zip/{cid}/{prefix:*}", a.logger(downloader.DownloadZipped))
 	a.log.Info("added path /zip/{cid}/{prefix}")
+
+	a.registerRESTRoutes(r)
+
 	// enable metrics
 	if a.cfg.GetBool(cmdMetrics) {
 		a.log.Info("added path /metrics/")
@@ -245,12 +249,26 @@ func (a *app) Serve(ctx context.Context) {
 }
 
 func (a *app) logger(h fasthttp.RequestHandler) fasthttp.RequestHandler {
-	return fasthttp.RequestHandler(func(ctx *fasthttp.RequestCtx) {
+	return func(ctx *fasthttp.RequestCtx) {
 		a.log.Info("request", zap.String("remote", ctx.RemoteAddr().String()),
 			zap.ByteString("method", ctx.Method()),
 			zap.ByteString("path", ctx.Path()),
 			zap.ByteString("query", ctx.QueryArgs().QueryString()),
 			zap.Uint64("id", ctx.ID()))
 		h(ctx)
-	})
+	}
+}
+
+func (a *app) registerRESTRoutes(r *router.Router) {
+	prm := &restv1.PrmAPI{
+		Logger:           a.log,
+		Pool:             a.pool,
+		DefaultTimestamp: a.cfg.GetBool(cfgUploaderHeaderEnableDefaultTimestamp),
+	}
+	api := restv1.New(prm)
+
+	a.log.Info("adding v1 rest routes")
+	versionPrefix := "/v1"
+	r.POST(versionPrefix+"/auth", a.logger(api.AuthHandler))
+	r.PUT(versionPrefix+"/objects", a.logger(api.ObjectsPut))
 }

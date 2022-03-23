@@ -4,6 +4,12 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/sha512"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,6 +21,8 @@ import (
 	"time"
 
 	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
+	restv1 "github.com/nspcc-dev/neofs-http-gw/rest/v1/handlers"
+	"github.com/nspcc-dev/neofs-http-gw/rest/v1/model"
 	"github.com/nspcc-dev/neofs-sdk-go/container"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
@@ -33,11 +41,16 @@ type putResponse struct {
 	OID string `json:"object_id"`
 }
 
+const (
+	devenvPrivateKey = "1dd37fba80fec4e6a6f13fd708d8dcb3b29def768017052f6c930fa1c5d90bbb"
+	testHost         = "http://localhost:8082"
+)
+
 func TestIntegration(t *testing.T) {
 	rootCtx := context.Background()
 	aioImage := "nspccdev/neofs-aio-testcontainer:"
 	versions := []string{"0.24.0", "0.25.1", "0.26.1", "0.27.0", "latest"}
-	key, err := keys.NewPrivateKeyFromHex("1dd37fba80fec4e6a6f13fd708d8dcb3b29def768017052f6c930fa1c5d90bbb")
+	key, err := keys.NewPrivateKeyFromHex(devenvPrivateKey)
 	require.NoError(t, err)
 
 	for _, version := range versions {
@@ -53,6 +66,8 @@ func TestIntegration(t *testing.T) {
 		t.Run("simple get "+version, func(t *testing.T) { simpleGet(ctx, t, clientPool, CID) })
 		t.Run("get by attribute "+version, func(t *testing.T) { getByAttr(ctx, t, clientPool, CID) })
 		t.Run("get zip "+version, func(t *testing.T) { getZip(ctx, t, clientPool, CID) })
+
+		t.Run("rest put "+version, func(t *testing.T) { restObjectPut(ctx, t, clientPool, CID) })
 
 		cancel()
 		err = aioContainer.Terminate(ctx)
@@ -242,6 +257,117 @@ func checkZip(t *testing.T, data []byte, length int64, names, contents []string)
 
 		err = rc.Close()
 		require.NoError(t, err)
+	}
+}
+
+func restObjectPut(ctx context.Context, t *testing.T, clientPool *pool.Pool, cnrID *cid.ID) {
+	key, err := keys.NewPrivateKeyFromHex(devenvPrivateKey)
+	require.NoError(t, err)
+
+	b := model.Bearer{
+		Records: []model.Record{{
+			Operation: model.OperationPut,
+			Action:    model.ActionAllow,
+			Filters:   []model.Filter{},
+			Targets: []model.Target{{
+				Role: model.RoleOthers,
+				Keys: []string{},
+			}},
+		}},
+	}
+
+	data, err := json.Marshal(&b)
+	require.NoError(t, err)
+
+	request0, err := http.NewRequest(http.MethodPost, testHost+"/v1/auth", bytes.NewReader(data))
+	require.NoError(t, err)
+	request0.Header.Add("Content-Type", "application/json")
+
+	httpClient := http.Client{
+		Timeout: 5 * time.Second,
+	}
+
+	resp, err := httpClient.Do(request0)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	rr, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	bearerBase64 := string(rr)
+	fmt.Println(bearerBase64)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	binaryData, err := base64.StdEncoding.DecodeString(bearerBase64)
+	require.NoError(t, err)
+
+	h := sha512.Sum512(binaryData)
+	x, y, err := ecdsa.Sign(rand.Reader, &key.PrivateKey, h[:])
+	if err != nil {
+		panic(err)
+	}
+	signatureData := elliptic.Marshal(elliptic.P256(), x, y)
+
+	content := "content of file"
+	attrKey, attrValue := "User-Attribute", "user value"
+
+	attributes := map[string]string{
+		object.AttributeFileName: "newFile.txt",
+		attrKey:                  attrValue,
+	}
+
+	req := model.ObjectsPutRequest{
+		ContainerID: cnrID.String(),
+		FileName:    "newFile.txt",
+		Payload:     base64.StdEncoding.EncodeToString([]byte(content)),
+	}
+
+	body, err := json.Marshal(&req)
+	require.NoError(t, err)
+
+	fmt.Println(base64.StdEncoding.EncodeToString(signatureData))
+	fmt.Println(hex.EncodeToString(key.PublicKey().Bytes()))
+
+	request, err := http.NewRequest(http.MethodPut, testHost+"/v1/objects", bytes.NewReader(body))
+	require.NoError(t, err)
+	request.Header.Add("Content-Type", "application/json")
+	request.Header.Add(restv1.XNeofsBearerSignature, base64.StdEncoding.EncodeToString(signatureData))
+	request.Header.Add("Authorization", "Bearer "+bearerBase64)
+	request.Header.Add(restv1.XNeofsBearerOwnerKey, hex.EncodeToString(key.PublicKey().Bytes()))
+	request.Header.Add("X-Attribute-"+attrKey, attrValue)
+
+	resp2, err := httpClient.Do(request)
+	require.NoError(t, err)
+	defer resp2.Body.Close()
+	require.Equal(t, http.StatusOK, resp2.StatusCode)
+
+	addr := &model.ObjectsPutResponse{}
+	err = json.NewDecoder(resp2.Body).Decode(addr)
+	require.NoError(t, err)
+
+	var CID cid.ID
+	err = CID.Parse(addr.ContainerID)
+	require.NoError(t, err)
+
+	id := oid.NewID()
+	err = id.Parse(addr.ObjectID)
+	require.NoError(t, err)
+
+	objectAddress := address.NewAddress()
+	objectAddress.SetContainerID(&CID)
+	objectAddress.SetObjectID(id)
+
+	payload := bytes.NewBuffer(nil)
+
+	res, err := clientPool.GetObject(ctx, *objectAddress)
+	require.NoError(t, err)
+
+	_, err = io.Copy(payload, res.Payload)
+	require.NoError(t, err)
+
+	require.Equal(t, content, payload.String())
+
+	for _, attribute := range res.Header.Attributes() {
+		require.Equal(t, attributes[attribute.Key()], attribute.Value(), attribute.Key())
 	}
 }
 

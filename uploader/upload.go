@@ -2,20 +2,13 @@ package uploader
 
 import (
 	"context"
-	"encoding/binary"
 	"encoding/json"
-	"fmt"
 	"io"
-	"strconv"
-	"time"
 
+	"github.com/nspcc-dev/neofs-http-gw/internal/util"
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
-	"github.com/nspcc-dev/neofs-http-gw/utils"
-	"github.com/nspcc-dev/neofs-sdk-go/client"
-	apistatus "github.com/nspcc-dev/neofs-sdk-go/client/status"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
-	"github.com/nspcc-dev/neofs-sdk-go/netmap"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
 	"github.com/nspcc-dev/neofs-sdk-go/object/address"
 	oid "github.com/nspcc-dev/neofs-sdk-go/object/id"
@@ -36,12 +29,6 @@ type Uploader struct {
 	log                    *zap.Logger
 	pool                   *pool.Pool
 	enableDefaultTimestamp bool
-}
-
-type epochDurations struct {
-	currentEpoch  uint64
-	msPerBlock    int64
-	blockPerEpoch uint64
 }
 
 // New creates a new Uploader using specified logger, connection pool and
@@ -92,52 +79,28 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		response.Error(c, "could not receive multipart/form: "+err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
-	filtered := filterHeaders(u.log, &c.Request.Header)
-	if needParseExpiration(filtered) {
-		epochDuration, err := getEpochDurations(c, u.pool)
-		if err != nil {
-			log.Error("could not get epoch durations from network info", zap.Error(err))
-			response.Error(c, "could parse expiration header, try expiration in epoch", fasthttp.StatusBadRequest)
-			return
-		}
-		if err = prepareExpirationHeader(filtered, epochDuration); err != nil {
-			log.Error("could not prepare expiration header", zap.Error(err))
-			response.Error(c, "could parse expiration header, try expiration in epoch", fasthttp.StatusBadRequest)
-			return
-		}
+
+	ctx, cancel := context.WithCancel(c)
+	defer cancel()
+
+	prm := util.PrmAttributes{
+		DefaultTimestamp: u.enableDefaultTimestamp,
+		DefaultFileName:  file.FileName(),
 	}
 
-	attributes := make([]object.Attribute, 0, len(filtered))
-	// prepares attributes from filtered headers
-	for key, val := range filtered {
-		attribute := object.NewAttribute()
-		attribute.SetKey(key)
-		attribute.SetValue(val)
-		attributes = append(attributes, *attribute)
+	attributes, err := util.GetObjectAttributes(ctx, &c.Request.Header, u.pool, prm)
+	if err != nil {
+		log.Error("could not get object attributes", zap.Error(err))
+		response.Error(c, "could not get object attributes", fasthttp.StatusBadRequest)
+		return
 	}
-	// sets FileName attribute if it wasn't set from header
-	if _, ok := filtered[object.AttributeFileName]; !ok {
-		filename := object.NewAttribute()
-		filename.SetKey(object.AttributeFileName)
-		filename.SetValue(file.FileName())
-		attributes = append(attributes, *filename)
-	}
-	// sets Timestamp attribute if it wasn't set from header and enabled by settings
-	if _, ok := filtered[object.AttributeTimestamp]; !ok && u.enableDefaultTimestamp {
-		timestamp := object.NewAttribute()
-		timestamp.SetKey(object.AttributeTimestamp)
-		timestamp.SetValue(strconv.FormatInt(time.Now().Unix(), 10))
-		attributes = append(attributes, *timestamp)
-	}
+
 	id, bt := u.fetchOwnerAndBearerToken(c)
 
 	obj := object.New()
 	obj.SetContainerID(idCnr)
 	obj.SetOwnerID(id)
 	obj.SetAttributes(attributes...)
-
-	ctx, cancel := context.WithCancel(c)
-	defer cancel()
 
 	if idObj, err = u.pool.PutObject(ctx, *obj, file, pool.WithBearer(bt)); err != nil {
 		log.Error("could not store file in neofs", zap.Error(err))
@@ -195,41 +158,4 @@ func (pr *putResponse) encode(w io.Writer) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "\t")
 	return enc.Encode(pr)
-}
-
-func getEpochDurations(ctx context.Context, p *pool.Pool) (*epochDurations, error) {
-	if conn, _, err := p.Connection(); err != nil {
-		return nil, err
-	} else if networkInfoRes, err := conn.NetworkInfo(ctx, client.PrmNetworkInfo{}); err != nil {
-		return nil, err
-	} else if err = apistatus.ErrFromStatus(networkInfoRes.Status()); err != nil {
-		return nil, err
-	} else {
-		networkInfo := networkInfoRes.Info()
-		res := &epochDurations{
-			currentEpoch: networkInfo.CurrentEpoch(),
-			msPerBlock:   networkInfo.MsPerBlock(),
-		}
-
-		networkInfo.NetworkConfig().IterateParameters(func(parameter *netmap.NetworkParameter) bool {
-			if string(parameter.Key()) == "EpochDuration" {
-				data := make([]byte, 8)
-				copy(data, parameter.Value())
-				res.blockPerEpoch = binary.LittleEndian.Uint64(data)
-				return true
-			}
-			return false
-		})
-		if res.blockPerEpoch == 0 {
-			return nil, fmt.Errorf("not found param: EpochDuration")
-		}
-		return res, nil
-	}
-}
-
-func needParseExpiration(headers map[string]string) bool {
-	_, ok1 := headers[utils.ExpirationDurationAttr]
-	_, ok2 := headers[utils.ExpirationRFC3339Attr]
-	_, ok3 := headers[utils.ExpirationTimestampAttr]
-	return ok1 || ok2 || ok3
 }

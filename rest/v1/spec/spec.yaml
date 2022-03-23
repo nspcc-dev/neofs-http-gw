@@ -1,0 +1,196 @@
+openapi: 3.0.3
+info:
+  title: REST API NeoFS
+  description: REST API NeoFS
+  version: v1
+servers:
+  - url: 'https://localhost'
+
+paths:
+  /auth:
+    post:
+      summary: Form bearer token to futher requests
+      parameters:
+        - in: header
+          name: X-Neofs-Bearer-Lifetime
+          description: Bearer token lifetime in epoch
+          schema:
+            type: integer
+            default: 100
+      requestBody:
+        description: Bearer token
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Bearer'
+
+      responses:
+        '200':
+          description: Base64 encoded stable binary marshaled bearer token
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: CiQKABogCAIQAhoWCAIQAhoIRmlsZU5hbWUiBm15ZmlsZSICCAM=
+
+  /objects:
+    put:
+      summary: Upload object to NeoFS
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - in: header
+          name: X-Neofs-Bearer-Signature
+          description: Base64 encoded signature for bearer token
+          schema:
+            type: string
+          required: true
+          example:
+            BGtqMEpzxTabrdIIIDAnL79Cs7bm46+8lsFaMMU+LCKw/ujEjF0r5mVLKixWmxoreuj1E0BXWcqp9d3wGV6Hc9I=
+        - in: header
+          name: X-Neofs-Bearer-Owner-Key
+          description: Hex encoded the public part of the key that signed the bearer token
+          schema:
+            type: string
+          required: true
+          example:
+            031a6c6fbbdf02ca351745fa86b9ba5a9452d785ac4f7fc2b7548ca2a46c4fcf4a
+      requestBody:
+        required: true
+        description: Object info to upload
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                containerId:
+                  type: string
+                fileName:
+                  type: string
+                payload:
+                  type: string
+              required:
+                - containerId
+                - fileName
+              example:
+                containerId: 5HZTn5qkRnmgSz9gSrw22CEdPPk6nQhkwf2Mgzyvkikv
+                fileName: myFile.txt
+                payload: Y29udGVudCBvZiBmaWxl
+      responses:
+        '200':
+          description: Address of uploaded objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  objectId:
+                    type: string
+                  containerId:
+                    type: string
+                example:
+                  objectId: 8N3o7Dtr6T1xteCt6eRwhpmJ7JhME58Hyu1dvaswuTDd
+                  containerId: 5HZTn5qkRnmgSz9gSrw22CEdPPk6nQhkwf2Mgzyvkikv
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: "http"
+      scheme: "bearer"
+  schemas:
+    Bearer:
+      type: object
+      properties:
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/Record'
+      required:
+        - records
+    Record:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+            - ALLOW
+            - DENY
+        operation:
+          type: string
+          enum:
+            - GET
+            - HEAD
+            - PUT
+            - DELETE
+            - SEARCH
+            - RANGE
+            - RANGEHASH
+        filters:
+          type: array
+          items:
+            $ref: '#/components/schemas/Filter'
+        targets:
+          type: array
+          items:
+            $ref: '#/components/schemas/Target'
+      required:
+        - action
+        - operation
+        - filters
+        - targets
+      example:
+        operation: GET
+        action: ALLOW
+        filters: [ ]
+        targets:
+          - role: OTHERS
+            keys: [ ]
+    Filter:
+      type: object
+      properties:
+        headerType:
+          type: string
+          enum:
+            - REQUEST
+            - OBJECT
+            - SERVICE
+        matchType:
+          type: string
+          enum:
+            - STRING_EQUAL
+            - STRING_NOT_EQUAL
+        key:
+          type: string
+        value:
+          type: string
+      required:
+        - headerType
+        - matchType
+        - key
+        - value
+      example:
+        headerType: OBJECT
+        matchType: STRING_NOT_EQUAL
+        key: FileName
+        value: myfile
+    Target:
+      type: object
+      properties:
+        role:
+          type: string
+          enum:
+            - USER
+            - SYSTEM
+            - OTHERS
+        keys:
+          type: array
+          items:
+            type: string
+      required:
+        - role
+        - keys
+      example:
+        role: USER
+        keys:
+          - 021dc56fc6d81d581ae7605a8e00e0e0bab6cbad566a924a527339475a97a8e38e

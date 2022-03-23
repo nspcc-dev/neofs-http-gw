@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/nspcc-dev/neofs-http-gw/internal/util"
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
-	"github.com/nspcc-dev/neofs-http-gw/utils"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
 	"github.com/nspcc-dev/neofs-sdk-go/object/address"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
@@ -48,7 +48,7 @@ func (r request) headObject(clnt *pool.Pool, objectAddress *address.Address) {
 		if !isValidToken(key) || !isValidValue(val) {
 			continue
 		}
-		r.Response.Header.Set(utils.UserAttributeHeaderPrefix+key, val)
+		r.Response.Header.Set(util.UserAttributeHeaderPrefix+key, val)
 		switch key {
 		case object.AttributeTimestamp:
 			value, err := strconv.ParseInt(val, 10, 64)

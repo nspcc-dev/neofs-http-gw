@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nspcc-dev/neofs-http-gw/internal/util"
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
-	"github.com/nspcc-dev/neofs-http-gw/utils"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
 	"github.com/nspcc-dev/neofs-sdk-go/object/address"
@@ -119,10 +119,10 @@ func (r request) receiveFile(clnt *pool.Pool, objectAddress *address.Address) {
 		if !isValidToken(key) || !isValidValue(val) {
 			continue
 		}
-		if strings.HasPrefix(key, utils.SystemAttributePrefix) {
+		if strings.HasPrefix(key, util.SystemAttributePrefix) {
 			key = systemBackwardTranslator(key)
 		}
-		r.Response.Header.Set(utils.UserAttributeHeaderPrefix+key, val)
+		r.Response.Header.Set(util.UserAttributeHeaderPrefix+key, val)
 		switch key {
 		case object.AttributeFileName:
 			filename = val
@@ -178,7 +178,7 @@ func (r request) receiveFile(clnt *pool.Pool, objectAddress *address.Address) {
 // systemBackwardTranslator is used to convert headers looking like '__NEOFS__ATTR_NAME' to 'Neofs-Attr-Name'.
 func systemBackwardTranslator(key string) string {
 	// trim specified prefix '__NEOFS__'
-	key = strings.TrimPrefix(key, utils.SystemAttributePrefix)
+	key = strings.TrimPrefix(key, util.SystemAttributePrefix)
 
 	var res strings.Builder
 	res.WriteString("Neofs-")

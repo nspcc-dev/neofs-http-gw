@@ -1,4 +1,4 @@
-package uploader
+package util
 
 import (
 	"strconv"
@@ -6,16 +6,11 @@ import (
 	"time"
 
 	"github.com/nspcc-dev/neofs-api-go/v2/object"
-	"github.com/nspcc-dev/neofs-http-gw/utils"
-	"github.com/nspcc-dev/neofs-sdk-go/logger"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
 )
 
 func TestFilter(t *testing.T) {
-	log, err := logger.New()
-	require.NoError(t, err)
-
 	req := &fasthttp.RequestHeader{}
 	req.DisableNormalizing()
 	req.Set("X-Attribute-Neofs-Expiration-Epoch1", "101")
@@ -30,7 +25,7 @@ func TestFilter(t *testing.T) {
 		"__NEOFS__EXPIRATION_EPOCH2": "102",
 	}
 
-	result := filterHeaders(log, req)
+	result := filterHeaders(req)
 
 	require.Equal(t, expected, result)
 }
@@ -71,8 +66,8 @@ func TestPrepareExpirationHeader(t *testing.T) {
 		{
 			name: "valid epoch, valid duration",
 			headers: map[string]string{
-				object.SysAttributeExpEpoch:  epoch,
-				utils.ExpirationDurationAttr: duration,
+				object.SysAttributeExpEpoch: epoch,
+				ExpirationDurationAttr:      duration,
 			},
 			durations: defaultDurations,
 			expected:  map[string]string{object.SysAttributeExpEpoch: epoch},
@@ -81,7 +76,7 @@ func TestPrepareExpirationHeader(t *testing.T) {
 			name: "valid epoch, valid rfc3339",
 			headers: map[string]string{
 				object.SysAttributeExpEpoch: epoch,
-				utils.ExpirationRFC3339Attr: tomorrow.Format(time.RFC3339),
+				ExpirationRFC3339Attr:       tomorrow.Format(time.RFC3339),
 			},
 			durations: defaultDurations,
 			expected:  map[string]string{object.SysAttributeExpEpoch: epoch},
@@ -89,8 +84,8 @@ func TestPrepareExpirationHeader(t *testing.T) {
 		{
 			name: "valid epoch, valid timestamp sec",
 			headers: map[string]string{
-				object.SysAttributeExpEpoch:   epoch,
-				utils.ExpirationTimestampAttr: timestampSec,
+				object.SysAttributeExpEpoch: epoch,
+				ExpirationTimestampAttr:     timestampSec,
 			},
 			durations: defaultDurations,
 			expected:  map[string]string{object.SysAttributeExpEpoch: epoch},
@@ -98,8 +93,8 @@ func TestPrepareExpirationHeader(t *testing.T) {
 		{
 			name: "valid epoch, valid timestamp milli",
 			headers: map[string]string{
-				object.SysAttributeExpEpoch:   epoch,
-				utils.ExpirationTimestampAttr: timestampMilli,
+				object.SysAttributeExpEpoch: epoch,
+				ExpirationTimestampAttr:     timestampMilli,
 			},
 			durations: defaultDurations,
 			expected:  map[string]string{object.SysAttributeExpEpoch: epoch},
@@ -107,58 +102,58 @@ func TestPrepareExpirationHeader(t *testing.T) {
 		{
 			name: "valid epoch, valid timestamp nano",
 			headers: map[string]string{
-				object.SysAttributeExpEpoch:   epoch,
-				utils.ExpirationTimestampAttr: timestampNano,
+				object.SysAttributeExpEpoch: epoch,
+				ExpirationTimestampAttr:     timestampNano,
 			},
 			durations: defaultDurations,
 			expected:  map[string]string{object.SysAttributeExpEpoch: epoch},
 		},
 		{
 			name:      "valid timestamp sec",
-			headers:   map[string]string{utils.ExpirationTimestampAttr: timestampSec},
+			headers:   map[string]string{ExpirationTimestampAttr: timestampSec},
 			durations: defaultDurations,
 			expected:  map[string]string{object.SysAttributeExpEpoch: defaultExpEpoch},
 		},
 		{
 			name:      "valid duration",
-			headers:   map[string]string{utils.ExpirationDurationAttr: duration},
+			headers:   map[string]string{ExpirationDurationAttr: duration},
 			durations: defaultDurations,
 			expected:  map[string]string{object.SysAttributeExpEpoch: defaultExpEpoch},
 		},
 		{
 			name:      "valid rfc3339",
-			headers:   map[string]string{utils.ExpirationRFC3339Attr: tomorrow.Format(time.RFC3339)},
+			headers:   map[string]string{ExpirationRFC3339Attr: tomorrow.Format(time.RFC3339)},
 			durations: defaultDurations,
 			expected:  map[string]string{object.SysAttributeExpEpoch: defaultExpEpoch},
 		},
 		{
 			name:    "invalid timestamp sec",
-			headers: map[string]string{utils.ExpirationTimestampAttr: "abc"},
+			headers: map[string]string{ExpirationTimestampAttr: "abc"},
 			err:     true,
 		},
 		{
 			name:    "invalid timestamp sec zero",
-			headers: map[string]string{utils.ExpirationTimestampAttr: "0"},
+			headers: map[string]string{ExpirationTimestampAttr: "0"},
 			err:     true,
 		},
 		{
 			name:    "invalid duration",
-			headers: map[string]string{utils.ExpirationDurationAttr: "1d"},
+			headers: map[string]string{ExpirationDurationAttr: "1d"},
 			err:     true,
 		},
 		{
 			name:    "invalid duration negative",
-			headers: map[string]string{utils.ExpirationDurationAttr: "-5h"},
+			headers: map[string]string{ExpirationDurationAttr: "-5h"},
 			err:     true,
 		},
 		{
 			name:    "invalid rfc3339",
-			headers: map[string]string{utils.ExpirationRFC3339Attr: "abc"},
+			headers: map[string]string{ExpirationRFC3339Attr: "abc"},
 			err:     true,
 		},
 		{
 			name:    "invalid rfc3339 zero",
-			headers: map[string]string{utils.ExpirationRFC3339Attr: time.RFC3339},
+			headers: map[string]string{ExpirationRFC3339Attr: time.RFC3339},
 			err:     true,
 		},
 	} {
