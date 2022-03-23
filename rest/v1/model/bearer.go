@@ -37,47 +37,47 @@ type Operation string
 
 const (
 	OperationUnknown   Operation = ""
-	OperationGet                 = "GET"
-	OperationHead                = "HEAD"
-	OperationPut                 = "PUT"
-	OperationDelete              = "DELETE"
-	OperationSearch              = "SEARCH"
-	OperationRange               = "RANGE"
-	OperationRangeHash           = "RANGE_HASH"
+	OperationGet       Operation = "GET"
+	OperationHead      Operation = "HEAD"
+	OperationPut       Operation = "PUT"
+	OperationDelete    Operation = "DELETE"
+	OperationSearch    Operation = "SEARCH"
+	OperationRange     Operation = "RANGE"
+	OperationRangeHash Operation = "RANGE_HASH"
 )
 
 type Action string
 
 const (
 	ActionUnknown Action = ""
-	ActionAllow          = "ALLOW"
-	ActionDeny           = "DENY"
+	ActionAllow   Action = "ALLOW"
+	ActionDeny    Action = "DENY"
 )
 
 type HeaderType string
 
 const (
 	HeaderTypeUnknown HeaderType = ""
-	HeaderTypeRequest            = "REQUEST"
-	HeaderTypeObject             = "OBJECT"
-	HeaderTypeService            = "SERVICE"
+	HeaderTypeRequest HeaderType = "REQUEST"
+	HeaderTypeObject  HeaderType = "OBJECT"
+	HeaderTypeService HeaderType = "SERVICE"
 )
 
 type MatchType string
 
 const (
 	MatchTypeUnknown        MatchType = ""
-	MatchTypeStringEqual              = "STRING_EQUAL"
-	MatchTypeStringNotEqual           = "STRING_NOT_EQUAL"
+	MatchTypeStringEqual    MatchType = "STRING_EQUAL"
+	MatchTypeStringNotEqual MatchType = "STRING_NOT_EQUAL"
 )
 
 type Role string
 
 const (
 	RoleUnknown Role = ""
-	RoleUser         = "USER"
-	RoleSystem       = "SYSTEM"
-	RoleOthers       = "OTHERS"
+	RoleUser    Role = "USER"
+	RoleSystem  Role = "SYSTEM"
+	RoleOthers  Role = "OTHERS"
 )
 
 func (a Action) ToNative() (eacl.Action, error) {
