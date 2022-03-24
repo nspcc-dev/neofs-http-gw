@@ -25,6 +25,7 @@ import (
 	"github.com/nspcc-dev/neofs-http-gw/rest/v1/model"
 	"github.com/nspcc-dev/neofs-sdk-go/container"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
+	"github.com/nspcc-dev/neofs-sdk-go/eacl"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
 	"github.com/nspcc-dev/neofs-sdk-go/object/address"
 	oid "github.com/nspcc-dev/neofs-sdk-go/object/id"
@@ -261,6 +262,8 @@ func checkZip(t *testing.T, data []byte, length int64, names, contents []string)
 }
 
 func restObjectPut(ctx context.Context, t *testing.T, clientPool *pool.Pool, cnrID *cid.ID) {
+	restrictByEACL(ctx, t, clientPool, cnrID)
+
 	key, err := keys.NewPrivateKeyFromHex(devenvPrivateKey)
 	require.NoError(t, err)
 
@@ -434,6 +437,78 @@ func createContainer(ctx context.Context, t *testing.T, clientPool *pool.Pool) (
 	})
 
 	return CID, err
+}
+
+func restrictByEACL(ctx context.Context, t *testing.T, clientPool *pool.Pool, cnrID *cid.ID) {
+	table := new(eacl.Table)
+	table.SetCID(cnrID)
+
+	for op := eacl.OperationGet; op <= eacl.OperationRangeHash; op++ {
+		record := new(eacl.Record)
+		record.SetOperation(op)
+		record.SetAction(eacl.ActionDeny)
+		target := new(eacl.Target)
+		target.SetRole(eacl.RoleOthers)
+		record.SetTargets(*target)
+		table.AddRecord(record)
+	}
+
+	err := clientPool.SetEACL(ctx, table)
+	require.NoError(t, err)
+
+	prm := &waitParams{
+		WaitTimeout:  15 * time.Second,
+		PollInterval: 1 * time.Second,
+	}
+
+	err = waitEACLPresence(ctx, clientPool, cnrID, table, prm)
+	require.NoError(t, err)
+}
+
+func waitEACLPresence(ctx context.Context, p *pool.Pool, cnrID *cid.ID, table *eacl.Table, params *waitParams) error {
+	exp, err := table.Marshal()
+	if err != nil {
+		return fmt.Errorf("couldn't marshal eacl: %w", err)
+	}
+
+	return waitFor(ctx, params, func(ctx context.Context) bool {
+		eaclTable, err := p.GetEACL(ctx, cnrID)
+		if err == nil {
+			got, err := eaclTable.Marshal()
+			if err == nil && bytes.Equal(exp, got) {
+				return true
+			}
+		}
+		return false
+	})
+}
+
+type waitParams struct {
+	WaitTimeout  time.Duration
+	PollInterval time.Duration
+}
+
+// waitFor await that given condition will be met in waitParams time.
+func waitFor(ctx context.Context, params *waitParams, condition func(context.Context) bool) error {
+	wctx, cancel := context.WithTimeout(ctx, params.WaitTimeout)
+	defer cancel()
+	ticker := time.NewTimer(params.PollInterval)
+	defer ticker.Stop()
+	wdone := wctx.Done()
+	done := ctx.Done()
+	for {
+		select {
+		case <-done:
+			return ctx.Err()
+		case <-wdone:
+			return wctx.Err()
+		case <-ticker.C:
+			if condition(ctx) {
+				return nil
+			}
+			ticker.Reset(params.PollInterval)
+		}
+	}
 }
 
 func putObject(ctx context.Context, t *testing.T, clientPool *pool.Pool, CID *cid.ID, content string, attributes map[string]string) *oid.ID {
