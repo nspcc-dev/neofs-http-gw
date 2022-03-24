@@ -17,13 +17,14 @@ type API struct {
 	defaultTimestamp bool
 }
 
+// PrmAPI groups parameters to init rest API.
 type PrmAPI struct {
 	Logger           *zap.Logger
 	Pool             *pool.Pool
 	DefaultTimestamp bool
 }
 
-// New creates a new API using specified logger and connection pool.
+// New creates a new API using specified logger, connection pool and other parameters.
 func New(prm *PrmAPI) *API {
 	return &API{
 		log:              prm.Logger,

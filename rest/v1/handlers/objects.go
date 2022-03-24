@@ -19,11 +19,15 @@ import (
 )
 
 const (
+	// XNeofsBearerSignature header contains base64 encoded signature of the bearer token body.
 	XNeofsBearerSignature = "X-Neofs-Bearer-Signature"
-	XNeofsBearerOwnerKey  = "X-Neofs-Bearer-Owner-Key"
-	XNeofsBearerLifetime  = "X-Neofs-Bearer-Lifetime"
+	// XNeofsBearerOwnerKey header contains hex encoded public key that corresponds the signature of the bearer token body.
+	XNeofsBearerOwnerKey = "X-Neofs-Bearer-Owner-Key"
+	// XNeofsBearerLifetime header contains bearer token lifetime in epoch.
+	XNeofsBearerLifetime = "X-Neofs-Bearer-Lifetime"
 )
 
+// ObjectsPut handler that uploads object to NeoFS.
 func (a *API) ObjectsPut(c *fasthttp.RequestCtx) {
 	btoken, err := prepareBearerToken(&c.Request.Header)
 	if err != nil {

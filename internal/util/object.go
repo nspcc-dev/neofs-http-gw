@@ -15,6 +15,7 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
+// PrmAttributes groups parameters to form attributes from request headers.
 type PrmAttributes struct {
 	DefaultTimestamp bool
 	DefaultFileName  string
@@ -35,6 +36,7 @@ const (
 	ExpirationRFC3339Attr   = SystemAttributePrefix + "EXPIRATION_RFC3339"
 )
 
+// GetObjectAttributes forms object attributes from request headers.
 func GetObjectAttributes(ctx context.Context, header *fasthttp.RequestHeader, pool *pool.Pool, prm PrmAttributes) ([]object.Attribute, error) {
 	filtered := filterHeaders(header)
 	if needParseExpiration(filtered) {

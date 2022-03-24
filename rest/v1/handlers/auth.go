@@ -8,16 +8,15 @@ import (
 	"strconv"
 
 	"github.com/nspcc-dev/neofs-api-go/v2/acl"
-
+	"github.com/nspcc-dev/neofs-http-gw/rest/v1/model"
 	"github.com/nspcc-dev/neofs-sdk-go/client"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
-
-	"github.com/nspcc-dev/neofs-http-gw/rest/v1/model"
 	"github.com/valyala/fasthttp"
 )
 
 const defaultBearerExpDuration = 100 // in epoch
 
+// AuthHandler handler that forms bearer token to sign.
 func (a *API) AuthHandler(c *fasthttp.RequestCtx) {
 	ctx, cancel := context.WithCancel(c)
 	defer cancel()

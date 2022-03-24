@@ -9,10 +9,12 @@ import (
 )
 
 type (
+	// Bearer is model for request body to form bearer token to sing.
 	Bearer struct {
 		Records []Record `json:"records"`
 	}
 
+	// Record is json-friendly eacl.Record.
 	Record struct {
 		Operation Operation `json:"operation"`
 		Action    Action    `json:"action"`
@@ -20,6 +22,7 @@ type (
 		Targets   []Target  `json:"targets"`
 	}
 
+	// Filter is json-friendly eacl.Filter.
 	Filter struct {
 		HeaderType HeaderType `json:"headerType"`
 		MatchType  MatchType  `json:"matchType"`
@@ -27,59 +30,105 @@ type (
 		Value      string     `json:"value"`
 	}
 
+	// Target is json-friendly eacl.Target.
 	Target struct {
 		Role Role     `json:"role"`
 		Keys []string `json:"keys"`
 	}
 )
 
+// Operation is json-friendly eacl.Operation.
 type Operation string
 
 const (
-	OperationUnknown   Operation = ""
-	OperationGet       Operation = "GET"
-	OperationHead      Operation = "HEAD"
-	OperationPut       Operation = "PUT"
-	OperationDelete    Operation = "DELETE"
-	OperationSearch    Operation = "SEARCH"
-	OperationRange     Operation = "RANGE"
+	// OperationUnknown is an operation that maps to eacl.OperationUnknown.
+	OperationUnknown Operation = ""
+
+	// OperationGet is an operation that maps to eacl.OperationGet.
+	OperationGet Operation = "GET"
+
+	// OperationHead is an operation that maps to eacl.OperationHead.
+	OperationHead Operation = "HEAD"
+
+	// OperationPut is an operation that maps to eacl.OperationPut.
+	OperationPut Operation = "PUT"
+
+	// OperationDelete is an operation that maps to eacl.OperationDelete.
+	OperationDelete Operation = "DELETE"
+
+	// OperationSearch is an operation that maps to eacl.OperationSearch.
+	OperationSearch Operation = "SEARCH"
+
+	// OperationRange is an operation that maps to eacl.OperationRange.
+	OperationRange Operation = "RANGE"
+
+	// OperationRangeHash is an operation that maps to eacl.OperationRangeHash.
 	OperationRangeHash Operation = "RANGE_HASH"
 )
 
+// Action is json-friendly eacl.Action.
 type Action string
 
 const (
+	// ActionUnknown is action that maps to eacl.ActionUnknown.
 	ActionUnknown Action = ""
-	ActionAllow   Action = "ALLOW"
-	ActionDeny    Action = "DENY"
+
+	// ActionAllow is action that maps to eacl.ActionAllow.
+	ActionAllow Action = "ALLOW"
+
+	// ActionDeny is action that maps to eacl.ActionDeny.
+	ActionDeny Action = "DENY"
 )
 
+// HeaderType is json-friendly eacl.FilterHeaderType.
 type HeaderType string
 
 const (
+	// HeaderTypeUnknown is a header type that maps to eacl.HeaderTypeUnknown.
 	HeaderTypeUnknown HeaderType = ""
+
+	// HeaderTypeRequest is a header type that maps to eacl.HeaderTypeRequest.
 	HeaderTypeRequest HeaderType = "REQUEST"
-	HeaderTypeObject  HeaderType = "OBJECT"
+
+	// HeaderTypeObject is a header type that maps to eacl.HeaderTypeObject.
+	HeaderTypeObject HeaderType = "OBJECT"
+
+	// HeaderTypeService is a header type that maps to eacl.HeaderTypeService.
 	HeaderTypeService HeaderType = "SERVICE"
 )
 
+// MatchType is json-friendly eacl.Match.
 type MatchType string
 
 const (
-	MatchTypeUnknown        MatchType = ""
-	MatchTypeStringEqual    MatchType = "STRING_EQUAL"
+	// MatchTypeUnknown is a match type that maps to eacl.MatchUnknown.
+	MatchTypeUnknown MatchType = ""
+
+	// MatchTypeStringEqual is a match type that maps to eacl.MatchStringEqual.
+	MatchTypeStringEqual MatchType = "STRING_EQUAL"
+
+	// MatchTypeStringNotEqual is a match type that maps to eacl.MatchStringNotEqual.
 	MatchTypeStringNotEqual MatchType = "STRING_NOT_EQUAL"
 )
 
+// Role is json-friendly eacl.Role.
 type Role string
 
 const (
+	// RoleUnknown is a role that maps to eacl.RoleUnknown.
 	RoleUnknown Role = ""
-	RoleUser    Role = "USER"
-	RoleSystem  Role = "SYSTEM"
-	RoleOthers  Role = "OTHERS"
+
+	// RoleUser is a role that maps to eacl.RoleUser.
+	RoleUser Role = "USER"
+
+	// RoleSystem is a role that maps to eacl.RoleSystem.
+	RoleSystem Role = "SYSTEM"
+
+	// RoleOthers is a role that maps to eacl.RoleOthers.
+	RoleOthers Role = "OTHERS"
 )
 
+// ToNative converts Action to appropriate eacl.Action.
 func (a Action) ToNative() (eacl.Action, error) {
 	switch a {
 	case ActionAllow:
@@ -91,6 +140,7 @@ func (a Action) ToNative() (eacl.Action, error) {
 	}
 }
 
+// ToNative converts Operation to appropriate eacl.Operation.
 func (o Operation) ToNative() (eacl.Operation, error) {
 	switch o {
 	case OperationGet:
@@ -112,6 +162,7 @@ func (o Operation) ToNative() (eacl.Operation, error) {
 	}
 }
 
+// ToNative converts HeaderType to appropriate eacl.FilterHeaderType.
 func (h HeaderType) ToNative() (eacl.FilterHeaderType, error) {
 	switch h {
 	case HeaderTypeObject:
@@ -125,6 +176,7 @@ func (h HeaderType) ToNative() (eacl.FilterHeaderType, error) {
 	}
 }
 
+// ToNative converts MatchType to appropriate eacl.Match.
 func (h MatchType) ToNative() (eacl.Match, error) {
 	switch h {
 	case MatchTypeStringEqual:
@@ -136,6 +188,7 @@ func (h MatchType) ToNative() (eacl.Match, error) {
 	}
 }
 
+// ToNative converts Role to appropriate eacl.Role.
 func (r Role) ToNative() (eacl.Role, error) {
 	switch r {
 	case RoleUser:
@@ -149,6 +202,7 @@ func (r Role) ToNative() (eacl.Role, error) {
 	}
 }
 
+// ToNative converts Record to appropriate eacl.Record.
 func (r *Record) ToNative() (*eacl.Record, error) {
 	var record eacl.Record
 
@@ -189,6 +243,7 @@ func (r *Record) ToNative() (*eacl.Record, error) {
 	return &record, nil
 }
 
+// ToNative converts Target to appropriate eacl.Target.
 func (t *Target) ToNative() (*eacl.Target, error) {
 	var target eacl.Target
 
@@ -211,6 +266,7 @@ func (t *Target) ToNative() (*eacl.Target, error) {
 	return &target, nil
 }
 
+// ToNative converts Bearer to appropriate token.BearerToken.
 func (b *Bearer) ToNative() (*token.BearerToken, error) {
 	var btoken token.BearerToken
 	var table eacl.Table

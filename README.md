@@ -267,6 +267,10 @@ For example:
 $ neofs-cli -r 192.168.130.72:8080 -k 6PYLKJhiSub5imt6WCVy6Quxtd9xu176omev1vWYovzkAQCTSQabAAQXii object put --file cat.png --cid DPL2tpRiuDNmoTj5KZjD1nzDuCS8tVcxa7hsvSLDWpVM --attributes img_type=cat,my_attr=cute
 ```
 
+### REST
+
+See [RESTAPI doc](./docs/REST.md)
+
 
 ### Downloading
 
