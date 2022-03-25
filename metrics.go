@@ -1,22 +1,19 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/fasthttp/router"
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/expfmt"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
 
 func attachMetrics(r *router.Router, l *zap.Logger) {
-	r.GET("/metrics/", metricsHandler(prometheus.DefaultGatherer, l, promhttp.HandlerOpts{}))
+	r.GET("/metrics/", metricsHandler(prometheus.DefaultGatherer, l))
 }
 
-func metricsHandler(reg prometheus.Gatherer, logger *zap.Logger, opts promhttp.HandlerOpts) fasthttp.RequestHandler {
+func metricsHandler(reg prometheus.Gatherer, logger *zap.Logger) fasthttp.RequestHandler {
 	var (
 		inFlightSem chan struct{}
 		errCnt      = prometheus.NewCounterVec(
@@ -28,32 +25,13 @@ func metricsHandler(reg prometheus.Gatherer, logger *zap.Logger, opts promhttp.H
 		)
 	)
 
-	if opts.MaxRequestsInFlight > 0 {
-		inFlightSem = make(chan struct{}, opts.MaxRequestsInFlight)
-	}
-	if opts.Registry != nil {
-		// Initialize all possibilites that can occur below.
-		errCnt.WithLabelValues("gathering")
-		errCnt.WithLabelValues("encoding")
-		if err := opts.Registry.Register(errCnt); err != nil {
-			if are, ok := err.(prometheus.AlreadyRegisteredError); ok {
-				errCnt = are.ExistingCollector.(*prometheus.CounterVec)
-			} else {
-				panic(err)
-			}
-		}
-	}
-
 	h := fasthttp.RequestHandler(func(c *fasthttp.RequestCtx) {
 		if inFlightSem != nil {
 			select {
 			case inFlightSem <- struct{}{}: // All good, carry on.
 				defer func() { <-inFlightSem }()
 			default:
-
-				response.Error(c, fmt.Sprintf(
-					"Limit of concurrent requests reached (%d), try again later.", opts.MaxRequestsInFlight,
-				), fasthttp.StatusServiceUnavailable)
+				response.Error(c, "Limit of concurrent requests reached, try again later.", fasthttp.StatusServiceUnavailable)
 				return
 			}
 		}
@@ -64,19 +42,8 @@ func metricsHandler(reg prometheus.Gatherer, logger *zap.Logger, opts promhttp.H
 			}
 
 			errCnt.WithLabelValues("gathering").Inc()
-			switch opts.ErrorHandling {
-			case promhttp.PanicOnError:
-				panic(err)
-			case promhttp.ContinueOnError:
-				if len(mfs) == 0 {
-					// Still report the error if no metrics have been gathered.
-					response.Error(c, err.Error(), fasthttp.StatusServiceUnavailable)
-					return
-				}
-			case promhttp.HTTPErrorOnError:
-				response.Error(c, err.Error(), fasthttp.StatusServiceUnavailable)
-				return
-			}
+			response.Error(c, err.Error(), fasthttp.StatusServiceUnavailable)
+			return
 		}
 
 		contentType := expfmt.FmtText
@@ -96,16 +63,8 @@ func metricsHandler(reg prometheus.Gatherer, logger *zap.Logger, opts promhttp.H
 				logger.Error("encoding and sending metric family", zap.Error(err))
 			}
 			errCnt.WithLabelValues("encoding").Inc()
-			switch opts.ErrorHandling {
-			case promhttp.PanicOnError:
-				panic(err)
-			case promhttp.HTTPErrorOnError:
-				response.Error(c, err.Error(), fasthttp.StatusServiceUnavailable)
-				return true
-			default:
-				// Do nothing in all other cases, including ContinueOnError.
-				return false
-			}
+			response.Error(c, err.Error(), fasthttp.StatusServiceUnavailable)
+			return true
 		}
 
 		for _, mf := range mfs {
@@ -123,12 +82,5 @@ func metricsHandler(reg prometheus.Gatherer, logger *zap.Logger, opts promhttp.H
 		handleError(lastErr)
 	})
 
-	if opts.Timeout <= 0 {
-		return h
-	}
-
-	return fasthttp.TimeoutHandler(h, opts.Timeout, fmt.Sprintf(
-		"Exceeded configured timeout of %v.\n",
-		opts.Timeout,
-	))
+	return h
 }
