@@ -14,22 +14,19 @@ import (
 	"github.com/nspcc-dev/neofs-http-gw/downloader"
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/uploader"
-	"github.com/nspcc-dev/neofs-sdk-go/logger"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
-	"google.golang.org/grpc/grpclog"
 )
 
 type (
 	app struct {
-		log          *zap.Logger
-		pool         *pool.Pool
-		cfg          *viper.Viper
-		auxiliaryLog logger.Logger
-		webServer    *fasthttp.Server
-		webDone      chan struct{}
+		log       *zap.Logger
+		pool      *pool.Pool
+		cfg       *viper.Viper
+		webServer *fasthttp.Server
+		webDone   chan struct{}
 	}
 
 	// App is an interface for the main gateway function.
@@ -77,10 +74,7 @@ func newApp(ctx context.Context, opt ...Option) App {
 	for i := range opt {
 		opt[i](a)
 	}
-	a.auxiliaryLog = logger.GRPC(a.log)
-	if a.cfg.GetBool(cmdVerbose) {
-		grpclog.SetLoggerV2(a.auxiliaryLog)
-	}
+
 	// -- setup FastHTTP server --
 	a.webServer.Name = "neofs-http-gw"
 	a.webServer.ReadBufferSize = a.cfg.GetInt(cfgWebReadBufferSize)
@@ -182,7 +176,7 @@ func getKeyFromWallet(w *wallet.Wallet, addrStr string, password *string) (*ecds
 }
 
 func (a *app) Wait() {
-	a.log.Info("starting application", zap.String("version", a.cfg.GetString(cfgApplicationVersion)))
+	a.log.Info("starting application", zap.String("app_name", "neofs-http-gw"), zap.String("version", Version))
 	<-a.webDone // wait for web-server to be stopped
 }
 
@@ -220,7 +214,7 @@ func (a *app) Serve(ctx context.Context) {
 	// enable metrics
 	if a.cfg.GetBool(cmdMetrics) {
 		a.log.Info("added path /metrics/")
-		attachMetrics(r, a.auxiliaryLog)
+		attachMetrics(r, a.log)
 	}
 	// enable pprof
 	if a.cfg.GetBool(cmdPprof) {

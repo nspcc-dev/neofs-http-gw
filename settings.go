@@ -36,13 +36,7 @@ const (
 	cfgRebalance  = "rebalance_timer"
 
 	// Logger.
-	cfgLoggerLevel              = "logger.level"
-	cfgLoggerFormat             = "logger.format"
-	cfgLoggerTraceLevel         = "logger.trace_level"
-	cfgLoggerNoCaller           = "logger.no_caller"
-	cfgLoggerNoDisclaimer       = "logger.no_disclaimer"
-	cfgLoggerSamplingInitial    = "logger.sampling.initial"
-	cfgLoggerSamplingThereafter = "logger.sampling.thereafter"
+	cfgLoggerLevel = "logger.level"
 
 	// Wallet.
 	cfgWalletPassphrase = "wallet.passphrase"
@@ -56,10 +50,6 @@ const (
 	// Zip compression.
 	cfgZipCompression = "zip.compression"
 
-	// Application.
-	cfgApplicationName    = "app.name"
-	cfgApplicationVersion = "app.version"
-
 	// Command line args.
 	cmdHelp    = "help"
 	cmdVersion = "version"
@@ -72,11 +62,9 @@ const (
 )
 
 var ignore = map[string]struct{}{
-	cfgApplicationName:    {},
-	cfgApplicationVersion: {},
-	cfgPeers:              {},
-	cmdHelp:               {},
-	cmdVersion:            {},
+	cfgPeers:   {},
+	cmdHelp:    {},
+	cmdVersion: {},
 }
 
 func settings() *viper.Viper {
@@ -111,20 +99,10 @@ func settings() *viper.Viper {
 	flags.String(cfgTLSKey, "", "TLS key path")
 	peers := flags.StringArrayP(cfgPeers, "p", nil, "NeoFS nodes")
 
-	// set prefers:
-	v.Set(cfgApplicationName, "neofs-http-gw")
-	v.Set(cfgApplicationVersion, Version)
-
 	// set defaults:
 
 	// logger:
 	v.SetDefault(cfgLoggerLevel, "debug")
-	v.SetDefault(cfgLoggerFormat, "console")
-	v.SetDefault(cfgLoggerTraceLevel, "panic")
-	v.SetDefault(cfgLoggerNoCaller, false)
-	v.SetDefault(cfgLoggerNoDisclaimer, true)
-	v.SetDefault(cfgLoggerSamplingInitial, 1000)
-	v.SetDefault(cfgLoggerSamplingThereafter, 1000)
 
 	// web-server:
 	v.SetDefault(cfgWebReadBufferSize, 4096)
