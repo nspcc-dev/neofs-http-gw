@@ -9,21 +9,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/expfmt"
 	"github.com/valyala/fasthttp"
+	"go.uber.org/zap"
 )
 
-func attachMetrics(r *router.Router, z promhttp.Logger) {
-	r.GET("/metrics/", metricsHandler(prometheus.DefaultGatherer, promhttp.HandlerOpts{
-		ErrorLog: z,
-		// ErrorHandling:       0,
-		// Registry:            nil,
-		// DisableCompression:  false,
-		// MaxRequestsInFlight: 0,
-		// Timeout:             0,
-		// EnableOpenMetrics:   false,
-	}))
+func attachMetrics(r *router.Router, l *zap.Logger) {
+	r.GET("/metrics/", metricsHandler(prometheus.DefaultGatherer, l, promhttp.HandlerOpts{}))
 }
 
-func metricsHandler(reg prometheus.Gatherer, opts promhttp.HandlerOpts) fasthttp.RequestHandler {
+func metricsHandler(reg prometheus.Gatherer, logger *zap.Logger, opts promhttp.HandlerOpts) fasthttp.RequestHandler {
 	var (
 		inFlightSem chan struct{}
 		errCnt      = prometheus.NewCounterVec(
@@ -66,7 +59,7 @@ func metricsHandler(reg prometheus.Gatherer, opts promhttp.HandlerOpts) fasthttp
 		}
 		mfs, err := reg.Gather()
 		if err != nil {
-			if opts.ErrorLog != nil {
+			if logger != nil {
 				panic("error gathering metrics:" + err.Error())
 			}
 
@@ -99,8 +92,8 @@ func metricsHandler(reg prometheus.Gatherer, opts promhttp.HandlerOpts) fasthttp
 				return false
 			}
 			lastErr = err
-			if opts.ErrorLog != nil {
-				opts.ErrorLog.Println("error encoding and sending metric family:", err)
+			if logger != nil {
+				logger.Error("encoding and sending metric family", zap.Error(err))
 			}
 			errCnt.WithLabelValues("encoding").Inc()
 			switch opts.ErrorHandling {

@@ -7,14 +7,13 @@ import (
 
 	"github.com/nspcc-dev/neofs-api-go/v2/object"
 	"github.com/nspcc-dev/neofs-http-gw/utils"
-	"github.com/nspcc-dev/neofs-sdk-go/logger"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
+	"go.uber.org/zap"
 )
 
 func TestFilter(t *testing.T) {
-	log, err := logger.New()
-	require.NoError(t, err)
+	log := zap.NewNop()
 
 	req := &fasthttp.RequestHeader{}
 	req.DisableNormalizing()
