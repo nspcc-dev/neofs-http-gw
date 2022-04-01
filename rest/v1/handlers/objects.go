@@ -74,14 +74,7 @@ func (a *API) ObjectsPut(c *fasthttp.RequestCtx) {
 		ObjectID:    objID.String(),
 	}
 
-	enc := json.NewEncoder(c)
-	enc.SetIndent("", "\t")
-	if err = enc.Encode(resp); err != nil {
-		a.logAndSendError(c, "could not encode response", err, fasthttp.StatusBadRequest)
-		return
-	}
-	c.Response.SetStatusCode(fasthttp.StatusOK)
-	c.Response.Header.SetContentType("application/json")
+	a.encodeAndSend(c, resp)
 }
 
 func prepareBearerToken(header *fasthttp.RequestHeader) (*token.BearerToken, error) {

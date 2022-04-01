@@ -70,6 +70,7 @@ func TestIntegration(t *testing.T) {
 
 		t.Run("rest put object "+version, func(t *testing.T) { restObjectPut(ctx, t, clientPool, CID) })
 		t.Run("rest put container"+version, func(t *testing.T) { restContainerPut(ctx, t, clientPool) })
+		t.Run("rest get container"+version, func(t *testing.T) { restContainerGet(ctx, t, clientPool, CID) })
 
 		cancel()
 		err = aioContainer.Terminate(ctx)
@@ -369,6 +370,25 @@ func restObjectPut(ctx context.Context, t *testing.T, clientPool *pool.Pool, cnr
 	for _, attribute := range res.Header.Attributes() {
 		require.Equal(t, attributes[attribute.Key()], attribute.Value(), attribute.Key())
 	}
+}
+
+func restContainerGet(ctx context.Context, t *testing.T, clientPool *pool.Pool, cnrID *cid.ID) {
+	httpClient := http.Client{Timeout: 5 * time.Second}
+	request, err := http.NewRequest(http.MethodGet, testHost+"/v1/containers/"+cnrID.String(), nil)
+	require.NoError(t, err)
+	request = request.WithContext(ctx)
+
+	resp, err := httpClient.Do(request)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	cnrInfo := &model.ContainerInfo{}
+	err = json.NewDecoder(resp.Body).Decode(cnrInfo)
+	require.NoError(t, err)
+
+	require.Equal(t, cnrID.String(), cnrInfo.ContainerID)
+	require.Equal(t, clientPool.OwnerID().String(), cnrInfo.OwnerID)
 }
 
 func signData(t *testing.T, key *keys.PrivateKey, data []byte) []byte {

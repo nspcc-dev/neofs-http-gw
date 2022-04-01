@@ -170,6 +170,25 @@ paths:
                 example:
                   containerId: 5HZTn5qkRnmgSz9gSrw22CEdPPk6nQhkwf2Mgzyvkikv
 
+  /containers/{containerId}:
+    get:
+      summary: Get container by id
+      security: [ ]
+      parameters:
+        - in: path
+          name: containerId
+          schema:
+            type: string
+          required: true
+          description: Base58 encoded container id
+      responses:
+        '200':
+          description: Container info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainerInfo'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -312,6 +331,39 @@ components:
           token: ChCpanIBJCpJuJz42KOmGMSnEhsKGTWquaX2Lq6GhhO4faOYkLD0f9WkXuYJlq4aBAhnGAMiIQJgFcIEghQB5lq3AJZOVswInwc1IGhlQ7NCUh4DFO3UATIECAEQAQ==
         - verb: DELETE
           token: ChDQqAY9kWRA9aDUmNnZgjexEhsKGTWquaX2Lq6GhhO4faOYkLD0f9WkXuYJlq4aBAhnGAMiIQPNok0jgvp1Qm4AXHzygfHBftUg2YZVxQ4lfT+JRTVzNzImCAIaIgogP6y+xIq8YOfBB2Phs+VfM1moHQNcTrZuNKL4KIaT/H8=
+    ContainerInfo:
+      type: object
+      properties:
+        containerId:
+          type: string
+        version:
+          type: string
+        ownerId:
+          type: string
+        basicAcl:
+          type: string
+        placementPolicy:
+          type: string
+        attributes:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              value:
+                type: string
+      example:
+        containerId: 5HZTn5qkRnmgSz9gSrw22CEdPPk6nQhkwf2Mgzyvkikv
+        version: "2.11"
+        ownerId: NbUgTSFvPmsRxmGeWpuuGeJUoRoi6PErcM
+        basicAcl: "0x1fbf9fff"
+        placementPolicy: "REP 2"
+        attribute:
+          - key: Timestamp
+            value: "1648810072"
+          - key: Name
+            value: container
   examples:
     ObjectToken:
       summary: Sample of auth token request for object operations
@@ -319,13 +371,13 @@ components:
         object:
           - operation: PUT
             action: ALLOW
-            filters: []
+            filters: [ ]
             targets:
               - role: OTHERS
                 keys: [ ]
           - operation: DELETE
             action: DENY
-            filters: []
+            filters: [ ]
             targets:
               - role: OTHERS
                 keys: [ ]

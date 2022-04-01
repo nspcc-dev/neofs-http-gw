@@ -277,4 +277,5 @@ func (a *app) registerRESTRoutes(r *router.Router) {
 	r.POST(versionPrefix+"/auth", a.logger(api.AuthHandler))
 	r.PUT(versionPrefix+"/objects", a.logger(api.ObjectsPut))
 	r.PUT(versionPrefix+"/containers", a.logger(api.ContainersPut))
+	r.GET(versionPrefix+"/containers/{containerId}", a.logger(api.ContainersGet))
 }

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
@@ -33,6 +34,17 @@ func New(prm *PrmAPI) *API {
 		pool:             prm.Pool,
 		key:              prm.Key,
 		defaultTimestamp: prm.DefaultTimestamp,
+	}
+}
+
+func (a *API) encodeAndSend(c *fasthttp.RequestCtx, data interface{}) {
+	c.Response.SetStatusCode(fasthttp.StatusOK)
+	c.Response.Header.SetContentType("application/json")
+
+	enc := json.NewEncoder(c)
+	enc.SetIndent("", "\t")
+	if err := enc.Encode(data); err != nil {
+		a.logAndSendError(c, "could not encode response", err, fasthttp.StatusBadRequest)
 	}
 }
 

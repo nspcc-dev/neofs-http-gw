@@ -35,3 +35,19 @@ type ContainersPutRequest struct {
 type ContainersPutResponse struct {
 	ContainerID string `json:"containerId"`
 }
+
+// ContainerInfo is model for get container response.
+type ContainerInfo struct {
+	ContainerID     string      `json:"containerId"`
+	Version         string      `json:"version"`
+	OwnerID         string      `json:"ownerId"`
+	BasicACL        string      `json:"basicAcl"`
+	PlacementPolicy string      `json:"placementPolicy"`
+	Attributes      []Attribute `json:"attributes"`
+}
+
+// Attribute is mode for object/container attributes.
+type Attribute struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}

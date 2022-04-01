@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/nspcc-dev/neofs-api-go/v2/refs"
@@ -56,15 +57,36 @@ func (a *API) ContainersPut(c *fasthttp.RequestCtx) {
 		ContainerID: cnrID.String(),
 	}
 
-	c.Response.SetStatusCode(fasthttp.StatusOK)
-	c.Response.Header.SetContentType("application/json")
+	a.encodeAndSend(c, resp)
+}
 
-	enc := json.NewEncoder(c)
-	enc.SetIndent("", "\t")
-	if err = enc.Encode(resp); err != nil {
-		a.logAndSendError(c, "could not encode response", err, fasthttp.StatusBadRequest)
+// ContainersGet handler that returns container info.
+func (a *API) ContainersGet(c *fasthttp.RequestCtx) {
+	ctx, cancel := context.WithCancel(c)
+	defer cancel()
+
+	containerId, _ := c.UserValue("containerId").(string)
+	cnr, err := getContainer(ctx, a.pool, containerId)
+	if err != nil {
+		a.logAndSendError(c, "could not get container", err, fasthttp.StatusBadRequest)
 		return
 	}
+
+	attrs := make([]model.Attribute, len(cnr.Attributes()))
+	for i, attr := range cnr.Attributes() {
+		attrs[i] = model.Attribute{Key: attr.Key(), Value: attr.Value()}
+	}
+
+	resp := &model.ContainerInfo{
+		ContainerID:     containerId,
+		Version:         cnr.Version().String(),
+		OwnerID:         cnr.OwnerID().String(),
+		BasicACL:        acl.BasicACL(cnr.BasicACL()).String(),
+		PlacementPolicy: strings.Join(policy.Encode(cnr.PlacementPolicy()), " "),
+		Attributes:      attrs,
+	}
+
+	a.encodeAndSend(c, resp)
 }
 
 func prepareUserAttributes(header *fasthttp.RequestHeader) map[string]string {
@@ -72,6 +94,15 @@ func prepareUserAttributes(header *fasthttp.RequestHeader) map[string]string {
 	delete(filtered, container.AttributeName)
 	delete(filtered, container.AttributeTimestamp)
 	return filtered
+}
+
+func getContainer(ctx context.Context, p *pool.Pool, containerId string) (*container.Container, error) {
+	var cnrId cid.ID
+	if err := cnrId.Parse(containerId); err != nil {
+		return nil, fmt.Errorf("parse container id '%s': %w", containerId, err)
+	}
+
+	return p.GetContainer(ctx, &cnrId)
 }
 
 func createContainer(ctx context.Context, p *pool.Pool, stoken *session.Token, request *model.ContainersPutRequest, userAttrs map[string]string) (*cid.ID, error) {
