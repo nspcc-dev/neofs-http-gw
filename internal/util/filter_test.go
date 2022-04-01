@@ -25,7 +25,7 @@ func TestFilter(t *testing.T) {
 		"__NEOFS__EXPIRATION_EPOCH2": "102",
 	}
 
-	result := filterHeaders(req)
+	result := FilterHeaders(req)
 
 	require.Equal(t, expected, result)
 }

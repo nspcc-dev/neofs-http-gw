@@ -12,3 +12,26 @@ type ObjectsPutResponse struct {
 	ContainerID string `json:"containerId"`
 	ObjectID    string `json:"objectId"`
 }
+
+// ContainerTokenResponse is model for response after authentication for container operations.
+type ContainerTokenResponse struct {
+	Tokens []ContainerToken `json:"tokens"`
+}
+
+// ContainerToken is model for container session token.
+type ContainerToken struct {
+	Verb  Verb   `json:"verb"`
+	Token string `json:"token"`
+}
+
+// ContainersPutRequest is model for request body to create new container in NeoFS.
+type ContainersPutRequest struct {
+	ContainerName   string `json:"containerName"`
+	PlacementPolicy string `json:"placementPolicy"`
+	BasicACL        string `json:"basicAcl"`
+}
+
+// ContainersPutResponse is model for response after put new container to NeoFS.
+type ContainersPutResponse struct {
+	ContainerID string `json:"containerId"`
+}

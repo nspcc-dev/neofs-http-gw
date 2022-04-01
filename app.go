@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"fmt"
 	"strconv"
+
+	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
 
 	"github.com/fasthttp/router"
 	"github.com/nspcc-dev/neo-go/cli/flags"
@@ -26,6 +27,7 @@ import (
 type (
 	app struct {
 		log          *zap.Logger
+		key          *keys.PrivateKey
 		pool         *pool.Pool
 		cfg          *viper.Viper
 		auxiliaryLog logger.Logger
@@ -65,7 +67,7 @@ func WithConfig(c *viper.Viper) Option {
 
 func newApp(ctx context.Context, opt ...Option) App {
 	var (
-		key *ecdsa.PrivateKey
+		key *keys.PrivateKey
 		err error
 	)
 
@@ -118,7 +120,7 @@ func newApp(ctx context.Context, opt ...Option) App {
 			zap.Float64("weight", weight), zap.Int("priority", priority))
 	}
 	opts := &pool.BuilderOptions{
-		Key:                     key,
+		Key:                     &key.PrivateKey,
 		NodeConnectionTimeout:   a.cfg.GetDuration(cfgConTimeout),
 		NodeRequestTimeout:      a.cfg.GetDuration(cfgReqTimeout),
 		ClientRebalanceInterval: a.cfg.GetDuration(cfgRebalance),
@@ -127,14 +129,16 @@ func newApp(ctx context.Context, opt ...Option) App {
 	if err != nil {
 		a.log.Fatal("failed to create connection pool", zap.Error(err))
 	}
+	a.key = key
+
 	return a
 }
 
-func getNeoFSKey(a *app) (*ecdsa.PrivateKey, error) {
+func getNeoFSKey(a *app) (*keys.PrivateKey, error) {
 	walletPath := a.cfg.GetString(cmdWallet)
 	if len(walletPath) == 0 {
 		a.log.Info("no wallet path specified, creating ephemeral key automatically for this run")
-		return pool.NewEphemeralKey()
+		return keys.NewPrivateKey()
 	}
 	w, err := wallet.NewWalletFromFile(walletPath)
 	if err != nil {
@@ -149,7 +153,7 @@ func getNeoFSKey(a *app) (*ecdsa.PrivateKey, error) {
 	return getKeyFromWallet(w, a.cfg.GetString(cmdAddress), password)
 }
 
-func getKeyFromWallet(w *wallet.Wallet, addrStr string, password *string) (*ecdsa.PrivateKey, error) {
+func getKeyFromWallet(w *wallet.Wallet, addrStr string, password *string) (*keys.PrivateKey, error) {
 	var addr util.Uint160
 	var err error
 
@@ -179,7 +183,7 @@ func getKeyFromWallet(w *wallet.Wallet, addrStr string, password *string) (*ecds
 		return nil, fmt.Errorf("couldn't decrypt account: %w", err)
 	}
 
-	return &acc.PrivateKey().PrivateKey, nil
+	return acc.PrivateKey(), nil
 }
 
 func (a *app) Wait() {
@@ -263,6 +267,7 @@ func (a *app) registerRESTRoutes(r *router.Router) {
 	prm := &restv1.PrmAPI{
 		Logger:           a.log,
 		Pool:             a.pool,
+		Key:              a.key,
 		DefaultTimestamp: a.cfg.GetBool(cfgUploaderHeaderEnableDefaultTimestamp),
 	}
 	api := restv1.New(prm)
@@ -271,4 +276,5 @@ func (a *app) registerRESTRoutes(r *router.Router) {
 	versionPrefix := "/v1"
 	r.POST(versionPrefix+"/auth", a.logger(api.AuthHandler))
 	r.PUT(versionPrefix+"/objects", a.logger(api.ObjectsPut))
+	r.PUT(versionPrefix+"/containers", a.logger(api.ContainersPut))
 }

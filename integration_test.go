@@ -68,7 +68,8 @@ func TestIntegration(t *testing.T) {
 		t.Run("get by attribute "+version, func(t *testing.T) { getByAttr(ctx, t, clientPool, CID) })
 		t.Run("get zip "+version, func(t *testing.T) { getZip(ctx, t, clientPool, CID) })
 
-		t.Run("rest put "+version, func(t *testing.T) { restObjectPut(ctx, t, clientPool, CID) })
+		t.Run("rest put object "+version, func(t *testing.T) { restObjectPut(ctx, t, clientPool, CID) })
+		t.Run("rest put container"+version, func(t *testing.T) { restContainerPut(ctx, t, clientPool) })
 
 		cancel()
 		err = aioContainer.Terminate(ctx)
@@ -268,7 +269,7 @@ func restObjectPut(ctx context.Context, t *testing.T, clientPool *pool.Pool, cnr
 	require.NoError(t, err)
 
 	b := model.Bearer{
-		Records: []model.Record{{
+		ObjectRules: []model.Record{{
 			Operation: model.OperationPut,
 			Action:    model.ActionAllow,
 			Filters:   []model.Filter{},
@@ -285,6 +286,7 @@ func restObjectPut(ctx context.Context, t *testing.T, clientPool *pool.Pool, cnr
 	request0, err := http.NewRequest(http.MethodPost, testHost+"/v1/auth", bytes.NewReader(data))
 	require.NoError(t, err)
 	request0.Header.Add("Content-Type", "application/json")
+	request0.Header.Add(restv1.XNeofsTokenScope, "object")
 
 	httpClient := http.Client{
 		Timeout: 5 * time.Second,
@@ -303,12 +305,7 @@ func restObjectPut(ctx context.Context, t *testing.T, clientPool *pool.Pool, cnr
 	binaryData, err := base64.StdEncoding.DecodeString(bearerBase64)
 	require.NoError(t, err)
 
-	h := sha512.Sum512(binaryData)
-	x, y, err := ecdsa.Sign(rand.Reader, &key.PrivateKey, h[:])
-	if err != nil {
-		panic(err)
-	}
-	signatureData := elliptic.Marshal(elliptic.P256(), x, y)
+	signatureData := signData(t, key, binaryData)
 
 	content := "content of file"
 	attrKey, attrValue := "User-Attribute", "user value"
@@ -333,9 +330,9 @@ func restObjectPut(ctx context.Context, t *testing.T, clientPool *pool.Pool, cnr
 	request, err := http.NewRequest(http.MethodPut, testHost+"/v1/objects", bytes.NewReader(body))
 	require.NoError(t, err)
 	request.Header.Add("Content-Type", "application/json")
-	request.Header.Add(restv1.XNeofsBearerSignature, base64.StdEncoding.EncodeToString(signatureData))
+	request.Header.Add(restv1.XNeofsTokenSignature, base64.StdEncoding.EncodeToString(signatureData))
 	request.Header.Add("Authorization", "Bearer "+bearerBase64)
-	request.Header.Add(restv1.XNeofsBearerOwnerKey, hex.EncodeToString(key.PublicKey().Bytes()))
+	request.Header.Add(restv1.XNeofsTokenSignatureKey, hex.EncodeToString(key.PublicKey().Bytes()))
 	request.Header.Add("X-Attribute-"+attrKey, attrValue)
 
 	resp2, err := httpClient.Do(request)
@@ -371,6 +368,112 @@ func restObjectPut(ctx context.Context, t *testing.T, clientPool *pool.Pool, cnr
 
 	for _, attribute := range res.Header.Attributes() {
 		require.Equal(t, attributes[attribute.Key()], attribute.Value(), attribute.Key())
+	}
+}
+
+func signData(t *testing.T, key *keys.PrivateKey, data []byte) []byte {
+	h := sha512.Sum512(data)
+	x, y, err := ecdsa.Sign(rand.Reader, &key.PrivateKey, h[:])
+	require.NoError(t, err)
+	return elliptic.Marshal(elliptic.P256(), x, y)
+}
+
+func restContainerPut(ctx context.Context, t *testing.T, clientPool *pool.Pool) {
+	key, err := keys.NewPrivateKeyFromHex(devenvPrivateKey)
+	require.NoError(t, err)
+
+	b := model.Bearer{
+		ContainerRules: []model.Rule{
+			{Verb: model.PutVerb},
+		},
+	}
+
+	data, err := json.Marshal(&b)
+	require.NoError(t, err)
+
+	request0, err := http.NewRequest(http.MethodPost, testHost+"/v1/auth", bytes.NewReader(data))
+	require.NoError(t, err)
+	request0.Header.Add("Content-Type", "application/json")
+	request0.Header.Add(restv1.XNeofsTokenScope, "container")
+	request0.Header.Add(restv1.XNeofsTokenSignatureKey, hex.EncodeToString(key.PublicKey().Bytes()))
+
+	httpClient := http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	resp, err := httpClient.Do(request0)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	rr, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	fmt.Println(string(rr))
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	stokenResp := &model.ContainerTokenResponse{}
+	err = json.Unmarshal(rr, stokenResp)
+	require.NoError(t, err)
+	require.Len(t, stokenResp.Tokens, 1)
+
+	bearerBase64 := stokenResp.Tokens[0].Token
+	binaryData, err := base64.StdEncoding.DecodeString(bearerBase64)
+	require.NoError(t, err)
+
+	signatureData := signData(t, key, binaryData)
+
+	attrKey, attrValue := "User-Attribute", "user value"
+
+	userAttributes := map[string]string{
+		attrKey: attrValue,
+	}
+
+	req := model.ContainersPutRequest{
+		ContainerName: "cnr",
+	}
+
+	body, err := json.Marshal(&req)
+	require.NoError(t, err)
+
+	fmt.Println(base64.StdEncoding.EncodeToString(signatureData))
+	fmt.Println(hex.EncodeToString(key.PublicKey().Bytes()))
+
+	request, err := http.NewRequest(http.MethodPut, testHost+"/v1/containers", bytes.NewReader(body))
+	require.NoError(t, err)
+	request.Header.Add("Content-Type", "application/json")
+	request.Header.Add(restv1.XNeofsTokenSignature, base64.StdEncoding.EncodeToString(signatureData))
+	request.Header.Add("Authorization", "Bearer "+bearerBase64)
+	request.Header.Add(restv1.XNeofsTokenSignatureKey, hex.EncodeToString(key.PublicKey().Bytes()))
+	request.Header.Add("X-Attribute-"+attrKey, attrValue)
+
+	resp2, err := httpClient.Do(request)
+	require.NoError(t, err)
+	defer resp2.Body.Close()
+
+	body, err = io.ReadAll(resp2.Body)
+	require.NoError(t, err)
+	fmt.Println(string(body))
+
+	require.Equal(t, http.StatusOK, resp2.StatusCode)
+
+	addr := &model.ContainersPutResponse{}
+	err = json.Unmarshal(body, addr)
+	require.NoError(t, err)
+
+	var CID cid.ID
+	err = CID.Parse(addr.ContainerID)
+	require.NoError(t, err)
+	fmt.Println(CID.String())
+
+	cnr, err := clientPool.GetContainer(ctx, &CID)
+	require.NoError(t, err)
+
+	cnrAttr := make(map[string]string, len(cnr.Attributes()))
+	for _, attribute := range cnr.Attributes() {
+		cnrAttr[attribute.Key()] = attribute.Value()
+	}
+
+	for key, val := range userAttributes {
+		require.Equal(t, val, cnrAttr[key])
 	}
 }
 

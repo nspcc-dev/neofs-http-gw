@@ -38,7 +38,7 @@ const (
 
 // GetObjectAttributes forms object attributes from request headers.
 func GetObjectAttributes(ctx context.Context, header *fasthttp.RequestHeader, pool *pool.Pool, prm PrmAttributes) ([]object.Attribute, error) {
-	filtered := filterHeaders(header)
+	filtered := FilterHeaders(header)
 	if needParseExpiration(filtered) {
 		epochDuration, err := getEpochDurations(ctx, pool)
 		if err != nil {

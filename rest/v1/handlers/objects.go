@@ -18,15 +18,6 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-const (
-	// XNeofsBearerSignature header contains base64 encoded signature of the bearer token body.
-	XNeofsBearerSignature = "X-Neofs-Bearer-Signature"
-	// XNeofsBearerOwnerKey header contains hex encoded public key that corresponds the signature of the bearer token body.
-	XNeofsBearerOwnerKey = "X-Neofs-Bearer-Owner-Key"
-	// XNeofsBearerLifetime header contains bearer token lifetime in epoch.
-	XNeofsBearerLifetime = "X-Neofs-Bearer-Lifetime"
-)
-
 // ObjectsPut handler that uploads object to NeoFS.
 func (a *API) ObjectsPut(c *fasthttp.RequestCtx) {
 	btoken, err := prepareBearerToken(&c.Request.Header)
@@ -99,9 +90,9 @@ func prepareBearerToken(header *fasthttp.RequestHeader) (*token.BearerToken, err
 		return nil, fmt.Errorf("could not fetch bearer token: %w", err)
 	}
 
-	signBase64 := header.Peek(XNeofsBearerSignature)
+	signBase64 := header.Peek(XNeofsTokenSignature)
 	if signBase64 == nil {
-		return nil, fmt.Errorf("missing header %s", XNeofsBearerSignature)
+		return nil, fmt.Errorf("missing header %s", XNeofsTokenSignature)
 	}
 
 	signature, err := base64.StdEncoding.DecodeString(string(signBase64))

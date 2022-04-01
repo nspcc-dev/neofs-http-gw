@@ -6,6 +6,7 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/fasthttp/router v1.4.1
 	github.com/golang/mock v1.6.0 // indirect
+	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/nspcc-dev/neo-go v0.98.0

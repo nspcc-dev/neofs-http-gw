@@ -23,7 +23,8 @@ func systemTranslator(key, prefix []byte) []byte {
 	return bytes.ToUpper(key)
 }
 
-func filterHeaders(header *fasthttp.RequestHeader) map[string]string {
+// FilterHeaders return 'X-Attribute-*' headers.
+func FilterHeaders(header *fasthttp.RequestHeader) map[string]string {
 	result := make(map[string]string)
 	prefix := []byte(UserAttributeHeaderPrefix)
 

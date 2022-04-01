@@ -6,14 +6,26 @@ info:
 servers:
   - url: 'https://localhost'
 
+security:
+  - BearerAuth: [ ]
+
 paths:
   /auth:
     post:
       summary: Form bearer token to futher requests
+      security: [ ]
       parameters:
         - in: header
-          name: X-Neofs-Bearer-Lifetime
-          description: Bearer token lifetime in epoch
+          name: X-Neofs-Token-Scope
+          description: Supported operation scope for token
+          schema:
+            type: string
+            enum:
+              - object
+              - container
+        - in: header
+          name: X-Neofs-Token-Lifetime
+          description: Token lifetime in epoch
           schema:
             type: integer
             default: 100
@@ -24,38 +36,45 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/Bearer'
+            examples:
+              ObjectToken:
+                $ref: '#/components/examples/ObjectToken'
+              ContainerToken:
+                $ref: '#/components/examples/ContainerToken'
+
 
       responses:
         '200':
-          description: Base64 encoded stable binary marshaled bearer token
+          description: Base64 encoded stable binary marshaled bearer token/s
           content:
             text/plain:
               schema:
                 type: string
                 example: CiQKABogCAIQAhoWCAIQAhoIRmlsZU5hbWUiBm15ZmlsZSICCAM=
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContainerTokenResponse'
 
   /objects:
+    parameters:
+      - in: header
+        name: X-Neofs-Token-Signature
+        description: Base64 encoded signature for bearer token
+        schema:
+          type: string
+        required: true
+        example:
+          BGtqMEpzxTabrdIIIDAnL79Cs7bm46+8lsFaMMU+LCKw/ujEjF0r5mVLKixWmxoreuj1E0BXWcqp9d3wGV6Hc9I=
+      - in: header
+        name: X-Neofs-Bearer-Owner-Key
+        description: Hex encoded the public part of the key that signed the bearer token
+        schema:
+          type: string
+        required: true
+        example:
+          031a6c6fbbdf02ca351745fa86b9ba5a9452d785ac4f7fc2b7548ca2a46c4fcf4a
     put:
       summary: Upload object to NeoFS
-      security:
-        - BearerAuth: [ ]
-      parameters:
-        - in: header
-          name: X-Neofs-Bearer-Signature
-          description: Base64 encoded signature for bearer token
-          schema:
-            type: string
-          required: true
-          example:
-            BGtqMEpzxTabrdIIIDAnL79Cs7bm46+8lsFaMMU+LCKw/ujEjF0r5mVLKixWmxoreuj1E0BXWcqp9d3wGV6Hc9I=
-        - in: header
-          name: X-Neofs-Bearer-Owner-Key
-          description: Hex encoded the public part of the key that signed the bearer token
-          schema:
-            type: string
-          required: true
-          example:
-            031a6c6fbbdf02ca351745fa86b9ba5a9452d785ac4f7fc2b7548ca2a46c4fcf4a
       requestBody:
         required: true
         description: Object info to upload
@@ -89,8 +108,66 @@ paths:
                     type: string
                   containerId:
                     type: string
+                required:
+                  - objectId
+                  - containerId
                 example:
                   objectId: 8N3o7Dtr6T1xteCt6eRwhpmJ7JhME58Hyu1dvaswuTDd
+                  containerId: 5HZTn5qkRnmgSz9gSrw22CEdPPk6nQhkwf2Mgzyvkikv
+
+  /containers:
+    parameters:
+      - in: header
+        name: X-Neofs-Bearer-Signature
+        description: Base64 encoded signature for bearer token
+        schema:
+          type: string
+        required: true
+        example:
+          BEvF1N0heytTXn1p2ZV3jN8YM25YkG4FxHmPeq2kWP5HeHCAN4cDjONyX6Bh30Ypw6Kfch2nYOfhiL+rClYQJ9Q=
+      - in: header
+        name: X-Neofs-Bearer-Owner-Key
+        description: Hex encoded the public part of the key that signed the bearer token
+        schema:
+          type: string
+        required: true
+        example:
+          031a6c6fbbdf02ca351745fa86b9ba5a9452d785ac4f7fc2b7548ca2a46c4fcf4a
+    put:
+      summary: Create new container in NeoFS
+      requestBody:
+        required: true
+        description: Container info
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                containerName:
+                  type: string
+                placementPolicy:
+                  type: string
+                basicAcl:
+                  type: string
+              required:
+                - containerName
+              example:
+                containerId: container
+                placementPolicy: "REP 3"
+                basicAcl: public-read-write
+      responses:
+        '200':
+          description: Address of uploaded objects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  containerId:
+                    type: string
+                required:
+                  - containerId
+                example:
                   containerId: 5HZTn5qkRnmgSz9gSrw22CEdPPk6nQhkwf2Mgzyvkikv
 
 components:
@@ -102,12 +179,14 @@ components:
     Bearer:
       type: object
       properties:
-        records:
+        object:
           type: array
           items:
             $ref: '#/components/schemas/Record'
-      required:
-        - records
+        container:
+          type: array
+          items:
+            $ref: '#/components/schemas/Rule'
     Record:
       type: object
       properties:
@@ -194,3 +273,67 @@ components:
         role: USER
         keys:
           - 021dc56fc6d81d581ae7605a8e00e0e0bab6cbad566a924a527339475a97a8e38e
+    Rule:
+      type: object
+      properties:
+        verb:
+          type: string
+          enum:
+            - PUT
+            - DELETE
+            - SETEACL
+        containerId:
+          type: string
+      required:
+        - verb
+    ContainerTokenResponse:
+      type: object
+      properties:
+        tokens:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContainerToken'
+    ContainerToken:
+      type: object
+      properties:
+        verb:
+          type: string
+          enum:
+            - PUT
+            - DELETE
+            - SETEACL
+        token:
+          type: string
+      required:
+        - verb
+        - token
+      example:
+        - verb: PUT
+          token: ChCpanIBJCpJuJz42KOmGMSnEhsKGTWquaX2Lq6GhhO4faOYkLD0f9WkXuYJlq4aBAhnGAMiIQJgFcIEghQB5lq3AJZOVswInwc1IGhlQ7NCUh4DFO3UATIECAEQAQ==
+        - verb: DELETE
+          token: ChDQqAY9kWRA9aDUmNnZgjexEhsKGTWquaX2Lq6GhhO4faOYkLD0f9WkXuYJlq4aBAhnGAMiIQPNok0jgvp1Qm4AXHzygfHBftUg2YZVxQ4lfT+JRTVzNzImCAIaIgogP6y+xIq8YOfBB2Phs+VfM1moHQNcTrZuNKL4KIaT/H8=
+  examples:
+    ObjectToken:
+      summary: Sample of auth token request for object operations
+      value:
+        object:
+          - operation: PUT
+            action: ALLOW
+            filters: []
+            targets:
+              - role: OTHERS
+                keys: [ ]
+          - operation: DELETE
+            action: DENY
+            filters: []
+            targets:
+              - role: OTHERS
+                keys: [ ]
+    ContainerToken:
+      summary: Sample of auth token request for container operations
+      value:
+        container:
+          - verb: PUT
+            containerId: ""
+          - verb: DELETE
+            cotnainerId: 5HZTn5qkRnmgSz9gSrw22CEdPPk6nQhkwf2Mgzyvkikv

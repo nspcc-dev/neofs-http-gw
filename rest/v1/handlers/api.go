@@ -14,6 +14,7 @@ import (
 type API struct {
 	log              *zap.Logger
 	pool             *pool.Pool
+	key              *keys.PrivateKey
 	defaultTimestamp bool
 }
 
@@ -21,6 +22,7 @@ type API struct {
 type PrmAPI struct {
 	Logger           *zap.Logger
 	Pool             *pool.Pool
+	Key              *keys.PrivateKey
 	DefaultTimestamp bool
 }
 
@@ -29,6 +31,7 @@ func New(prm *PrmAPI) *API {
 	return &API{
 		log:              prm.Logger,
 		pool:             prm.Pool,
+		key:              prm.Key,
 		defaultTimestamp: prm.DefaultTimestamp,
 	}
 }
@@ -39,9 +42,9 @@ func (a *API) logAndSendError(c *fasthttp.RequestCtx, msg string, err error, sta
 }
 
 func fetchBearerOwner(header *fasthttp.RequestHeader) (*keys.PublicKey, error) {
-	ownerKey := header.Peek(XNeofsBearerOwnerKey)
+	ownerKey := header.Peek(XNeofsTokenSignatureKey)
 	if ownerKey == nil {
-		return nil, fmt.Errorf("missing header %s", XNeofsBearerOwnerKey)
+		return nil, fmt.Errorf("missing header %s", XNeofsTokenSignatureKey)
 	}
 
 	return keys.NewPublicKeyFromString(string(ownerKey))

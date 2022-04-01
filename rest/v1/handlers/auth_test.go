@@ -7,6 +7,7 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 	"testing"
 
 	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
@@ -25,7 +26,7 @@ func TestSign(t *testing.T) {
 	pubKeyHex := hex.EncodeToString(key.PublicKey().Bytes())
 
 	b := model.Bearer{
-		Records: []model.Record{{
+		ObjectRules: []model.Record{{
 			Operation: model.OperationPut,
 			Action:    model.ActionAllow,
 			Filters:   []model.Filter{},
@@ -36,7 +37,7 @@ func TestSign(t *testing.T) {
 		}},
 	}
 
-	btoken, err := b.ToNative()
+	btoken, err := b.ToNativeObjectToken()
 	require.NoError(t, err)
 
 	ownerKey, err := keys.NewPublicKeyFromString(pubKeyHex)
@@ -58,9 +59,16 @@ func TestSign(t *testing.T) {
 
 	var h1 fasthttp.RequestHeader
 	h1.Set("Authorization", "Bearer "+bearerBase64)
-	h1.Set(XNeofsBearerSignature, base64.StdEncoding.EncodeToString(signatureData))
-	h1.Set(XNeofsBearerOwnerKey, pubKeyHex)
+	h1.Set(XNeofsTokenSignature, base64.StdEncoding.EncodeToString(signatureData))
+	h1.Set(XNeofsTokenSignatureKey, pubKeyHex)
 
 	_, err = prepareBearerToken(&h1)
 	require.NoError(t, err)
+}
+
+func TestName(t *testing.T) {
+	var ts TokenScope
+	ts.Parse("object")
+
+	fmt.Println(ts)
 }
