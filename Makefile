@@ -117,3 +117,7 @@ help:
 clean:
 	rm -rf vendor
 	rm -rf $(BINDIR)
+
+
+gen-rest-api:
+	/home/denis/github/oapi-codegen/oapi-codegen -generate fasthttp-server,types -package spec -o ./rest/v1/spec/spec.fasthttp.gen.go -templates ./rest/v1/spec/fasthttp-templates ./rest/v1/spec/spec.yaml

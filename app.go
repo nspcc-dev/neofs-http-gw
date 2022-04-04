@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/nspcc-dev/neofs-http-gw/rest/v1/spec"
+
 	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
 
 	"github.com/fasthttp/router"
@@ -273,9 +275,12 @@ func (a *app) registerRESTRoutes(r *router.Router) {
 	api := restv1.New(prm)
 
 	a.log.Info("adding v1 rest routes")
-	versionPrefix := "/v1"
-	r.POST(versionPrefix+"/auth", a.logger(api.AuthHandler))
-	r.PUT(versionPrefix+"/objects", a.logger(api.ObjectsPut))
-	r.PUT(versionPrefix+"/containers", a.logger(api.ContainersPut))
-	r.GET(versionPrefix+"/containers/{containerId}", a.logger(api.ContainersGet))
+
+	ops := spec.FastHTTPServerOptions{
+		BaseURL:     "/v1",
+		BaseRouter:  r,
+		Middlewares: []spec.MiddlewareFunc{a.logger},
+	}
+
+	_ = spec.HandlerWithOptions(api, ops)
 }

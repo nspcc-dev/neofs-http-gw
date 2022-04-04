@@ -14,6 +14,7 @@ import (
 	sessionv2 "github.com/nspcc-dev/neofs-api-go/v2/session"
 	"github.com/nspcc-dev/neofs-http-gw/internal/util"
 	"github.com/nspcc-dev/neofs-http-gw/rest/v1/model"
+	"github.com/nspcc-dev/neofs-http-gw/rest/v1/spec"
 	"github.com/nspcc-dev/neofs-sdk-go/acl"
 	"github.com/nspcc-dev/neofs-sdk-go/container"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
@@ -28,8 +29,8 @@ const (
 	defaultBasicAcl        = acl.PrivateBasicName
 )
 
-// ContainersPut handler that creates container in NeoFS.
-func (a *API) ContainersPut(c *fasthttp.RequestCtx) {
+// PutContainers handler that creates container in NeoFS.
+func (a *API) PutContainers(c *fasthttp.RequestCtx, params spec.PutContainersParams) {
 	ctx, cancel := context.WithCancel(c)
 	defer cancel()
 
@@ -60,12 +61,12 @@ func (a *API) ContainersPut(c *fasthttp.RequestCtx) {
 	a.encodeAndSend(c, resp)
 }
 
-// ContainersGet handler that returns container info.
-func (a *API) ContainersGet(c *fasthttp.RequestCtx) {
+// GetContainersContainerId handler that returns container info.
+func (a *API) GetContainersContainerId(c *fasthttp.RequestCtx, containerId string) {
 	ctx, cancel := context.WithCancel(c)
 	defer cancel()
 
-	containerId, _ := c.UserValue("containerId").(string)
+	//containerId, _ := c.UserValue("containerId").(string)
 	cnr, err := getContainer(ctx, a.pool, containerId)
 	if err != nil {
 		a.logAndSendError(c, "could not get container", err, fasthttp.StatusBadRequest)

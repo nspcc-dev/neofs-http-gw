@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
 	"github.com/nspcc-dev/neofs-http-gw/rest/v1/model"
+	"github.com/nspcc-dev/neofs-http-gw/rest/v1/spec"
 	"github.com/nspcc-dev/neofs-sdk-go/client"
 	"github.com/nspcc-dev/neofs-sdk-go/owner"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
@@ -19,8 +20,8 @@ import (
 
 const defaultTokenExpDuration = 100 // in epoch
 
-// AuthHandler handler that forms bearer token to sign.
-func (a *API) AuthHandler(c *fasthttp.RequestCtx) {
+// PostAuth handler that forms bearer token to sign.
+func (a *API) PostAuth(c *fasthttp.RequestCtx, params spec.PostAuthParams) {
 	ctx, cancel := context.WithCancel(c)
 	defer cancel()
 

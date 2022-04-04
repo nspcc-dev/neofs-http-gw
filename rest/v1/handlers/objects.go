@@ -11,6 +11,7 @@ import (
 	"github.com/nspcc-dev/neofs-api-go/v2/refs"
 	"github.com/nspcc-dev/neofs-http-gw/internal/util"
 	"github.com/nspcc-dev/neofs-http-gw/rest/v1/model"
+	"github.com/nspcc-dev/neofs-http-gw/rest/v1/spec"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
@@ -18,8 +19,8 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-// ObjectsPut handler that uploads object to NeoFS.
-func (a *API) ObjectsPut(c *fasthttp.RequestCtx) {
+// PutObjects handler that uploads object to NeoFS.
+func (a *API) PutObjects(c *fasthttp.RequestCtx, params spec.PutObjectsParams) {
 	btoken, err := prepareBearerToken(&c.Request.Header)
 	if err != nil {
 		a.logAndSendError(c, "prepare bearer token", err, fasthttp.StatusBadRequest)
