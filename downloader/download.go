@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
@@ -190,7 +192,7 @@ func systemBackwardTranslator(key string) string {
 
 	strs := strings.Split(key, "_")
 	for i, s := range strs {
-		s = strings.Title(strings.ToLower(s))
+		s = title(strings.ToLower(s))
 		res.WriteString(s)
 		if i != len(strs)-1 {
 			res.WriteString("-")
@@ -198,6 +200,16 @@ func systemBackwardTranslator(key string) string {
 	}
 
 	return res.String()
+}
+
+func title(str string) string {
+	if str == "" {
+		return ""
+	}
+
+	r, size := utf8.DecodeRuneInString(str)
+	r0 := unicode.ToTitle(r)
+	return string(r0) + str[size:]
 }
 
 func bearerToken(ctx context.Context) *token.BearerToken {
@@ -243,13 +255,8 @@ type Settings struct {
 }
 
 // New creates an instance of Downloader using specified options.
-func New(log *zap.Logger, settings Settings, conns *pool.Pool) (*Downloader, error) {
-	var err error
-	d := &Downloader{log: log, pool: conns, settings: settings}
-	if err != nil {
-		return nil, fmt.Errorf("failed to get neofs client's reusable artifacts: %w", err)
-	}
-	return d, nil
+func New(log *zap.Logger, settings Settings, conns *pool.Pool) *Downloader {
+	return &Downloader{log: log, pool: conns, settings: settings}
 }
 
 func (d *Downloader) newRequest(ctx *fasthttp.RequestCtx, log *zap.Logger) *request {

@@ -199,10 +199,7 @@ func (a *app) Serve(ctx context.Context) {
 	}()
 	edts := a.cfg.GetBool(cfgUploaderHeaderEnableDefaultTimestamp)
 	uploader := uploader.New(a.log, a.pool, edts)
-	downloader, err := downloader.New(a.log, downloader.Settings{ZipCompression: a.cfg.GetBool(cfgZipCompression)}, a.pool)
-	if err != nil {
-		a.log.Fatal("failed to create downloader", zap.Error(err))
-	}
+	downloader := downloader.New(a.log, downloader.Settings{ZipCompression: a.cfg.GetBool(cfgZipCompression)}, a.pool)
 	// Configure router.
 	r := router.New()
 	r.RedirectTrailingSlash = true
@@ -237,6 +234,7 @@ func (a *app) Serve(ctx context.Context) {
 	tlsKeyPath := a.cfg.GetString(cfgTLSKey)
 
 	a.webServer.Handler = r.Handler
+	var err error
 	if tlsCertPath == "" && tlsKeyPath == "" {
 		a.log.Info("running web server", zap.String("address", bind))
 		err = a.webServer.ListenAndServe(bind)
