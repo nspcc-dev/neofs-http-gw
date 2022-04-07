@@ -22,6 +22,7 @@ import (
 	"github.com/nspcc-dev/neofs-sdk-go/object/address"
 	oid "github.com/nspcc-dev/neofs-sdk-go/object/id"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
+	"github.com/nspcc-dev/neofs-sdk-go/token"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
@@ -97,7 +98,11 @@ func (r request) receiveFile(clnt *pool.Pool, objectAddress *address.Address) {
 		return
 	}
 
-	rObj, err := clnt.GetObject(r.RequestCtx, *objectAddress, bearerOpts(r.RequestCtx))
+	var prm pool.PrmObjectGet
+	prm.SetAddress(*objectAddress)
+	prm.UseBearer(bearerToken(r.RequestCtx))
+
+	rObj, err := clnt.GetObject(r.RequestCtx, prm)
 	if err != nil {
 		r.handleNeoFSErr(err, start)
 		return
@@ -195,11 +200,11 @@ func systemBackwardTranslator(key string) string {
 	return res.String()
 }
 
-func bearerOpts(ctx context.Context) pool.CallOption {
+func bearerToken(ctx context.Context) *token.BearerToken {
 	if tkn, err := tokens.LoadBearerToken(ctx); err == nil {
-		return pool.WithBearer(tkn)
+		return tkn
 	}
-	return pool.WithBearer(nil)
+	return nil
 }
 
 func (r *request) handleNeoFSErr(err error, start time.Time) {
@@ -335,7 +340,12 @@ func (d *Downloader) search(c *fasthttp.RequestCtx, cid *cid.ID, key, val string
 	filters.AddRootFilter()
 	filters.AddFilter(key, val, op)
 
-	return d.pool.SearchObjects(c, *cid, filters)
+	var prm pool.PrmObjectSearch
+	prm.SetContainerID(*cid)
+	prm.SetFilters(filters)
+	prm.UseBearer(bearerToken(c))
+
+	return d.pool.SearchObjects(c, prm)
 }
 
 // DownloadZipped handles zip by prefix requests.
@@ -385,7 +395,7 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 
 	addr.SetContainerID(containerID)
 
-	optBearer := bearerOpts(c)
+	btoken := bearerToken(c)
 	empty := true
 	called := false
 
@@ -400,7 +410,11 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 
 		addr.SetObjectID(&id)
 
-		resGet, err = d.pool.GetObject(c, addr, optBearer)
+		var prm pool.PrmObjectGet
+		prm.SetAddress(addr)
+		prm.UseBearer(btoken)
+
+		resGet, err = d.pool.GetObject(c, prm)
 		if err != nil {
 			err = fmt.Errorf("get NeoFS object: %v", err)
 			return true
