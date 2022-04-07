@@ -9,6 +9,7 @@ import (
 	"github.com/fasthttp/router"
 	"github.com/nspcc-dev/neo-go/cli/flags"
 	"github.com/nspcc-dev/neo-go/cli/input"
+	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
 	"github.com/nspcc-dev/neo-go/pkg/util"
 	"github.com/nspcc-dev/neo-go/pkg/wallet"
 	"github.com/nspcc-dev/neofs-http-gw/downloader"
@@ -92,7 +93,13 @@ func newApp(ctx context.Context, opt ...Option) App {
 	if err != nil {
 		a.log.Fatal("failed to get neofs credentials", zap.Error(err))
 	}
-	pb := new(pool.Builder)
+
+	var prm pool.InitParameters
+	prm.SetKey(key)
+	prm.SetNodeDialTimeout(a.cfg.GetDuration(cfgConTimeout))
+	prm.SetHealthcheckTimeout(a.cfg.GetDuration(cfgReqTimeout))
+	prm.SetClientRebalanceInterval(a.cfg.GetDuration(cfgRebalance))
+
 	for i := 0; ; i++ {
 		address := a.cfg.GetString(cfgPeers + "." + strconv.Itoa(i) + ".address")
 		weight := a.cfg.GetFloat64(cfgPeers + "." + strconv.Itoa(i) + ".weight")
@@ -106,19 +113,19 @@ func newApp(ctx context.Context, opt ...Option) App {
 		if priority <= 0 { // unspecified or wrong
 			priority = 1
 		}
-		pb.AddNode(address, priority, weight)
+		prm.AddNode(pool.NewNodeParam(priority, address, weight))
 		a.log.Info("add connection", zap.String("address", address),
 			zap.Float64("weight", weight), zap.Int("priority", priority))
 	}
-	opts := &pool.BuilderOptions{
-		Key:                     key,
-		NodeConnectionTimeout:   a.cfg.GetDuration(cfgConTimeout),
-		NodeRequestTimeout:      a.cfg.GetDuration(cfgReqTimeout),
-		ClientRebalanceInterval: a.cfg.GetDuration(cfgRebalance),
-	}
-	a.pool, err = pb.Build(ctx, opts)
+
+	a.pool, err = pool.NewPool(prm)
 	if err != nil {
 		a.log.Fatal("failed to create connection pool", zap.Error(err))
+	}
+
+	err = a.pool.Dial(ctx)
+	if err != nil {
+		a.log.Fatal("failed to dial pool", zap.Error(err))
 	}
 	return a
 }
@@ -127,7 +134,11 @@ func getNeoFSKey(a *app) (*ecdsa.PrivateKey, error) {
 	walletPath := a.cfg.GetString(cmdWallet)
 	if len(walletPath) == 0 {
 		a.log.Info("no wallet path specified, creating ephemeral key automatically for this run")
-		return pool.NewEphemeralKey()
+		key, err := keys.NewPrivateKey()
+		if err != nil {
+			return nil, err
+		}
+		return &key.PrivateKey, nil
 	}
 	w, err := wallet.NewWalletFromFile(walletPath)
 	if err != nil {

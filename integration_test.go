@@ -119,7 +119,10 @@ func simplePut(ctx context.Context, t *testing.T, clientPool *pool.Pool, CID *ci
 
 	payload := bytes.NewBuffer(nil)
 
-	res, err := clientPool.GetObject(ctx, *objectAddress)
+	var prm pool.PrmObjectGet
+	prm.SetAddress(*objectAddress)
+
+	res, err := clientPool.GetObject(ctx, prm)
 	require.NoError(t, err)
 
 	_, err = io.Copy(payload, res.Payload)
@@ -272,15 +275,15 @@ func getDefaultConfig() *viper.Viper {
 }
 
 func getPool(ctx context.Context, t *testing.T, key *keys.PrivateKey) *pool.Pool {
-	pb := new(pool.Builder)
-	pb.AddNode("localhost:8080", 1, 1)
+	var prm pool.InitParameters
+	prm.SetKey(&key.PrivateKey)
+	prm.SetNodeDialTimeout(5 * time.Second)
+	prm.AddNode(pool.NewNodeParam(1, "localhost:8080", 1))
 
-	opts := &pool.BuilderOptions{
-		Key:                   &key.PrivateKey,
-		NodeConnectionTimeout: 5 * time.Second,
-		NodeRequestTimeout:    5 * time.Second,
-	}
-	clientPool, err := pb.Build(ctx, opts)
+	clientPool, err := pool.NewPool(prm)
+	require.NoError(t, err)
+
+	err = clientPool.Dial(ctx)
 	require.NoError(t, err)
 	return clientPool
 }
@@ -296,16 +299,19 @@ func createContainer(ctx context.Context, t *testing.T, clientPool *pool.Pool) (
 		container.WithAttribute(container.AttributeTimestamp, strconv.FormatInt(time.Now().Unix(), 10)))
 	cnr.SetOwnerID(clientPool.OwnerID())
 
-	CID, err := clientPool.PutContainer(ctx, cnr)
+	var waitPrm pool.WaitParams
+	waitPrm.SetTimeout(15 * time.Second)
+	waitPrm.SetPollInterval(3 * time.Second)
+
+	var prm pool.PrmContainerPut
+	prm.SetContainer(*cnr)
+	prm.SetWaitParams(waitPrm)
+
+	CID, err := clientPool.PutContainer(ctx, prm)
 	if err != nil {
 		return nil, err
 	}
 	fmt.Println(CID.String())
-
-	err = clientPool.WaitForContainerPresence(ctx, CID, &pool.ContainerPollingParams{
-		CreationTimeout: 15 * time.Second,
-		PollInterval:    3 * time.Second,
-	})
 
 	return CID, err
 }
@@ -324,7 +330,11 @@ func putObject(ctx context.Context, t *testing.T, clientPool *pool.Pool, CID *ci
 	}
 	obj.SetAttributes(attrs...)
 
-	id, err := clientPool.PutObject(ctx, *obj, bytes.NewBufferString(content))
+	var prm pool.PrmObjectPut
+	prm.SetHeader(*obj)
+	prm.SetPayload(bytes.NewBufferString(content))
+
+	id, err := clientPool.PutObject(ctx, prm)
 	require.NoError(t, err)
 
 	return id

@@ -33,8 +33,13 @@ func (r request) headObject(clnt *pool.Pool, objectAddress *address.Address) {
 		return
 	}
 
-	bearerOpt := bearerOpts(r.RequestCtx)
-	obj, err := clnt.HeadObject(r.RequestCtx, *objectAddress, bearerOpt)
+	btoken := bearerToken(r.RequestCtx)
+
+	var prm pool.PrmObjectHead
+	prm.SetAddress(*objectAddress)
+	prm.UseBearer(btoken)
+
+	obj, err := clnt.HeadObject(r.RequestCtx, prm)
 	if err != nil {
 		r.handleNeoFSErr(err, start)
 		return
@@ -69,7 +74,12 @@ func (r request) headObject(clnt *pool.Pool, objectAddress *address.Address) {
 
 	if len(contentType) == 0 {
 		contentType, _, err = readContentType(obj.PayloadSize(), func(sz uint64) (io.Reader, error) {
-			return clnt.ObjectRange(r.RequestCtx, *objectAddress, 0, sz, bearerOpt)
+			var prmRange pool.PrmObjectRange
+			prmRange.SetAddress(*objectAddress)
+			prmRange.SetLength(sz)
+			prmRange.UseBearer(btoken)
+
+			return clnt.ObjectRange(r.RequestCtx, prmRange)
 		})
 		if err != nil && err != io.EOF {
 			r.handleNeoFSErr(err, start)
