@@ -66,7 +66,7 @@ $ HTTP_GW_PEERS_0_ADDRESS=grpcs://192.168.130.72:8080 neofs-http-gw
 ## Configuration
 
 In general, everything available as CLI parameter can also be specified via
-environment variables, so they're not specifically mentioned in most cases
+environment variables (see [example](./config/config.env)), so they're not specifically mentioned in most cases
 (see `--help` also). If you prefer a config file you can use it in yaml format.
 
 ### Nodes: weights and priorities
@@ -162,18 +162,9 @@ The gateway supports downloading files by common prefix (like dir) in zip format
 using config or `HTTP_GW_ZIP_COMPRESSION=true` environment variable.
 
 ### Logging
-
-`--verbose` flag enables gRPC logging and there is a number of environment
-variables to tune logging behavior:
-
+You can specify logging level (default `info`) using variable:
 ```
-HTTP_GW_LOGGER_FORMAT=string                     - Logger format
-HTTP_GW_LOGGER_LEVEL=string                      - Logger level
-HTTP_GW_LOGGER_NO_CALLER=bool                    - Logger don't show caller
-HTTP_GW_LOGGER_NO_DISCLAIMER=bool                - Logger don't show application name/version
-HTTP_GW_LOGGER_SAMPLING_INITIAL=int              - Logger sampling initial
-HTTP_GW_LOGGER_SAMPLING_THEREAFTER=int           - Logger sampling thereafter
-HTTP_GW_LOGGER_TRACE_LEVEL=string                - Logger show trace on level
+HTTP_GW_LOGGER_LEVEL=debug
 ```
 
 ### Yaml file
@@ -183,39 +174,7 @@ It can be specified with `--config` parameter:
 $ neofs-http-gw --config your-config.yaml
 ```
 
-Configuration file example:
-```
-listen_address: 0.0.0.0:8082
-
-wallet:
-  passphrase: 123456
-  
-logger:
-  level: debug
-  
-peers:
-  0:
-    address: grpc://s01.neofs.devenv:8080
-    weight: 1
-    priority: 1
-    
-zip:
-  compression: false 
-```
-
-To know nesting level of variable you need to cut off the prefix `HTTP_GW` from variable and split the rest parts by `_`.
-For example variable `HTTP_GW_PEERS_0_WEIGHT=1` will be transformed to:
-```
-peers:
-  0:
-    weight: 1
-    priority: 1
-```
-
-If parameter doesn't support environment variable (e.g. `--listen_address 0.0.0.0:8082`) form it is used as is:
-```
-listen_address: 0.0.0.0:8082
-```
+See [config](./config/config.yaml) for example.
 
 ## HTTP API provided
 

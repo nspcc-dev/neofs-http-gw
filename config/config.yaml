@@ -1,0 +1,78 @@
+wallet:
+  path: /path/to/wallet.json # Path to wallet.
+  address: NfgHwwTi3wHAS8aFAN243C5vGbkYDpqLHP # Account address. If omitted default one will be used.
+  passphrase: pwd # Password to decrypt wallet.
+
+metrics: true # Enable metrics.
+pprof: true # Enable pprof.
+logger:
+  level: debug # Log level.
+
+listen_address: 0.0.0.0:443 # Address to bind.
+tls_certificate: /path/to/tls/cert # Provide cert to enable TLS.
+tls_key: /path/to/tls/key # Provide key to enable TLS.
+
+# Nodes configuration.
+# This configuration make gateway use the first node (grpc://s01.neofs.devenv:8080)
+# while it's healthy. Otherwise, gateway use the second node (grpc://s01.neofs.devenv:8080)
+# for 10% of requests and the third node for 90% of requests.
+peers:
+  0:
+    # Endpoint.
+    address: grpc://s01.neofs.devenv:8080
+
+    # Until nodes with the same priority level are healthy
+    # nodes with other priority are not used.
+    # Еhe lower the value, the higher the priority.
+    priority: 1
+
+    # Load distribution proportion for nodes with the same priority.
+    weight: 1
+  1:
+    address: grpc://s02.neofs.devenv:8080
+    priority: 2
+    weight: 1
+  2:
+    address: grpc://s03.neofs.devenv:8080
+    priority: 2
+    weight: 9
+
+
+web:
+  # Per-connection buffer size for requests' reading.
+  # This also limits the maximum header size.
+  read_buffer_size: 4096
+
+  # Per-connection buffer size for responses' writing.
+  write_buffer_size: 4096
+
+  # ReadTimeout is the amount of time allowed to read
+  # the full request including body. The connection's read
+  # deadline is reset when the connection opens, or for
+  # keep-alive connections after the first byte has been read.
+  read_timeout: 15s
+
+  # WriteTimeout is the maximum duration before timing out
+  # writes of the response. It is reset after the request handler
+  # has returned.
+  write_timeout: 1m
+
+  # StreamRequestBody enables request body streaming,
+  # and calls the handler sooner when given body is
+  # larger then the current limit.
+  stream_request_body: true
+
+  # Maximum request body size.
+  # The server rejects requests with bodies exceeding this limit.
+  max_request_body_size: 4194304
+
+
+upload_header:
+  use_default_timestamp: false # Create timestamp for object if it isn't provided by header.
+
+connect_timeout: 5s # Timeout to dial node.
+request_timeout: 5s # Timeout to check node health during rebalance.
+rebalance_timer: 30s # Interval to check nodes health.
+
+zip:
+  compression: false # Enable zip compression to download files by common prefix.

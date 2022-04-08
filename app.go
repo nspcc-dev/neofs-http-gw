@@ -133,6 +133,10 @@ func newApp(ctx context.Context, opt ...Option) App {
 func getNeoFSKey(a *app) (*ecdsa.PrivateKey, error) {
 	walletPath := a.cfg.GetString(cmdWallet)
 	if len(walletPath) == 0 {
+		walletPath = a.cfg.GetString(cfgWalletPath)
+	}
+
+	if len(walletPath) == 0 {
 		a.log.Info("no wallet path specified, creating ephemeral key automatically for this run")
 		key, err := keys.NewPrivateKey()
 		if err != nil {
@@ -150,7 +154,13 @@ func getNeoFSKey(a *app) (*ecdsa.PrivateKey, error) {
 		pwd := a.cfg.GetString(cfgWalletPassphrase)
 		password = &pwd
 	}
-	return getKeyFromWallet(w, a.cfg.GetString(cmdAddress), password)
+
+	address := a.cfg.GetString(cmdAddress)
+	if len(address) == 0 {
+		address = a.cfg.GetString(cfgWalletAddress)
+	}
+
+	return getKeyFromWallet(w, address, password)
 }
 
 func getKeyFromWallet(w *wallet.Wallet, addrStr string, password *string) (*ecdsa.PrivateKey, error) {
