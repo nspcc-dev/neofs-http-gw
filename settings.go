@@ -40,6 +40,8 @@ const (
 
 	// Wallet.
 	cfgWalletPassphrase = "wallet.passphrase"
+	cfgWalletPath       = "wallet.path"
+	cfgWalletAddress    = "wallet.address"
 
 	// Uploader Header.
 	cfgUploaderHeaderEnableDefaultTimestamp = "upload_header.use_default_timestamp"
@@ -53,7 +55,6 @@ const (
 	// Command line args.
 	cmdHelp    = "help"
 	cmdVersion = "version"
-	cmdVerbose = "verbose"
 	cmdPprof   = "pprof"
 	cmdMetrics = "metrics"
 	cmdWallet  = "wallet"
@@ -89,7 +90,6 @@ func settings() *viper.Viper {
 	flags.StringP(cmdWallet, "w", "", `path to the wallet`)
 	flags.String(cmdAddress, "", `address of wallet account`)
 	config := flags.String(cmdConfig, "", "config path")
-	flags.Bool(cmdVerbose, false, "debug gRPC connections")
 	flags.Duration(cfgConTimeout, defaultConnectTimeout, "gRPC connect timeout")
 	flags.Duration(cfgReqTimeout, defaultRequestTimeout, "gRPC request timeout")
 	flags.Duration(cfgRebalance, defaultRebalanceTimer, "gRPC connection rebalance timer")
