@@ -1,7 +1,7 @@
 wallet:
   path: /path/to/wallet.json # Path to wallet.
   address: NfgHwwTi3wHAS8aFAN243C5vGbkYDpqLHP # Account address. If omitted default one will be used.
-  passphrase: pwd # Password to decrypt wallet.
+  passphrase: pwd # Passphrase to decrypt wallet.
 
 metrics: true # Enable metrics.
 pprof: true # Enable pprof.
@@ -13,8 +13,8 @@ tls_certificate: /path/to/tls/cert # Provide cert to enable TLS.
 tls_key: /path/to/tls/key # Provide key to enable TLS.
 
 # Nodes configuration.
-# This configuration make gateway use the first node (grpc://s01.neofs.devenv:8080)
-# while it's healthy. Otherwise, gateway use the second node (grpc://s01.neofs.devenv:8080)
+# This configuration make the gateway use the first node (grpc://s01.neofs.devenv:8080)
+# while it's healthy. Otherwise, the gateway use the second node (grpc://s01.neofs.devenv:8080)
 # for 10% of requests and the third node for 90% of requests.
 peers:
   0:
@@ -23,7 +23,7 @@ peers:
 
     # Until nodes with the same priority level are healthy
     # nodes with other priority are not used.
-    # Еhe lower the value, the higher the priority.
+    # The lower the value, the higher the priority.
     priority: 1
 
     # Load distribution proportion for nodes with the same priority.
