@@ -1,4 +1,4 @@
-FROM golang:1.16-alpine as basebuilder
+FROM golang:1.17-alpine as basebuilder
 RUN apk add --update make bash ca-certificates
 
 FROM basebuilder as builder
