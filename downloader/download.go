@@ -19,12 +19,12 @@ import (
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/nspcc-dev/neofs-http-gw/utils"
+	"github.com/nspcc-dev/neofs-sdk-go/bearer"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
 	"github.com/nspcc-dev/neofs-sdk-go/object/address"
 	oid "github.com/nspcc-dev/neofs-sdk-go/object/id"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
-	"github.com/nspcc-dev/neofs-sdk-go/token"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
@@ -105,7 +105,9 @@ func (r request) receiveFile(clnt *pool.Pool, objectAddress *address.Address) {
 
 	var prm pool.PrmObjectGet
 	prm.SetAddress(*objectAddress)
-	prm.UseBearer(bearerToken(r.RequestCtx))
+	if btoken := bearerToken(r.RequestCtx); btoken != nil {
+		prm.UseBearer(*btoken)
+	}
 
 	rObj, err := clnt.GetObject(r.appCtx, prm)
 	if err != nil {
@@ -215,7 +217,7 @@ func title(str string) string {
 	return string(r0) + str[size:]
 }
 
-func bearerToken(ctx context.Context) *token.BearerToken {
+func bearerToken(ctx context.Context) *bearer.Token {
 	if tkn, err := tokens.LoadBearerToken(ctx); err == nil {
 		return tkn
 	}
@@ -309,8 +311,8 @@ func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, *pool.P
 		val, _     = url.QueryUnescape(c.UserValue("attr_val").(string))
 		log        = d.log.With(zap.String("cid", scid), zap.String("attr_key", key), zap.String("attr_val", val))
 	)
-	containerID := cid.New()
-	if err := containerID.Parse(scid); err != nil {
+	containerID := new(cid.ID)
+	if err := containerID.DecodeString(scid); err != nil {
 		log.Error("wrong container id", zap.Error(err))
 		response.Error(c, "wrong container id", httpStatus)
 		return
@@ -341,8 +343,8 @@ func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, *pool.P
 	}
 
 	var addrObj address.Address
-	addrObj.SetContainerID(containerID)
-	addrObj.SetObjectID(&buf[0])
+	addrObj.SetContainerID(*containerID)
+	addrObj.SetObjectID(buf[0])
 
 	f(*d.newRequest(c, log), d.pool, &addrObj)
 }
@@ -355,7 +357,9 @@ func (d *Downloader) search(c *fasthttp.RequestCtx, cid *cid.ID, key, val string
 	var prm pool.PrmObjectSearch
 	prm.SetContainerID(*cid)
 	prm.SetFilters(filters)
-	prm.UseBearer(bearerToken(c))
+	if btoken := bearerToken(c); btoken != nil {
+		prm.UseBearer(*btoken)
+	}
 
 	return d.pool.SearchObjects(d.appCtx, prm)
 }
@@ -366,8 +370,8 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 	prefix, _ := url.QueryUnescape(c.UserValue("prefix").(string))
 	log := d.log.With(zap.String("cid", scid), zap.String("prefix", prefix))
 
-	containerID := cid.New()
-	if err := containerID.Parse(scid); err != nil {
+	containerID := new(cid.ID)
+	if err := containerID.DecodeString(scid); err != nil {
 		log.Error("wrong container id", zap.Error(err))
 		response.Error(c, "wrong container id", fasthttp.StatusBadRequest)
 		return
@@ -405,7 +409,7 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 		bufZip []byte
 	)
 
-	addr.SetContainerID(containerID)
+	addr.SetContainerID(*containerID)
 
 	btoken := bearerToken(c)
 	empty := true
@@ -420,11 +424,13 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 
 		empty = false
 
-		addr.SetObjectID(&id)
+		addr.SetObjectID(id)
 
 		var prm pool.PrmObjectGet
 		prm.SetAddress(addr)
-		prm.UseBearer(btoken)
+		if btoken != nil {
+			prm.UseBearer(*btoken)
+		}
 
 		resGet, err = d.pool.GetObject(d.appCtx, prm)
 		if err != nil {

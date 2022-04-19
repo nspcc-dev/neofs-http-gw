@@ -37,7 +37,9 @@ func (r request) headObject(clnt *pool.Pool, objectAddress *address.Address) {
 
 	var prm pool.PrmObjectHead
 	prm.SetAddress(*objectAddress)
-	prm.UseBearer(btoken)
+	if btoken != nil {
+		prm.UseBearer(*btoken)
+	}
 
 	obj, err := clnt.HeadObject(r.appCtx, prm)
 	if err != nil {
@@ -77,7 +79,9 @@ func (r request) headObject(clnt *pool.Pool, objectAddress *address.Address) {
 			var prmRange pool.PrmObjectRange
 			prmRange.SetAddress(*objectAddress)
 			prmRange.SetLength(sz)
-			prmRange.UseBearer(btoken)
+			if btoken != nil {
+				prmRange.UseBearer(*btoken)
+			}
 
 			return clnt.ObjectRange(r.appCtx, prmRange)
 		})
@@ -90,9 +94,11 @@ func (r request) headObject(clnt *pool.Pool, objectAddress *address.Address) {
 }
 
 func idsToResponse(resp *fasthttp.Response, obj *object.Object) {
-	resp.Header.Set(hdrObjectID, obj.ID().String())
+	objID, _ := obj.ID()
+	cnrID, _ := obj.ContainerID()
+	resp.Header.Set(hdrObjectID, objID.String())
 	resp.Header.Set(hdrOwnerID, obj.OwnerID().String())
-	resp.Header.Set(hdrContainerID, obj.ContainerID().String())
+	resp.Header.Set(hdrContainerID, cnrID.String())
 }
 
 // HeadByAddress handles head requests using simple cid/oid format.

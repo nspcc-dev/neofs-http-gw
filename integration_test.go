@@ -108,16 +108,16 @@ func simplePut(ctx context.Context, t *testing.T, clientPool *pool.Pool, CID *ci
 	err = json.NewDecoder(resp.Body).Decode(addr)
 	require.NoError(t, err)
 
-	err = CID.Parse(addr.CID)
+	err = CID.DecodeString(addr.CID)
 	require.NoError(t, err)
 
-	id := oid.NewID()
-	err = id.Parse(addr.OID)
+	id := new(oid.ID)
+	err = id.DecodeString(addr.OID)
 	require.NoError(t, err)
 
 	objectAddress := address.NewAddress()
-	objectAddress.SetContainerID(CID)
-	objectAddress.SetObjectID(id)
+	objectAddress.SetContainerID(*CID)
+	objectAddress.SetObjectID(*id)
 
 	payload := bytes.NewBuffer(nil)
 
@@ -320,7 +320,7 @@ func createContainer(ctx context.Context, t *testing.T, clientPool *pool.Pool) (
 
 func putObject(ctx context.Context, t *testing.T, clientPool *pool.Pool, CID *cid.ID, content string, attributes map[string]string) *oid.ID {
 	obj := object.New()
-	obj.SetContainerID(CID)
+	obj.SetContainerID(*CID)
 	obj.SetOwnerID(clientPool.OwnerID())
 
 	var attrs []object.Attribute

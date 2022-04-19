@@ -6,7 +6,7 @@ require (
 	github.com/fasthttp/router v1.4.1
 	github.com/nspcc-dev/neo-go v0.98.0
 	github.com/nspcc-dev/neofs-api-go/v2 v2.12.1
-	github.com/nspcc-dev/neofs-sdk-go v1.0.0-rc.3.0.20220407103316-e50e6d28280d
+	github.com/nspcc-dev/neofs-sdk-go v1.0.0-rc.3.0.20220421125737-6e81e13e1bff
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/common v0.30.0
 	github.com/spf13/pflag v1.0.5
@@ -56,6 +56,7 @@ require (
 	github.com/nspcc-dev/hrw v1.0.9 // indirect
 	github.com/nspcc-dev/neofs-crypto v0.3.0 // indirect
 	github.com/nspcc-dev/rfc6979 v0.2.0 // indirect
+	github.com/nspcc-dev/tzhash v1.5.2 // indirect
 	github.com/onsi/ginkgo v1.16.4 // indirect
 	github.com/onsi/gomega v1.15.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect

@@ -4,8 +4,8 @@ import (
 	"encoding/base64"
 	"testing"
 
-	"github.com/nspcc-dev/neofs-sdk-go/owner"
-	"github.com/nspcc-dev/neofs-sdk-go/token"
+	"github.com/nspcc-dev/neofs-sdk-go/bearer"
+	"github.com/nspcc-dev/neofs-sdk-go/user"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
 )
@@ -59,16 +59,12 @@ func Test_fromHeader(t *testing.T) {
 }
 
 func Test_fetchBearerToken(t *testing.T) {
-	uid := owner.NewID()
+	var uid user.ID
 
-	tkn := new(token.BearerToken)
-	tkn.SetOwner(uid)
+	tkn := new(bearer.Token)
+	tkn.SetOwnerID(uid)
 
-	data, err := tkn.Marshal()
-
-	require.NoError(t, err)
-
-	t64 := base64.StdEncoding.EncodeToString(data)
+	t64 := base64.StdEncoding.EncodeToString(tkn.Marshal())
 	require.NotEmpty(t, t64)
 
 	cases := []struct {
@@ -78,7 +74,7 @@ func Test_fetchBearerToken(t *testing.T) {
 		header string
 
 		error  string
-		expect *token.BearerToken
+		expect *bearer.Token
 	}{
 		{name: "empty"},
 
@@ -137,15 +133,12 @@ func makeTestRequest(cookie, header string) *fasthttp.RequestCtx {
 }
 
 func Test_checkAndPropagateBearerToken(t *testing.T) {
-	uid := owner.NewID()
+	var uid user.ID
 
-	tkn := new(token.BearerToken)
-	tkn.SetOwner(uid)
+	tkn := new(bearer.Token)
+	tkn.SetOwnerID(uid)
 
-	data, err := tkn.Marshal()
-	require.NoError(t, err)
-
-	t64 := base64.StdEncoding.EncodeToString(data)
+	t64 := base64.StdEncoding.EncodeToString(tkn.Marshal())
 	require.NotEmpty(t, t64)
 
 	ctx := makeTestRequest(t64, "")

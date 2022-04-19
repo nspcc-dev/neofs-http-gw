@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/nspcc-dev/neofs-sdk-go/token"
+	"github.com/nspcc-dev/neofs-sdk-go/bearer"
 	"github.com/valyala/fasthttp"
 )
 
@@ -62,14 +62,14 @@ func StoreBearerToken(ctx *fasthttp.RequestCtx) error {
 
 // LoadBearerToken returns a bearer token stored in the context given (if it's
 // present there).
-func LoadBearerToken(ctx context.Context) (*token.BearerToken, error) {
-	if tkn, ok := ctx.Value(bearerTokenKey).(*token.BearerToken); ok && tkn != nil {
+func LoadBearerToken(ctx context.Context) (*bearer.Token, error) {
+	if tkn, ok := ctx.Value(bearerTokenKey).(*bearer.Token); ok && tkn != nil {
 		return tkn, nil
 	}
 	return nil, errors.New("found empty bearer token")
 }
 
-func fetchBearerToken(ctx *fasthttp.RequestCtx) (*token.BearerToken, error) {
+func fetchBearerToken(ctx *fasthttp.RequestCtx) (*bearer.Token, error) {
 	// ignore empty value
 	if ctx == nil {
 		return nil, nil
@@ -78,7 +78,7 @@ func fetchBearerToken(ctx *fasthttp.RequestCtx) (*token.BearerToken, error) {
 		lastErr error
 
 		buf []byte
-		tkn = new(token.BearerToken)
+		tkn = new(bearer.Token)
 	)
 	for _, parse := range []fromHandler{BearerTokenFromHeader, BearerTokenFromCookie} {
 		if buf = parse(&ctx.Request.Header); buf == nil {
