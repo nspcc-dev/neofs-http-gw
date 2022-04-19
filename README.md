@@ -299,6 +299,14 @@ You can download some dir (files with the same prefix) in zip (it will be compre
 $ wget http://localhost:8082/zip/Dxhf4PNprrJHWWTG5RGLdfLkJiSQ3AQqit1MSnEPRkDZ/common/prefix
 ```
 
+**Note:** the objects must have a `FilePath` attribute, otherwise they will not be in the zip archive.
+You can upload file with this attribute using `curl`:
+
+```
+$ curl -F 'file=@cat.jpeg;filename=cat.jpeg' -H 'X-Attribute-FilePath: common/prefix/cat.jpeg' http://localhost:8082/upload/Dxhf4PNprrJHWWTG5RGLdfLkJiSQ3AQqit1MSnEPRkDZ
+```
+
+
 #### Replies
 
 You get object contents in the reply body (if GET method was used), but at the same time you also get a
