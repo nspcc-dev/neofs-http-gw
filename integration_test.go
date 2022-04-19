@@ -28,6 +28,8 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
+const attributeFilePath = "FilePath"
+
 type putResponse struct {
 	CID string `json:"container_id"`
 	OID string `json:"object_id"`
@@ -191,8 +193,8 @@ func getByAttr(ctx context.Context, t *testing.T, clientPool *pool.Pool, CID *ci
 func getZip(ctx context.Context, t *testing.T, clientPool *pool.Pool, CID *cid.ID) {
 	names := []string{"zipfolder/dir/name1.txt", "zipfolder/name2.txt"}
 	contents := []string{"content of file1", "content of file2"}
-	attributes1 := map[string]string{object.AttributeFileName: names[0]}
-	attributes2 := map[string]string{object.AttributeFileName: names[1]}
+	attributes1 := map[string]string{attributeFilePath: names[0]}
+	attributes2 := map[string]string{attributeFilePath: names[1]}
 
 	putObject(ctx, t, clientPool, CID, contents[0], attributes1)
 	putObject(ctx, t, clientPool, CID, contents[1], attributes2)

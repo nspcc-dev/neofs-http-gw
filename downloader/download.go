@@ -36,6 +36,8 @@ type request struct {
 
 var errObjectNotFound = errors.New("object not found")
 
+const attributeFilePath = "FilePath"
+
 func isValidToken(s string) bool {
 	for _, c := range s {
 		if c <= ' ' || c > 127 {
@@ -374,7 +376,7 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 		return
 	}
 
-	resSearch, err := d.search(c, containerID, object.AttributeFileName, prefix, object.MatchCommonPrefix)
+	resSearch, err := d.search(c, containerID, attributeFilePath, prefix, object.MatchCommonPrefix)
 	if err != nil {
 		log.Error("could not search for objects", zap.Error(err))
 		response.Error(c, "could not search for objects", fasthttp.StatusBadRequest)
@@ -428,7 +430,7 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 		}
 
 		w, err = zipWriter.CreateHeader(&zip.FileHeader{
-			Name:     getFilename(&resGet.Header),
+			Name:     getZipFilePath(&resGet.Header),
 			Method:   compression,
 			Modified: time.Now(),
 		})
@@ -474,9 +476,9 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 	}
 }
 
-func getFilename(obj *object.Object) string {
+func getZipFilePath(obj *object.Object) string {
 	for _, attr := range obj.Attributes() {
-		if attr.Key() == object.AttributeFileName {
+		if attr.Key() == attributeFilePath {
 			return attr.Value()
 		}
 	}
