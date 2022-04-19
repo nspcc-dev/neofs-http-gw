@@ -12,14 +12,14 @@ import (
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/nspcc-dev/neofs-http-gw/utils"
+	"github.com/nspcc-dev/neofs-sdk-go/bearer"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
 	"github.com/nspcc-dev/neofs-sdk-go/netmap"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
 	"github.com/nspcc-dev/neofs-sdk-go/object/address"
 	oid "github.com/nspcc-dev/neofs-sdk-go/object/id"
-	"github.com/nspcc-dev/neofs-sdk-go/owner"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
-	"github.com/nspcc-dev/neofs-sdk-go/token"
+	"github.com/nspcc-dev/neofs-sdk-go/user"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
@@ -56,7 +56,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		file       MultipartFile
 		idObj      *oid.ID
 		addr       = address.NewAddress()
-		idCnr      = cid.New()
+		idCnr      = new(cid.ID)
 		scid, _    = c.UserValue("cid").(string)
 		log        = u.log.With(zap.String("cid", scid))
 		bodyStream = c.RequestBodyStream()
@@ -67,7 +67,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		response.Error(c, "could not fetch bearer token", fasthttp.StatusBadRequest)
 		return
 	}
-	if err = idCnr.Parse(scid); err != nil {
+	if err = idCnr.DecodeString(scid); err != nil {
 		log.Error("wrong container id", zap.Error(err))
 		response.Error(c, "wrong container id", fasthttp.StatusBadRequest)
 		return
@@ -131,14 +131,17 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	id, bt := u.fetchOwnerAndBearerToken(c)
 
 	obj := object.New()
-	obj.SetContainerID(idCnr)
+	obj.SetContainerID(*idCnr)
 	obj.SetOwnerID(id)
 	obj.SetAttributes(attributes...)
 
 	var prm pool.PrmObjectPut
 	prm.SetHeader(*obj)
 	prm.SetPayload(file)
-	prm.UseBearer(bt)
+
+	if bt != nil {
+		prm.UseBearer(*bt)
+	}
 
 	if idObj, err = u.pool.PutObject(u.appCtx, prm); err != nil {
 		log.Error("could not store file in neofs", zap.Error(err))
@@ -146,8 +149,8 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		return
 	}
 
-	addr.SetObjectID(idObj)
-	addr.SetContainerID(idCnr)
+	addr.SetObjectID(*idObj)
+	addr.SetContainerID(*idCnr)
 
 	// Try to return the response, otherwise, if something went wrong, throw an error.
 	if err = newPutResponse(addr).encode(c); err != nil {
@@ -173,9 +176,10 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	c.Response.Header.SetContentType(jsonHeader)
 }
 
-func (u *Uploader) fetchOwnerAndBearerToken(ctx context.Context) (*owner.ID, *token.BearerToken) {
+func (u *Uploader) fetchOwnerAndBearerToken(ctx context.Context) (*user.ID, *bearer.Token) {
 	if tkn, err := tokens.LoadBearerToken(ctx); err == nil && tkn != nil {
-		return tkn.Issuer(), tkn
+		issuer, _ := tkn.Issuer()
+		return &issuer, tkn
 	}
 	return u.pool.OwnerID(), nil
 }
@@ -186,9 +190,11 @@ type putResponse struct {
 }
 
 func newPutResponse(addr *address.Address) *putResponse {
+	objID, _ := addr.ObjectID()
+	cnrID, _ := addr.ContainerID()
 	return &putResponse{
-		ObjectID:    addr.ObjectID().String(),
-		ContainerID: addr.ContainerID().String(),
+		ObjectID:    objID.String(),
+		ContainerID: cnrID.String(),
 	}
 }
 
