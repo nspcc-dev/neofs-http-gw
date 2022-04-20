@@ -9,11 +9,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/nspcc-dev/neofs-http-gw/resolver"
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/nspcc-dev/neofs-http-gw/utils"
 	"github.com/nspcc-dev/neofs-sdk-go/bearer"
-	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
 	"github.com/nspcc-dev/neofs-sdk-go/netmap"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
 	"github.com/nspcc-dev/neofs-sdk-go/object/address"
@@ -35,6 +35,7 @@ type Uploader struct {
 	log                    *zap.Logger
 	pool                   *pool.Pool
 	enableDefaultTimestamp bool
+	containerResolver      *resolver.ContainerResolver
 }
 
 type epochDurations struct {
@@ -45,33 +46,41 @@ type epochDurations struct {
 
 // New creates a new Uploader using specified logger, connection pool and
 // other options.
-func New(ctx context.Context, log *zap.Logger, conns *pool.Pool, enableDefaultTimestamp bool) *Uploader {
-	return &Uploader{ctx, log, conns, enableDefaultTimestamp}
+func New(ctx context.Context, params *utils.AppParams, enableDefaultTimestamp bool) *Uploader {
+	return &Uploader{
+		appCtx:                 ctx,
+		log:                    params.Logger,
+		pool:                   params.Pool,
+		enableDefaultTimestamp: enableDefaultTimestamp,
+		containerResolver:      params.Resolver,
+	}
 }
 
 // Upload handles multipart upload request.
 func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	var (
-		err        error
 		file       MultipartFile
 		idObj      *oid.ID
 		addr       = address.NewAddress()
-		idCnr      = new(cid.ID)
 		scid, _    = c.UserValue("cid").(string)
 		log        = u.log.With(zap.String("cid", scid))
 		bodyStream = c.RequestBodyStream()
 		drainBuf   = make([]byte, drainBufSize)
 	)
-	if err = tokens.StoreBearerToken(c); err != nil {
+
+	if err := tokens.StoreBearerToken(c); err != nil {
 		log.Error("could not fetch bearer token", zap.Error(err))
 		response.Error(c, "could not fetch bearer token", fasthttp.StatusBadRequest)
 		return
 	}
-	if err = idCnr.DecodeString(scid); err != nil {
+
+	idCnr, err := utils.GetContainerID(u.appCtx, scid, u.containerResolver)
+	if err != nil {
 		log.Error("wrong container id", zap.Error(err))
 		response.Error(c, "wrong container id", fasthttp.StatusBadRequest)
 		return
 	}
+
 	defer func() {
 		// If the temporary reader can be closed - let's close it.
 		if file == nil {

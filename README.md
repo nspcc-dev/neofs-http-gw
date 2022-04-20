@@ -189,6 +189,8 @@ and upload objects with it, but deleting, searching, managing ACLs, creating
 containers and other activities are not supported and not planned to be
 supported.
 
+**Note:** in all download/upload routes you can use container name instead of it's id (`$CID`), but resolvers must be configured properly (see [configs](./config) for examples).
+
 ### Preparation
 
 Before uploading or downloading a file make sure you have a prepared container. 

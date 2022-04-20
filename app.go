@@ -13,8 +13,10 @@ import (
 	"github.com/nspcc-dev/neo-go/pkg/util"
 	"github.com/nspcc-dev/neo-go/pkg/wallet"
 	"github.com/nspcc-dev/neofs-http-gw/downloader"
+	"github.com/nspcc-dev/neofs-http-gw/resolver"
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/uploader"
+	"github.com/nspcc-dev/neofs-http-gw/utils"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
@@ -28,6 +30,7 @@ type (
 		cfg       *viper.Viper
 		webServer *fasthttp.Server
 		webDone   chan struct{}
+		resolver  *resolver.ContainerResolver
 	}
 
 	// App is an interface for the main gateway function.
@@ -127,7 +130,37 @@ func newApp(ctx context.Context, opt ...Option) App {
 	if err != nil {
 		a.log.Fatal("failed to dial pool", zap.Error(err))
 	}
+
+	resolveCfg := &resolver.Config{
+		NeoFS:      resolver.NewNeoFSResolver(a.pool),
+		RPCAddress: a.cfg.GetString(cfgRPCEndpoint),
+	}
+
+	order := a.cfg.GetStringSlice(cfgResolveOrder)
+	if resolveCfg.RPCAddress == "" {
+		order = remove(order, resolver.NNSResolver)
+		a.log.Warn(fmt.Sprintf("resolver '%s' won't be used since '%s' isn't provided", resolver.NNSResolver, cfgRPCEndpoint))
+	}
+
+	if len(order) != 0 {
+		a.resolver, err = resolver.NewResolver(order, resolveCfg)
+		if err != nil {
+			a.log.Fatal("failed to create resolver", zap.Error(err))
+		}
+	} else {
+		a.log.Info("container resolver is disabled")
+	}
+
 	return a
+}
+
+func remove(list []string, element string) []string {
+	for i, item := range list {
+		if item == element {
+			return append(list[:i], list[i+1:]...)
+		}
+	}
+	return list
 }
 
 func getNeoFSKey(a *app) (*ecdsa.PrivateKey, error) {
@@ -208,8 +241,9 @@ func (a *app) Serve(ctx context.Context) {
 		close(a.webDone)
 	}()
 	edts := a.cfg.GetBool(cfgUploaderHeaderEnableDefaultTimestamp)
-	uploader := uploader.New(ctx, a.log, a.pool, edts)
-	downloader := downloader.New(ctx, a.log, downloader.Settings{ZipCompression: a.cfg.GetBool(cfgZipCompression)}, a.pool)
+	uploadRoutes := uploader.New(ctx, a.AppParams(), edts)
+	downloadSettings := downloader.Settings{ZipCompression: a.cfg.GetBool(cfgZipCompression)}
+	downloadRoutes := downloader.New(ctx, a.AppParams(), downloadSettings)
 	// Configure router.
 	r := router.New()
 	r.RedirectTrailingSlash = true
@@ -219,15 +253,15 @@ func (a *app) Serve(ctx context.Context) {
 	r.MethodNotAllowed = func(r *fasthttp.RequestCtx) {
 		response.Error(r, "Method Not Allowed", fasthttp.StatusMethodNotAllowed)
 	}
-	r.POST("/upload/{cid}", a.logger(uploader.Upload))
+	r.POST("/upload/{cid}", a.logger(uploadRoutes.Upload))
 	a.log.Info("added path /upload/{cid}")
-	r.GET("/get/{cid}/{oid}", a.logger(downloader.DownloadByAddress))
-	r.HEAD("/get/{cid}/{oid}", a.logger(downloader.HeadByAddress))
+	r.GET("/get/{cid}/{oid}", a.logger(downloadRoutes.DownloadByAddress))
+	r.HEAD("/get/{cid}/{oid}", a.logger(downloadRoutes.HeadByAddress))
 	a.log.Info("added path /get/{cid}/{oid}")
-	r.GET("/get_by_attribute/{cid}/{attr_key}/{attr_val:*}", a.logger(downloader.DownloadByAttribute))
-	r.HEAD("/get_by_attribute/{cid}/{attr_key}/{attr_val:*}", a.logger(downloader.HeadByAttribute))
+	r.GET("/get_by_attribute/{cid}/{attr_key}/{attr_val:*}", a.logger(downloadRoutes.DownloadByAttribute))
+	r.HEAD("/get_by_attribute/{cid}/{attr_key}/{attr_val:*}", a.logger(downloadRoutes.HeadByAttribute))
 	a.log.Info("added path /get_by_attribute/{cid}/{attr_key}/{attr_val:*}")
-	r.GET("/zip/{cid}/{prefix:*}", a.logger(downloader.DownloadZipped))
+	r.GET("/zip/{cid}/{prefix:*}", a.logger(downloadRoutes.DownloadZipped))
 	a.log.Info("added path /zip/{cid}/{prefix}")
 	// enable metrics
 	if a.cfg.GetBool(cmdMetrics) {
@@ -266,4 +300,12 @@ func (a *app) logger(h fasthttp.RequestHandler) fasthttp.RequestHandler {
 			zap.Uint64("id", ctx.ID()))
 		h(ctx)
 	})
+}
+
+func (a *app) AppParams() *utils.AppParams {
+	return &utils.AppParams{
+		Logger:   a.log,
+		Pool:     a.pool,
+		Resolver: a.resolver,
+	}
 }
