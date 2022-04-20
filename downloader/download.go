@@ -16,6 +16,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/nspcc-dev/neofs-http-gw/resolver"
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/nspcc-dev/neofs-http-gw/utils"
@@ -250,10 +251,11 @@ func (r *request) handleNeoFSErr(err error, start time.Time) {
 
 // Downloader is a download request handler.
 type Downloader struct {
-	appCtx   context.Context
-	log      *zap.Logger
-	pool     *pool.Pool
-	settings Settings
+	appCtx            context.Context
+	log               *zap.Logger
+	pool              *pool.Pool
+	containerResolver *resolver.ContainerResolver
+	settings          Settings
 }
 
 type Settings struct {
@@ -261,8 +263,14 @@ type Settings struct {
 }
 
 // New creates an instance of Downloader using specified options.
-func New(ctx context.Context, log *zap.Logger, settings Settings, conns *pool.Pool) *Downloader {
-	return &Downloader{appCtx: ctx, log: log, pool: conns, settings: settings}
+func New(ctx context.Context, params *utils.AppParams, settings Settings) *Downloader {
+	return &Downloader{
+		appCtx:            ctx,
+		log:               params.Logger,
+		pool:              params.Pool,
+		settings:          settings,
+		containerResolver: params.Resolver,
+	}
 }
 
 func (d *Downloader) newRequest(ctx *fasthttp.RequestCtx, log *zap.Logger) *request {
@@ -282,17 +290,28 @@ func (d *Downloader) DownloadByAddress(c *fasthttp.RequestCtx) {
 // prepares request and object address to it.
 func (d *Downloader) byAddress(c *fasthttp.RequestCtx, f func(request, *pool.Pool, *address.Address)) {
 	var (
-		addr     = address.NewAddress()
 		idCnr, _ = c.UserValue("cid").(string)
 		idObj, _ = c.UserValue("oid").(string)
-		val      = strings.Join([]string{idCnr, idObj}, "/")
 		log      = d.log.With(zap.String("cid", idCnr), zap.String("oid", idObj))
 	)
-	if err := addr.Parse(val); err != nil {
-		log.Error("wrong object address", zap.Error(err))
-		response.Error(c, "wrong object address", fasthttp.StatusBadRequest)
+
+	cnrID, err := utils.GetContainerID(d.appCtx, idCnr, d.containerResolver)
+	if err != nil {
+		log.Error("wrong container id", zap.Error(err))
+		response.Error(c, "wrong container id", fasthttp.StatusBadRequest)
 		return
 	}
+
+	objID := new(oid.ID)
+	if err = objID.DecodeString(idObj); err != nil {
+		log.Error("wrong object id", zap.Error(err))
+		response.Error(c, "wrong object id", fasthttp.StatusBadRequest)
+		return
+	}
+
+	addr := address.NewAddress()
+	addr.SetContainerID(*cnrID)
+	addr.SetObjectID(*objID)
 
 	f(*d.newRequest(c, log), d.pool, addr)
 }
@@ -305,16 +324,16 @@ func (d *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
 // byAttribute is a wrapper similar to byAddress.
 func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, *pool.Pool, *address.Address)) {
 	var (
-		httpStatus = fasthttp.StatusBadRequest
-		scid, _    = c.UserValue("cid").(string)
-		key, _     = url.QueryUnescape(c.UserValue("attr_key").(string))
-		val, _     = url.QueryUnescape(c.UserValue("attr_val").(string))
-		log        = d.log.With(zap.String("cid", scid), zap.String("attr_key", key), zap.String("attr_val", val))
+		scid, _ = c.UserValue("cid").(string)
+		key, _  = url.QueryUnescape(c.UserValue("attr_key").(string))
+		val, _  = url.QueryUnescape(c.UserValue("attr_val").(string))
+		log     = d.log.With(zap.String("cid", scid), zap.String("attr_key", key), zap.String("attr_val", val))
 	)
-	containerID := new(cid.ID)
-	if err := containerID.DecodeString(scid); err != nil {
+
+	containerID, err := utils.GetContainerID(d.appCtx, scid, d.containerResolver)
+	if err != nil {
 		log.Error("wrong container id", zap.Error(err))
-		response.Error(c, "wrong container id", httpStatus)
+		response.Error(c, "wrong container id", fasthttp.StatusBadRequest)
 		return
 	}
 
@@ -370,14 +389,14 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 	prefix, _ := url.QueryUnescape(c.UserValue("prefix").(string))
 	log := d.log.With(zap.String("cid", scid), zap.String("prefix", prefix))
 
-	containerID := new(cid.ID)
-	if err := containerID.DecodeString(scid); err != nil {
+	containerID, err := utils.GetContainerID(d.appCtx, scid, d.containerResolver)
+	if err != nil {
 		log.Error("wrong container id", zap.Error(err))
 		response.Error(c, "wrong container id", fasthttp.StatusBadRequest)
 		return
 	}
 
-	if err := tokens.StoreBearerToken(c); err != nil {
+	if err = tokens.StoreBearerToken(c); err != nil {
 		log.Error("could not fetch and store bearer token", zap.Error(err))
 		response.Error(c, "could not fetch and store bearer token: "+err.Error(), fasthttp.StatusBadRequest)
 		return
