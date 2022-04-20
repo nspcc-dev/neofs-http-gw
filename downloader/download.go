@@ -98,7 +98,7 @@ func (r request) receiveFile(clnt *pool.Pool, objectAddress *address.Address) {
 	)
 	if err = tokens.StoreBearerToken(r.RequestCtx); err != nil {
 		r.log.Error("could not fetch and store bearer token", zap.Error(err))
-		response.Error(r.RequestCtx, "could not fetch and store bearer token", fasthttp.StatusBadRequest)
+		response.Error(r.RequestCtx, "could not fetch and store bearer token: "+err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
 
@@ -162,7 +162,7 @@ func (r request) receiveFile(clnt *pool.Pool, objectAddress *address.Address) {
 		})
 		if err != nil && err != io.EOF {
 			r.log.Error("could not detect Content-Type from payload", zap.Error(err))
-			response.Error(r.RequestCtx, "could not detect Content-Type from payload", fasthttp.StatusBadRequest)
+			response.Error(r.RequestCtx, "could not detect Content-Type from payload: "+err.Error(), fasthttp.StatusBadRequest)
 			return
 		}
 
@@ -316,7 +316,7 @@ func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, *pool.P
 	res, err := d.search(c, containerID, key, val, object.MatchStringEqual)
 	if err != nil {
 		log.Error("could not search for objects", zap.Error(err))
-		response.Error(c, "could not search for objects", fasthttp.StatusBadRequest)
+		response.Error(c, "could not search for objects: "+err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
 
@@ -333,7 +333,7 @@ func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, *pool.P
 		}
 
 		log.Error("read object list failed", zap.Error(err))
-		response.Error(c, "read object list failed", fasthttp.StatusBadRequest)
+		response.Error(c, "read object list failed: "+err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
 
@@ -372,14 +372,14 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 
 	if err := tokens.StoreBearerToken(c); err != nil {
 		log.Error("could not fetch and store bearer token", zap.Error(err))
-		response.Error(c, "could not fetch and store bearer token", fasthttp.StatusBadRequest)
+		response.Error(c, "could not fetch and store bearer token: "+err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
 
 	resSearch, err := d.search(c, containerID, attributeFilePath, prefix, object.MatchCommonPrefix)
 	if err != nil {
 		log.Error("could not search for objects", zap.Error(err))
-		response.Error(c, "could not search for objects", fasthttp.StatusBadRequest)
+		response.Error(c, "could not search for objects: "+err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
 
@@ -457,7 +457,7 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 	})
 	if errIter != nil {
 		log.Error("iterating over selected objects failed", zap.Error(errIter))
-		response.Error(c, "iterating over selected objects", fasthttp.StatusBadRequest)
+		response.Error(c, "iterating over selected objects: "+errIter.Error(), fasthttp.StatusBadRequest)
 		return
 	} else if !called {
 		log.Error("objects not found")
@@ -471,7 +471,7 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 
 	if err != nil {
 		log.Error("file streaming failure", zap.Error(err))
-		response.Error(c, "file streaming failure", fasthttp.StatusInternalServerError)
+		response.Error(c, "file streaming failure: "+err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
 }

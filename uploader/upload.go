@@ -95,12 +95,12 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		epochDuration, err := getEpochDurations(c, u.pool)
 		if err != nil {
 			log.Error("could not get epoch durations from network info", zap.Error(err))
-			response.Error(c, "could parse expiration header, try expiration in epoch", fasthttp.StatusBadRequest)
+			response.Error(c, "could not get epoch durations from network info: "+err.Error(), fasthttp.StatusBadRequest)
 			return
 		}
 		if err = prepareExpirationHeader(filtered, epochDuration); err != nil {
-			log.Error("could not prepare expiration header", zap.Error(err))
-			response.Error(c, "could parse expiration header, try expiration in epoch", fasthttp.StatusBadRequest)
+			log.Error("could not parse expiration header", zap.Error(err))
+			response.Error(c, "could not parse expiration header: "+err.Error(), fasthttp.StatusBadRequest)
 			return
 		}
 	}
@@ -144,7 +144,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 
 	if idObj, err = u.pool.PutObject(ctx, prm); err != nil {
 		log.Error("could not store file in neofs", zap.Error(err))
-		response.Error(c, "could not store file in neofs", fasthttp.StatusBadRequest)
+		response.Error(c, "could not store file in neofs: "+err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
 
@@ -153,8 +153,8 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 
 	// Try to return the response, otherwise, if something went wrong, throw an error.
 	if err = newPutResponse(addr).encode(c); err != nil {
-		log.Error("could not prepare response", zap.Error(err))
-		response.Error(c, "could not prepare response", fasthttp.StatusBadRequest)
+		log.Error("could not encode response", zap.Error(err))
+		response.Error(c, "could not encode response", fasthttp.StatusBadRequest)
 
 		return
 	}
