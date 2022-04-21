@@ -31,6 +31,7 @@ const (
 
 // Uploader is an upload request handler.
 type Uploader struct {
+	appCtx                 context.Context
 	log                    *zap.Logger
 	pool                   *pool.Pool
 	enableDefaultTimestamp bool
@@ -44,8 +45,8 @@ type epochDurations struct {
 
 // New creates a new Uploader using specified logger, connection pool and
 // other options.
-func New(log *zap.Logger, conns *pool.Pool, enableDefaultTimestamp bool) *Uploader {
-	return &Uploader{log, conns, enableDefaultTimestamp}
+func New(ctx context.Context, log *zap.Logger, conns *pool.Pool, enableDefaultTimestamp bool) *Uploader {
+	return &Uploader{ctx, log, conns, enableDefaultTimestamp}
 }
 
 // Upload handles multipart upload request.
@@ -134,15 +135,12 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	obj.SetOwnerID(id)
 	obj.SetAttributes(attributes...)
 
-	ctx, cancel := context.WithCancel(c)
-	defer cancel()
-
 	var prm pool.PrmObjectPut
 	prm.SetHeader(*obj)
 	prm.SetPayload(file)
 	prm.UseBearer(bt)
 
-	if idObj, err = u.pool.PutObject(ctx, prm); err != nil {
+	if idObj, err = u.pool.PutObject(u.appCtx, prm); err != nil {
 		log.Error("could not store file in neofs", zap.Error(err))
 		response.Error(c, "could not store file in neofs", fasthttp.StatusBadRequest)
 		return
