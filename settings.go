@@ -107,8 +107,8 @@ func settings() *viper.Viper {
 	// web-server:
 	v.SetDefault(cfgWebReadBufferSize, 4096)
 	v.SetDefault(cfgWebWriteBufferSize, 4096)
-	v.SetDefault(cfgWebReadTimeout, time.Second*15)
-	v.SetDefault(cfgWebWriteTimeout, time.Minute)
+	v.SetDefault(cfgWebReadTimeout, time.Minute*10)
+	v.SetDefault(cfgWebWriteTimeout, time.Minute*5)
 	v.SetDefault(cfgWebStreamRequestBody, true)
 	v.SetDefault(cfgWebMaxRequestBodySize, fasthttp.DefaultMaxRequestBodySize)
 
