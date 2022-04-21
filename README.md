@@ -125,6 +125,11 @@ You can tune HTTP read and write buffer sizes as well as timeouts with
 `HTTP_GW_WEB_WRITE_BUFFER_SIZE` and `HTTP_GW_WEB_WRITE_TIMEOUT` environment
 variables.
 
+**Note:** to allow upload and download of big data streams, disable read
+and write timeouts correspondingly. To do that, set `HTTP_GW_WEB_READ_TIMEOUT=0`
+and `HTTP_GW_WEB_WRITE_TIMEOUT=0`. Otherwise, HTTP Gateway will terminate
+request with data stream after timeout.
+
 `HTTP_GW_WEB_STREAM_REQUEST_BODY` environment variable can be used to disable
 request body streaming (effectively it'll make gateway accept file completely
 first and only then try sending it to NeoFS).
