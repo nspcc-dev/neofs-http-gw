@@ -65,8 +65,8 @@ type readCloser struct {
 	io.Closer
 }
 
-// initializes io.Reader with limited size and detects Content-Type from it.
-// Returns r's error directly. Also returns processed data.
+// initializes io.Reader with the limited size and detects Content-Type from it.
+// Returns r's error directly. Also returns the processed data.
 func readContentType(maxSize uint64, rInit func(uint64) (io.Reader, error)) (string, []byte, error) {
 	if maxSize > sizeToDetectType {
 		maxSize = sizeToDetectType
@@ -166,7 +166,7 @@ func (r request) receiveFile(clnt *pool.Pool, objectAddress *address.Address) {
 			return
 		}
 
-		// reset payload reader since part of the data has been read
+		// reset payload reader since a part of the data has been read
 		var headReader io.Reader = bytes.NewReader(payloadHead)
 
 		if err != io.EOF { // otherwise, we've already read full payload
@@ -273,7 +273,7 @@ func (d *Downloader) DownloadByAddress(c *fasthttp.RequestCtx) {
 	d.byAddress(c, request.receiveFile)
 }
 
-// byAddress is wrapper for function (e.g. request.headObject, request.receiveFile) that
+// byAddress is a wrapper for function (e.g. request.headObject, request.receiveFile) that
 // prepares request and object address to it.
 func (d *Downloader) byAddress(c *fasthttp.RequestCtx, f func(request, *pool.Pool, *address.Address)) {
 	var (
@@ -297,7 +297,7 @@ func (d *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
 	d.byAttribute(c, request.receiveFile)
 }
 
-// byAttribute is wrapper similar to byAddress.
+// byAttribute is a wrapper similar to byAddress.
 func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, *pool.Pool, *address.Address)) {
 	var (
 		httpStatus = fasthttp.StatusBadRequest

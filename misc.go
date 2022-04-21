@@ -5,6 +5,6 @@ package main
 const Prefix = "HTTP_GW"
 
 var (
-	// Version is gateway version.
+	// Version is the gateway version.
 	Version = "dev"
 )

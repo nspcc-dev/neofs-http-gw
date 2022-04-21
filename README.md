@@ -13,7 +13,7 @@
 # NeoFS HTTP Gateway
 
 NeoFS HTTP Gateway bridges NeoFS internal protocol and HTTP standard.
-- you can download one file per request from NeoFS Network
+- you can download one file per request from the NeoFS Network
 - you can upload one file per request into the NeoFS Network
 
 ## Installation
@@ -35,8 +35,8 @@ version      Show current version
 ```
 
 Or you can also use a [Docker
-image](https://hub.docker.com/r/nspccdev/neofs-http-gw) provided for released
-(and occasionally unreleased) versions of gateway (`:latest` points to the
+image](https://hub.docker.com/r/nspccdev/neofs-http-gw) provided for the released
+(and occasionally unreleased) versions of the gateway (`:latest` points to the
 latest stable release).
 
 ## Execution
@@ -47,8 +47,8 @@ can be done either via `-p` parameter or via `HTTP_GW_PEERS_<N>_ADDRESS` and
 `HTTP_GW_PEERS_<N>_WEIGHT` environment variables (the gate supports multiple
 NeoFS nodes with weighted load balancing).
 
-If you're launching HTTP gateway in bundle with [neofs-dev-env](https://github.com/nspcc-dev/neofs-dev-env), 
-you can get an IP address of the node in output of `make hosts` command 
+If you launch HTTP gateway in bundle with [neofs-dev-env](https://github.com/nspcc-dev/neofs-dev-env), 
+you can get the IP address of the node in the output of `make hosts` command 
 (with s0*.neofs.devenv name).
 
 These two commands are functionally equivalent, they run the gate with one
@@ -89,9 +89,9 @@ This command will make gateway use 192.168.130.71 while it is healthy. Otherwise
 192.168.130.72 for 90% of requests and 192.168.130.73 for remaining 10%.
 
 ### Keys
-You can provide wallet via `--wallet` or `-w` flag also you can specify account address using `--address` 
-(if no address provided default one will be used). If wallet is used you need to set `HTTP_GW_WALLET_PASSPHRASE` variable to decrypt wallet. 
-If no wallet provided gateway autogenerates key pair it will use for NeoFS requests.
+You can provide a wallet via `--wallet` or `-w` flag. You can also specify the account address using `--address` 
+(if no address provided default one will be used). If wallet is used, you need to set `HTTP_GW_WALLET_PASSPHRASE` variable to decrypt the wallet. 
+If no wallet provided, the gateway autogenerates a key pair it will use for NeoFS requests.
 ```
 $ neofs-http-gw -p $NEOFS_NODE -w $WALLET_PATH --address $ACCOUNT_ADDRESS
 ```
@@ -105,10 +105,10 @@ $ neofs-http-gw -p 192.168.130.72:8080 -w wallet.json --address NfgHwwTi3wHAS8aF
 Gateway binds to `0.0.0.0:8082` by default and you can change that with
 `--listen_address` option.
 
-It can also provide TLS interface for its users, just specify paths to key and
+It can also provide TLS interface for its users, just specify paths to the key and
 certificate files via `--tls_key` and `--tls_certificate` parameters. Note
-that using these options makes gateway TLS-only, if you need to serve both TLS
-and plain text HTTP you either have to run two gateway instances or use some
+that using these options makes gateway TLS-only. If you need to serve both TLS
+and plain text HTTP, you either have to run two gateway instances or use some
 external redirecting solution.
 
 Example to bind to `192.168.130.130:443` and serve TLS there:
@@ -126,7 +126,7 @@ You can tune HTTP read and write buffer sizes as well as timeouts with
 variables.
 
 `HTTP_GW_WEB_STREAM_REQUEST_BODY` environment variable can be used to disable
-request body streaming (effectively it'll make gateway accept file completely
+request body streaming (effectively it'll make the gateway accept the file completely
 first and only then try sending it to NeoFS).
 
 `HTTP_GW_WEB_MAX_REQUEST_BODY_SIZE` controls maximum request body size
@@ -140,17 +140,17 @@ variable to control this behavior.
 
 ### Monitoring and metrics
 
-Pprof and Prometheus are integrated into the gateway, but not enabled by
+Pprof and Prometheus are integrated into the gateway, but they are not enabled by
 default. To enable them use `--pprof` and `--metrics` flags or
 `HTTP_GW_PPROF`/`HTTP_GW_METRICS` environment variables.
 
 ### Timeouts
 
 You can tune gRPC interface parameters with `--connect_timeout` (for
-connection to node) and `--request_timeout` (for request processing over
+connection to a node) and `--request_timeout` (for request processing over
 established connection) options.
 
-gRPC-level checks allow gateway to detect dead peers, but it declares them
+gRPC-level checks allow the gateway to detect dead peers, but it declares them
 unhealthy at pool level once per `--rebalance_timer` interval, so check for it
 if needed.
 
@@ -189,16 +189,16 @@ supported.
 Before uploading or downloading a file make sure you have a prepared container. 
 You can create it with instructions below.
 
-Also in case of downloading you need to have a file inside a container.
+Also ,in case of downloading, you need to have a file inside a container.
 
 #### Create a container
 
-You can create  a container via [neofs-cli](https://github.com/nspcc-dev/neofs-node/releases):
+You can create a container via [neofs-cli](https://github.com/nspcc-dev/neofs-node/releases):
 ```
 $ neofs-cli -r $NEOFS_NODE -k $KEY container create --policy $POLICY --basic-acl $ACL
 ```
-where `$KEY` can be a path to private key file (as raw bytes), a hex string or 
-(unencrypted) WIF string,   
+where `$KEY` can be a path to a private key file (as raw bytes), a hex string or 
+a (unencrypted) WIF string,   
 `$ACL` -- hex encoded basic ACL value or keywords 'private, 'public-read', 'public-read-write' and  
 `$POLICY` -- QL-encoded or JSON-encoded placement policy or path to file with it
 
@@ -207,7 +207,7 @@ For example:
 $ neofs-cli -r 192.168.130.72:8080 -k 6PYLKJhiSub5imt6WCVy6Quxtd9xu176omev1vWYovzkAQCTSQabAAQXii container create --policy "REP 3" --basic-acl public --await
 ```
 
-If you launched nodes via [neofs-dev-env](https://github.com/nspcc-dev/neofs-dev-env)
+If you have launched nodes via [neofs-dev-env](https://github.com/nspcc-dev/neofs-dev-env),
 you can get the key value from `wallets/wallet.json` or write the path to 
 the file `wallets/wallet.key`.
 
@@ -274,7 +274,7 @@ $ wget http://localhost:8082/get_by_attribute/88GdaZFTcYJn1dqiSECss8kKPmmun6d6Bf
 $ wget http://localhost:8082/get_by_attribute/88GdaZFTcYJn1dqiSECss8kKPmmun6d6BfvC4zhwfLYM/FileName/cat%25jpeg # means 'cat%jpeg'
 ```
 
-Some other user-defined attribute:
+Some other user-defined attributes:
 
 ```
 $ wget http://localhost:8082/get_by_attribute/Dxhf4PNprrJHWWTG5RGLdfLkJiSQ3AQqit1MSnEPRkDZ/Ololo/100500
@@ -327,10 +327,10 @@ set of reply headers generated using the following rules:
 
 ### Uploading
 
-You can POST files to `/upload/$CID` path where `$CID` is container ID. The
+You can POST files to `/upload/$CID` path where `$CID` is a container ID. The
 request must contain multipart form with mandatory `filename` parameter. Only
 one part in multipart form will be processed, so to upload another file just
-issue new POST request.
+issue a new POST request.
 
 Example request:
 
@@ -340,7 +340,7 @@ $ curl -F 'file=@cat.jpeg;filename=cat.jpeg' http://localhost:8082/upload/Dxhf4P
 
 Chunked encoding is supported by the server (but check for request read
 timeouts if you're planning some streaming). You can try streaming support
-with large file piped through named FIFO pipe:
+with a large file piped through named FIFO pipe:
 
 ```
 $ mkfifo pipe
@@ -378,7 +378,7 @@ which transforms to `X-Attribute-Neofs-Expiration-Epoch`. So you can provide exp
 
 ---
 
-For successful uploads you get JSON data in reply body with container and
+For successful uploads you get JSON data in reply body with a container and
 object ID, like this:
 ```
 {
@@ -391,7 +391,7 @@ object ID, like this:
 
 You can always upload files to public containers (open for anyone to put
 objects into), but for restricted containers you need to explicitly allow PUT
-operations for request signed with your HTTP Gateway keys.
+operations for a request signed with your HTTP Gateway keys.
 
 If your don't want to manage gateway's secret keys and adjust eACL rules when
 gateway configuration changes (new gate, key rotation, etc) or you plan to use
@@ -405,23 +405,23 @@ documentation for more details). There are two options to pass them to gateway:
    credentials field
  * "Bearer" cookie with base64-encoded token contents
 
-For example you have a mobile application frontend with a backend part storing
-data in NeoFS. When user authorizes in mobile app, the backend issues a NeoFS
-Bearer token and provides it to the frontend. Then the mobile app may generate
+For example, you have a mobile application frontend with a backend part storing
+data in NeoFS. When a user authorizes in the mobile app, the backend issues a NeoFS
+Bearer token and provides it to the frontend. Then, the mobile app may generate
 some data and upload it via any available NeoFS HTTP Gateway by adding
 the corresponding header to the upload request. Accessing the ACL protected data
 works the same way.
 
 ##### Example
-In order to generate bearer token, you need to know container owner key and 
-address of sender who will be do request to NeoFS (in our case it's gateway wallet address).
+In order to generate a bearer token, you need to know the container owner key and 
+the address of the sender who will do the request to NeoFS (in our case, it's a gateway wallet address).
 
 Suppose we have:
 * **KxDgvEKzgSBPPfuVfw67oPQBSjidEiqTHURKSDL1R7yGaGYAeYnr** (container owner key)
 * **NhVtreTTCoqsMQV5Wp55fqnriiUCpEaKm3** (token owner address)
 * **BJeErH9MWmf52VsR1mLWKkgF3pRm3FkubYxM7TZkBP4K** (container id)
 
-Firstly we need to encode container id and sender address to base64 (now it's base58). 
+Firstly, we need to encode the container id and the sender address to base64 (now it's base58). 
 So use **base58** and **base64** utils.
 
 1. Encoding container id:
@@ -436,7 +436,7 @@ $ echo 'NhVtreTTCoqsMQV5Wp55fqnriiUCpEaKm3' | base58 --decode | base64
 # output: NezFK4ujidF+X7bB88uzREQzRQeAvdj3Gg==
 ```
 
-Now we can form Bearer token (10000 is liftetime expiration in epoch) and save it to **bearer.json**:
+Now, we can form a Bearer token (10000 is liftetime expiration in epoch) and save it to **bearer.json**:
 ```
 {
     "body": {
@@ -463,17 +463,17 @@ Now we can form Bearer token (10000 is liftetime expiration in epoch) and save i
 }
 ```
 
-Then sign it with container owner key:
+Next, sign it with the container owner key:
 ```
 $ neofs-cli util sign bearer-token --from bearer.json --to signed.json -k KxDgvEKzgSBPPfuVfw67oPQBSjidEiqTHURKSDL1R7yGaGYAeYnr
 ```
-Encoding to base64 to use via header:
+Encoding to base64 to use via the header:
 ```
 $ base64 -w 0 signed.json 
 # output: Ck4KKgoECAIQBhIiCiCZGdlbN7DPGPMg9rsWqV+p2XdMzUqknRiexewSFp8kmBIbChk17MUri6OJ0X5ftsHzy7NERDNFB4C92PcaGgMIkE4SZgohAxpsb7vfAso1F0X6hrm6WpRS14WsT3/Ct1SMoqRsT89KEkEEGxKi8GjKSf52YqhppgaOTQHbUsL3jn7SHLqS3ndAQ7NtAATnmRHleZw2V2xRRSRBQdjDC05KK83LhdSax72Fsw==
 ```
 
-After that Bearer token can be used:
+After that, the Bearer token can be used:
 
 ```
 $ curl -F 'file=@cat.jpeg;filename=cat.jpeg' -H "Authorization: Bearer Ck4KKgoECAIQBhIiCiCZGdlbN7DPGPMg9rsWqV+p2XdMzUqknRiexewSFp8kmBIbChk17MUri6OJ0X5ftsHzy7NERDNFB4C92PcaGgMIkE4SZgohAxpsb7vfAso1F0X6hrm6WpRS14WsT3/Ct1SMoqRsT89KEkEEGxKi8GjKSf52YqhppgaOTQHbUsL3jn7SHLqS3ndAQ7NtAATnmRHleZw2V2xRRSRBQdjDC05KK83LhdSax72Fsw==" \
@@ -495,7 +495,7 @@ For example:
 $ neofs-cli --key KxDgvEKzgSBPPfuVfw67oPQBSjidEiqTHURKSDL1R7yGaGYAeYnr --basic-acl 0x0FFFCFFF -r 192.168.130.72:8080 container create --policy "REP 3"  --await
 ```
 
-To deny access to the container without a token, set the eACL rules:
+To deny access to a container without a token, set the eACL rules:
 ```
 $ neofs-cli --key KxDgvEKzgSBPPfuVfw67oPQBSjidEiqTHURKSDL1R7yGaGYAeYnr -r 192.168.130.72:8080 container set-eacl --table eacl.json --await --cid BJeErH9MWmf52VsR1mLWKkgF3pRm3FkubYxM7TZkBP4K
 ```

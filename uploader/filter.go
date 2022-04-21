@@ -15,7 +15,7 @@ import (
 var neofsAttributeHeaderPrefixes = [...][]byte{[]byte("Neofs-"), []byte("NEOFS-"), []byte("neofs-")}
 
 func systemTranslator(key, prefix []byte) []byte {
-	// replace specified prefix with `__NEOFS__`
+	// replace the specified prefix with `__NEOFS__`
 	key = bytes.Replace(key, prefix, []byte(utils.SystemAttributePrefix), 1)
 
 	// replace `-` with `_`
@@ -30,12 +30,12 @@ func filterHeaders(l *zap.Logger, header *fasthttp.RequestHeader) map[string]str
 	prefix := []byte(utils.UserAttributeHeaderPrefix)
 
 	header.VisitAll(func(key, val []byte) {
-		// checks that key and val not empty
+		// checks that the key and the val not empty
 		if len(key) == 0 || len(val) == 0 {
 			return
 		}
 
-		// checks that key has attribute prefix
+		// checks that the key has attribute prefix
 		if !bytes.HasPrefix(key, prefix) {
 			return
 		}
@@ -51,7 +51,7 @@ func filterHeaders(l *zap.Logger, header *fasthttp.RequestHeader) map[string]str
 			}
 		}
 
-		// checks that attribute key not empty
+		// checks that the attribute key is not empty
 		if len(key) == 0 {
 			return
 		}
