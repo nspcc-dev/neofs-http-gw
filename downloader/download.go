@@ -31,7 +31,8 @@ import (
 
 type request struct {
 	*fasthttp.RequestCtx
-	log *zap.Logger
+	appCtx context.Context
+	log    *zap.Logger
 }
 
 var errObjectNotFound = errors.New("object not found")
@@ -106,7 +107,7 @@ func (r request) receiveFile(clnt *pool.Pool, objectAddress *address.Address) {
 	prm.SetAddress(*objectAddress)
 	prm.UseBearer(bearerToken(r.RequestCtx))
 
-	rObj, err := clnt.GetObject(r.RequestCtx, prm)
+	rObj, err := clnt.GetObject(r.appCtx, prm)
 	if err != nil {
 		r.handleNeoFSErr(err, start)
 		return
@@ -247,6 +248,7 @@ func (r *request) handleNeoFSErr(err error, start time.Time) {
 
 // Downloader is a download request handler.
 type Downloader struct {
+	appCtx   context.Context
 	log      *zap.Logger
 	pool     *pool.Pool
 	settings Settings
@@ -257,13 +259,14 @@ type Settings struct {
 }
 
 // New creates an instance of Downloader using specified options.
-func New(log *zap.Logger, settings Settings, conns *pool.Pool) *Downloader {
-	return &Downloader{log: log, pool: conns, settings: settings}
+func New(ctx context.Context, log *zap.Logger, settings Settings, conns *pool.Pool) *Downloader {
+	return &Downloader{appCtx: ctx, log: log, pool: conns, settings: settings}
 }
 
 func (d *Downloader) newRequest(ctx *fasthttp.RequestCtx, log *zap.Logger) *request {
 	return &request{
 		RequestCtx: ctx,
+		appCtx:     d.appCtx,
 		log:        log,
 	}
 }
@@ -354,7 +357,7 @@ func (d *Downloader) search(c *fasthttp.RequestCtx, cid *cid.ID, key, val string
 	prm.SetFilters(filters)
 	prm.UseBearer(bearerToken(c))
 
-	return d.pool.SearchObjects(c, prm)
+	return d.pool.SearchObjects(d.appCtx, prm)
 }
 
 // DownloadZipped handles zip by prefix requests.
@@ -423,7 +426,7 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 		prm.SetAddress(addr)
 		prm.UseBearer(btoken)
 
-		resGet, err = d.pool.GetObject(c, prm)
+		resGet, err = d.pool.GetObject(d.appCtx, prm)
 		if err != nil {
 			err = fmt.Errorf("get NeoFS object: %v", err)
 			return true

@@ -208,8 +208,8 @@ func (a *app) Serve(ctx context.Context) {
 		close(a.webDone)
 	}()
 	edts := a.cfg.GetBool(cfgUploaderHeaderEnableDefaultTimestamp)
-	uploader := uploader.New(a.log, a.pool, edts)
-	downloader := downloader.New(a.log, downloader.Settings{ZipCompression: a.cfg.GetBool(cfgZipCompression)}, a.pool)
+	uploader := uploader.New(ctx, a.log, a.pool, edts)
+	downloader := downloader.New(ctx, a.log, downloader.Settings{ZipCompression: a.cfg.GetBool(cfgZipCompression)}, a.pool)
 	// Configure router.
 	r := router.New()
 	r.RedirectTrailingSlash = true

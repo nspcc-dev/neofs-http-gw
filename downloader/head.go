@@ -39,7 +39,7 @@ func (r request) headObject(clnt *pool.Pool, objectAddress *address.Address) {
 	prm.SetAddress(*objectAddress)
 	prm.UseBearer(btoken)
 
-	obj, err := clnt.HeadObject(r.RequestCtx, prm)
+	obj, err := clnt.HeadObject(r.appCtx, prm)
 	if err != nil {
 		r.handleNeoFSErr(err, start)
 		return
@@ -79,7 +79,7 @@ func (r request) headObject(clnt *pool.Pool, objectAddress *address.Address) {
 			prmRange.SetLength(sz)
 			prmRange.UseBearer(btoken)
 
-			return clnt.ObjectRange(r.RequestCtx, prmRange)
+			return clnt.ObjectRange(r.appCtx, prmRange)
 		})
 		if err != nil && err != io.EOF {
 			r.handleNeoFSErr(err, start)
