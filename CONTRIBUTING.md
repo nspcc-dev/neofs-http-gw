@@ -9,14 +9,14 @@ everyone. Please follow the guidelines:
 
 - Open an issue first, to discuss a new feature or enhancement.
 
-- Write tests, and make sure the test suite passes locally and on CI.
+- Write tests and make sure the test suite passes locally and on CI.
 
-- Open a pull request, and reference the relevant issue(s).
+- Open a pull request and reference the relevant issue(s).
 
 - Make sure your commits are logically separated and have good comments
   explaining the details of your change.
 
-- After receiving feedback, amend your commits or add new ones as
+- After receiving a feedback, amend your commits or add new ones as
   appropriate.
 
 - **Have fun!**
@@ -48,7 +48,7 @@ $ git merge upstream/master
 
 ### Create your feature branch
 Before making code changes, make sure you create a separate branch for these
-changes. Maybe you will find it convenient to name branch in
+changes. Maybe you will find it convenient to name a branch in
 `<type>/<Issue>-<changes_topic>` format.
 
 ```
@@ -98,7 +98,7 @@ reviewed and approved, it will be merged.
 ## DCO Sign off
 
 All authors to the project retain copyright to their work. However, to ensure
-that they are only submitting work that they have rights to, we are requiring
+that they are only submitting work that they have rights to, we require
 everyone to acknowledge this by signing their work.
 
 Any copyright notices in this repository should specify the authors as "the
@@ -110,7 +110,7 @@ To sign your work, just add a line like this at the end of your commit message:
 Signed-off-by: Samii Sakisaka <samii@nspcc.ru>
 ```
 
-This can easily be done with the `--signoff` option to `git commit`.
+This can be easily done with the `--signoff` option to `git commit`.
 
 By doing this you state that you can certify the following (from [The Developer
 Certificate of Origin](https://developercertificate.org/)):
