@@ -2,6 +2,23 @@
 
 This document outlines major changes between releases.
 
+## [0.20.0] - 2022-04-29
+
+### Fixed
+- Get rid of data race on server shutdown (#145)
+- Improved English in docs and comments (#153)
+- Use `FilePath` to download zip (#150)
+
+### Added
+- Support container name NNS resolving (#142)
+
+### Changed
+- Updated docs (#133, #140)
+- Increased default read/write timeouts (#154) 
+- Updated SDK (#137, #139)
+- Updated go version to 1.17 (#143)
+- Improved error messages (#144)
+
 ## [0.19.0] - 2022-03-16
 
 ### Fixed
@@ -146,3 +163,4 @@ releases.
 [0.17.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.16.1...v0.17.0
 [0.18.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.17.0...v0.18.0
 [0.19.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.18.0...v0.19.0
+[0.20.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.19.0...v0.20.0
