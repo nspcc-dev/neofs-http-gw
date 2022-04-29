@@ -2,8 +2,8 @@ package uploader
 
 import (
 	"io"
-	"mime/multipart"
 
+	"github.com/nspcc-dev/neofs-http-gw/uploader/multipart"
 	"go.uber.org/zap"
 )
 
@@ -15,6 +15,8 @@ type MultipartFile interface {
 }
 
 func fetchMultipartFile(l *zap.Logger, r io.Reader, boundary string) (MultipartFile, error) {
+	// To have a custom buffer (3mb) the custom multipart reader is used.
+	// https://github.com/nspcc-dev/neofs-http-gw/issues/148
 	reader := multipart.NewReader(r, boundary)
 
 	for {
