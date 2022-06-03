@@ -89,8 +89,6 @@ func fetchBearerToken(ctx *fasthttp.RequestCtx) (*bearer.Token, error) {
 		} else if err = tkn.Unmarshal(data); err != nil {
 			lastErr = fmt.Errorf("can't unmarshal bearer token: %w", err)
 			continue
-		} else if tkn == nil {
-			continue
 		}
 
 		return tkn, nil
