@@ -97,7 +97,7 @@ docker/lint:
 	-v `pwd`:/src \
 	-u `stat -c "%u:%g" .` \
 	--env HOME=/src \
-	golangci/golangci-lint:v1.39 bash -c 'cd /src/ && make lint'
+	golangci/golangci-lint:v1.46.2 bash -c 'cd /src/ && make lint'
 
 # Print version
 version:
