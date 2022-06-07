@@ -2,6 +2,7 @@
 
 REPO ?= $(shell go list -m)
 VERSION ?= $(shell git describe --tags --dirty --always)
+GO_VERSION ?= 1.17
 BUILD ?= $(shell date -u --iso=seconds)
 
 HUB_IMAGE ?= nspccdev/neofs-http-gw
@@ -10,9 +11,9 @@ HUB_TAG ?= "$(shell echo ${VERSION} | sed 's/^v//')"
 # List of binaries to build. For now just one.
 BINDIR = bin
 DIRS = $(BINDIR)
-BINS = "$(BINDIR)/neofs-http-gw"
+BINS = $(BINDIR)/neofs-http-gw
 
-.PHONY: help all dep clean fmts fmt imports test cover lint docker/lint
+.PHONY: help all $(BINS) $(DIRS) docker/$(BINS) dep test cover fmts fmt imports image image-push dirty-image lint docker/lint version clean
 
 # Make all binaries
 all: $(BINS)
@@ -28,6 +29,15 @@ $(BINS): $(DIRS) dep
 $(DIRS):
 	@echo "⇒ Ensure dir: $@"
 	@mkdir -p $@
+
+docker/$(BINS):
+	@echo "=> Building binary using clean Docker environment"
+	@docker run --rm -t \
+	-v `pwd`:/src \
+	-w /src \
+	-u "$$(id -u):$$(id -g)" \
+	--env HOME=/src \
+	golang:$(GO_VERSION) make $(BINS)
 
 # Pull go dependencies
 dep:
