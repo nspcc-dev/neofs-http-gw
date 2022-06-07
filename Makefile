@@ -3,6 +3,7 @@
 REPO ?= $(shell go list -m)
 VERSION ?= $(shell git describe --tags --dirty --always)
 GO_VERSION ?= 1.17
+LINT_VERSION ?= 1.46.2
 BUILD ?= $(shell date -u --iso=seconds)
 
 HUB_IMAGE ?= nspccdev/neofs-http-gw
@@ -13,7 +14,7 @@ BINDIR = bin
 DIRS = $(BINDIR)
 BINS = $(BINDIR)/neofs-http-gw
 
-.PHONY: help all $(BINS) $(DIRS) docker/$(BINS) dep test cover fmts fmt imports image image-push dirty-image lint docker/lint version clean
+.PHONY: all $(BINS) $(DIRS) docker/$(BINS) dep test cover fmt image image-push dirty-image lint docker/lint version clean
 
 # Make all binaries
 all: $(BINS)
@@ -59,18 +60,10 @@ cover:
 	@go test -v -race ./... -coverprofile=coverage.txt -covermode=atomic
 	@go tool cover -html=coverage.txt -o coverage.html
 
-# Run all code formatters
-fmts: fmt imports
-
 # Reformat code
 fmt:
 	@echo "⇒ Processing gofmt check"
 	@GO111MODULE=on gofmt -s -w ./
-
-# Reformat imports
-imports:
-	@echo "⇒ Processing goimports check"
-	@GO111MODULE=on goimports -w ./
 
 # Build clean Docker image
 image:
@@ -107,21 +100,11 @@ docker/lint:
 	-v `pwd`:/src \
 	-u `stat -c "%u:%g" .` \
 	--env HOME=/src \
-	golangci/golangci-lint:v1.46.2 bash -c 'cd /src/ && make lint'
+	golangci/golangci-lint:v$(LINT_VERSION) bash -c 'cd /src/ && make lint'
 
 # Print version
 version:
 	@echo $(VERSION)
-
-# Show this help prompt
-help:
-	@echo '  Usage:'
-	@echo ''
-	@echo '    make <target>'
-	@echo ''
-	@echo '  Targets:'
-	@echo ''
-	@awk '/^#/{ comment = substr($$0,3) } comment && /^[a-zA-Z][a-zA-Z0-9_-]+ ?:/{ print "   ", $$1, comment }' $(MAKEFILE_LIST) | column -t -s ':' | grep -v 'IGNORE' | sort -u
 
 # Clean up
 clean:
