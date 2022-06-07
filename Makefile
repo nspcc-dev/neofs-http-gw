@@ -14,10 +14,19 @@ BINDIR = bin
 DIRS = $(BINDIR)
 BINS = $(BINDIR)/neofs-http-gw
 
-.PHONY: all $(BINS) $(DIRS) docker/$(BINS) dep test cover fmt image image-push dirty-image lint docker/lint version clean
+.PHONY: all docker/all $(BINS) $(DIRS) docker/$(BINS) dep test cover fmt image image-push dirty-image lint docker/lint version clean
 
 # Make all binaries
 all: $(BINS)
+
+docker/all:
+	@echo "=> Building binary using clean Docker environment"
+	@docker run --rm -t \
+	-v `pwd`:/src \
+	-w /src \
+	-u "$$(id -u):$$(id -g)" \
+	--env HOME=/src \
+	golang:$(GO_VERSION) make all
 
 $(BINS): $(DIRS) dep
 	@echo "⇒ Build $@"
