@@ -30,7 +30,7 @@ Other notable make targets:
 dep          Check and ensure dependencies
 image        Build clean docker image
 dirty-image  Build dirty docker image with host-built binaries
-fmts         Run all code formatters
+fmt          Format the code
 lint         Run linters
 version      Show current version
 ```
