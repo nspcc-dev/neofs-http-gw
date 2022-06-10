@@ -14,19 +14,10 @@ BINDIR = bin
 DIRS = $(BINDIR)
 BINS = $(BINDIR)/neofs-http-gw
 
-.PHONY: all docker/all $(BINS) $(DIRS) docker/$(BINS) dep test cover fmt image image-push dirty-image lint docker/lint version clean
+.PHONY: all $(BINS) $(DIRS) dep docker/ test cover fmt image image-push dirty-image lint docker/lint version clean
 
 # Make all binaries
 all: $(BINS)
-
-docker/all:
-	@echo "=> Building binary using clean Docker environment"
-	@docker run --rm -t \
-	-v `pwd`:/src \
-	-w /src \
-	-u "$$(id -u):$$(id -g)" \
-	--env HOME=/src \
-	golang:$(GO_VERSION) make all
 
 $(BINS): $(DIRS) dep
 	@echo "⇒ Build $@"
@@ -40,15 +31,6 @@ $(DIRS):
 	@echo "⇒ Ensure dir: $@"
 	@mkdir -p $@
 
-docker/$(BINS):
-	@echo "=> Building binary using clean Docker environment"
-	@docker run --rm -t \
-	-v `pwd`:/src \
-	-w /src \
-	-u "$$(id -u):$$(id -g)" \
-	--env HOME=/src \
-	golang:$(GO_VERSION) make $(BINS)
-
 # Pull go dependencies
 dep:
 	@printf "⇒ Download requirements: "
@@ -59,6 +41,17 @@ dep:
 	@CGO_ENABLED=0 \
 	GO111MODULE=on \
 	go mod tidy -v && echo OK
+
+docker/%:
+	$(if $(filter $*,all $(BINS)), \
+		@echo "=> Running 'make $*' in clean Docker environment" && \
+		docker run --rm -t \
+		  -v `pwd`:/src \
+		  -w /src \
+		  -u `stat -c "%u:%g" .` \
+		  --env HOME=/src \
+		  golang:$(GO_VERSION) make $*,\
+	  	@echo "supported docker targets: all $(BINS) lint")
 
 # Run tests
 test:
