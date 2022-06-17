@@ -276,7 +276,7 @@ func makeZipRequest(t *testing.T, url string, names, contents []string) {
 
 	data, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	checkZip(t, data, resp.ContentLength, names, contents)
+	checkZip(t, data, int64(len(data)), names, contents)
 }
 
 func checkZip(t *testing.T, data []byte, length int64, names, contents []string) {
