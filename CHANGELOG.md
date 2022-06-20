@@ -2,6 +2,20 @@
 
 This document outlines major changes between releases.
 
+## [0.21.0] - 2022-06-20
+
+### Fixed
+- Downloading ZIP archive using streaming (#163)
+
+### Added
+- New make target to build app in docker (#159)
+
+### Changed
+- Increased buffer size for file uploading (#148)
+- Updated linter version to v1.46.2 (#161)
+- Updated CodeQL version to v2 (#158)
+
+
 ## [0.20.0] - 2022-04-29
 
 ### Fixed
@@ -164,3 +178,4 @@ releases.
 [0.18.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.17.0...v0.18.0
 [0.19.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.18.0...v0.19.0
 [0.20.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.19.0...v0.20.0
+[0.21.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.20.0...v0.21.0
