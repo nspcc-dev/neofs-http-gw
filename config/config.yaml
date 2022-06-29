@@ -1,7 +1,7 @@
 wallet:
   path: /path/to/wallet.json # Path to wallet.
   address: NfgHwwTi3wHAS8aFAN243C5vGbkYDpqLHP # Account address. If omitted default one will be used.
-  passphrase: pwd # Passphrase to decrypt wallet.
+  passphrase: pwd # Passphrase to decrypt wallet. If you're using a wallet without a password, place '' here.
 
 metrics: true # Enable metrics.
 pprof: true # Enable pprof.
