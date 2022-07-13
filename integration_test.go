@@ -325,11 +325,11 @@ func createDockerContainer(ctx context.Context, t *testing.T, image string) test
 
 func getDefaultConfig() *viper.Viper {
 	v := settings()
-	v.SetDefault(cfgPeers+".0.address", "127.0.0.1:8080")
+	v.SetDefault(cfgPeers+".0.address", "localhost:8080")
 	v.SetDefault(cfgPeers+".0.weight", 1)
 	v.SetDefault(cfgPeers+".0.priority", 1)
 
-	v.SetDefault(cfgRPCEndpoint, "http://127.0.0.1:30333")
+	v.SetDefault(cfgRPCEndpoint, "http://localhost:30333")
 
 	return v
 }
