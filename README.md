@@ -538,3 +538,7 @@ File **eacl.json**:
 
 If enabled, Prometheus metrics are available at `/metrics/` path and Pprof at
 `/debug/pprof`.
+
+## Credits
+
+Please see [CREDITS](CREDITS.md) for details.
