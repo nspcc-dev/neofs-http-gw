@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -168,7 +169,7 @@ func settings() *viper.Viper {
 
 		os.Exit(0)
 	case version != nil && *version:
-		fmt.Printf("NeoFS HTTP Gateway %s\n", Version)
+		fmt.Printf("NeoFS HTTP Gateway\nVersion: %s\nGoVersion: %s\n", Version, runtime.Version())
 		os.Exit(0)
 	}
 
