@@ -16,9 +16,9 @@ import (
 )
 
 const (
-	defaultRebalanceTimer = 15 * time.Second
+	defaultRebalanceTimer = 60 * time.Second
 	defaultRequestTimeout = 15 * time.Second
-	defaultConnectTimeout = 30 * time.Second
+	defaultConnectTimeout = 10 * time.Second
 
 	cfgListenAddress  = "listen_address"
 	cfgTLSCertificate = "tls_certificate"
