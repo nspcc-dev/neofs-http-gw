@@ -103,8 +103,7 @@ $ neofs-http-gw -p 192.168.130.72:8080 -w wallet.json --address NfgHwwTi3wHAS8aF
 
 ### Binding and TLS
 
-Gateway binds to `0.0.0.0:8082` by default and you can change that with
-`--listen_address` option.
+You can make the gateway listen on specific address using the `--listen_address` option.
 
 It can also provide TLS interface for its users, just specify paths to the key and
 certificate files via `--tls_key` and `--tls_certificate` parameters. Note
@@ -146,8 +145,7 @@ variable to control this behavior.
 
 ### Monitoring and metrics
 
-Pprof and Prometheus are integrated into the gateway, but they are not enabled by
-default. To enable them use `--pprof` and `--metrics` flags or
+Pprof and Prometheus are integrated into the gateway. To enable them use `--pprof` and `--metrics` flags or
 `HTTP_GW_PPROF`/`HTTP_GW_METRICS` environment variables.
 
 ### Timeouts
@@ -168,7 +166,7 @@ The gateway supports downloading files by common prefix (like dir) in zip format
 using config or `HTTP_GW_ZIP_COMPRESSION=true` environment variable.
 
 ### Logging
-You can specify logging level (default `info`) using variable:
+You can specify logging level using variable:
 ```
 HTTP_GW_LOGGER_LEVEL=debug
 ```
@@ -180,7 +178,7 @@ It can be specified with `--config` parameter:
 $ neofs-http-gw --config your-config.yaml
 ```
 
-See [config](./config/config.yaml) for example.
+See [config](./config/config.yaml) and [defaults](./docs/gate-configuration.md) for example.
 
 ## HTTP API provided
 
