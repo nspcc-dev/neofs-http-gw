@@ -27,7 +27,7 @@ listen_address: 0.0.0.0:8082
 tls_certificate: /path/to/tls/cert 
 tls_key: /path/to/tls/key 
 
-rpc_endpoint: http://node4.neofs:40332
+rpc_endpoint: http://morph-chain.neofs.devenv:30333
 resolve_order:
   - nns
   - dns
