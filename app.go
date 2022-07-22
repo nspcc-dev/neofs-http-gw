@@ -31,6 +31,7 @@ type (
 		webServer *fasthttp.Server
 		webDone   chan struct{}
 		resolver  *resolver.ContainerResolver
+		metrics   GateMetricsProvider
 	}
 
 	// App is an interface for the main gateway function.
@@ -41,6 +42,10 @@ type (
 
 	// Option is an application option.
 	Option func(a *app)
+
+	GateMetricsProvider interface {
+		SetHealth(int32)
+	}
 )
 
 // WithLogger returns Option to set a specific logger.
@@ -151,6 +156,10 @@ func newApp(ctx context.Context, opt ...Option) App {
 		a.log.Info("container resolver is disabled")
 	}
 
+	if a.cfg.GetBool(cmdMetrics) {
+		a.metrics = newGateMetrics()
+	}
+
 	return a
 }
 
@@ -231,6 +240,10 @@ func getKeyFromWallet(w *wallet.Wallet, addrStr string, password *string) (*ecds
 
 func (a *app) Wait() {
 	a.log.Info("starting application", zap.String("app_name", "neofs-http-gw"), zap.String("version", Version))
+	if a.metrics != nil {
+		a.metrics.SetHealth(1)
+	}
+
 	<-a.webDone // wait for web-server to be stopped
 }
 
