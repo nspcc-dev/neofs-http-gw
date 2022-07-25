@@ -10,7 +10,7 @@ import (
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/nspcc-dev/neofs-http-gw/utils"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
-	"github.com/nspcc-dev/neofs-sdk-go/object/address"
+	oid "github.com/nspcc-dev/neofs-sdk-go/object/id"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
@@ -25,7 +25,7 @@ const (
 	hdrContainerID = "X-Container-Id"
 )
 
-func (r request) headObject(clnt *pool.Pool, objectAddress *address.Address) {
+func (r request) headObject(clnt *pool.Pool, objectAddress oid.Address) {
 	var start = time.Now()
 	if err := tokens.StoreBearerToken(r.RequestCtx); err != nil {
 		r.log.Error("could not fetch and store bearer token", zap.Error(err))
@@ -36,7 +36,7 @@ func (r request) headObject(clnt *pool.Pool, objectAddress *address.Address) {
 	btoken := bearerToken(r.RequestCtx)
 
 	var prm pool.PrmObjectHead
-	prm.SetAddress(*objectAddress)
+	prm.SetAddress(objectAddress)
 	if btoken != nil {
 		prm.UseBearer(*btoken)
 	}
@@ -77,7 +77,7 @@ func (r request) headObject(clnt *pool.Pool, objectAddress *address.Address) {
 	if len(contentType) == 0 {
 		contentType, _, err = readContentType(obj.PayloadSize(), func(sz uint64) (io.Reader, error) {
 			var prmRange pool.PrmObjectRange
-			prmRange.SetAddress(*objectAddress)
+			prmRange.SetAddress(objectAddress)
 			prmRange.SetLength(sz)
 			if btoken != nil {
 				prmRange.UseBearer(*btoken)

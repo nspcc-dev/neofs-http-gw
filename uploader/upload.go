@@ -2,7 +2,6 @@ package uploader
 
 import (
 	"context"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,9 +13,7 @@ import (
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/nspcc-dev/neofs-http-gw/utils"
 	"github.com/nspcc-dev/neofs-sdk-go/bearer"
-	"github.com/nspcc-dev/neofs-sdk-go/netmap"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
-	"github.com/nspcc-dev/neofs-sdk-go/object/address"
 	oid "github.com/nspcc-dev/neofs-sdk-go/object/id"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
 	"github.com/nspcc-dev/neofs-sdk-go/user"
@@ -34,6 +31,7 @@ type Uploader struct {
 	appCtx                 context.Context
 	log                    *zap.Logger
 	pool                   *pool.Pool
+	ownerID                *user.ID
 	enableDefaultTimestamp bool
 	containerResolver      *resolver.ContainerResolver
 }
@@ -51,6 +49,7 @@ func New(ctx context.Context, params *utils.AppParams, enableDefaultTimestamp bo
 		appCtx:                 ctx,
 		log:                    params.Logger,
 		pool:                   params.Pool,
+		ownerID:                params.Owner,
 		enableDefaultTimestamp: enableDefaultTimestamp,
 		containerResolver:      params.Resolver,
 	}
@@ -61,7 +60,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	var (
 		file       MultipartFile
 		idObj      *oid.ID
-		addr       = address.NewAddress()
+		addr       oid.Address
 		scid, _    = c.UserValue("cid").(string)
 		log        = u.log.With(zap.String("cid", scid))
 		bodyStream = c.RequestBodyStream()
@@ -158,8 +157,8 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		return
 	}
 
-	addr.SetObjectID(*idObj)
-	addr.SetContainerID(*idCnr)
+	addr.SetObject(*idObj)
+	addr.SetContainer(*idCnr)
 
 	// Try to return the response, otherwise, if something went wrong, throw an error.
 	if err = newPutResponse(addr).encode(c); err != nil {
@@ -187,10 +186,10 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 
 func (u *Uploader) fetchOwnerAndBearerToken(ctx context.Context) (*user.ID, *bearer.Token) {
 	if tkn, err := tokens.LoadBearerToken(ctx); err == nil && tkn != nil {
-		issuer, _ := tkn.Issuer()
+		issuer := bearer.ResolveIssuer(*tkn)
 		return &issuer, tkn
 	}
-	return u.pool.OwnerID(), nil
+	return u.ownerID, nil
 }
 
 type putResponse struct {
@@ -198,12 +197,10 @@ type putResponse struct {
 	ContainerID string `json:"container_id"`
 }
 
-func newPutResponse(addr *address.Address) *putResponse {
-	objID, _ := addr.ObjectID()
-	cnrID, _ := addr.ContainerID()
+func newPutResponse(addr oid.Address) *putResponse {
 	return &putResponse{
-		ObjectID:    objID.String(),
-		ContainerID: cnrID.String(),
+		ObjectID:    addr.Object().EncodeToString(),
+		ContainerID: addr.Container().EncodeToString(),
 	}
 }
 
@@ -220,21 +217,13 @@ func getEpochDurations(ctx context.Context, p *pool.Pool) (*epochDurations, erro
 	}
 
 	res := &epochDurations{
-		currentEpoch: networkInfo.CurrentEpoch(),
-		msPerBlock:   networkInfo.MsPerBlock(),
+		currentEpoch:  networkInfo.CurrentEpoch(),
+		msPerBlock:    networkInfo.MsPerBlock(),
+		blockPerEpoch: networkInfo.EpochDuration(),
 	}
 
-	networkInfo.NetworkConfig().IterateParameters(func(parameter *netmap.NetworkParameter) bool {
-		if string(parameter.Key()) == "EpochDuration" {
-			data := make([]byte, 8)
-			copy(data, parameter.Value())
-			res.blockPerEpoch = binary.LittleEndian.Uint64(data)
-			return true
-		}
-		return false
-	})
 	if res.blockPerEpoch == 0 {
-		return nil, fmt.Errorf("not found param: EpochDuration")
+		return nil, fmt.Errorf("EpochDuration is empty")
 	}
 	return res, nil
 }

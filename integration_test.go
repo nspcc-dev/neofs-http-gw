@@ -10,18 +10,18 @@ import (
 	"mime/multipart"
 	"net/http"
 	"sort"
-	"strconv"
 	"testing"
 	"time"
 
 	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
 	"github.com/nspcc-dev/neofs-sdk-go/container"
+	"github.com/nspcc-dev/neofs-sdk-go/container/acl"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
+	"github.com/nspcc-dev/neofs-sdk-go/netmap"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
-	"github.com/nspcc-dev/neofs-sdk-go/object/address"
 	oid "github.com/nspcc-dev/neofs-sdk-go/object/id"
-	"github.com/nspcc-dev/neofs-sdk-go/policy"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
+	"github.com/nspcc-dev/neofs-sdk-go/user"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -44,14 +44,16 @@ func TestIntegration(t *testing.T) {
 	rootCtx := context.Background()
 	aioImage := "nspccdev/neofs-aio-testcontainer:"
 	versions := []string{
-		"0.24.0",
-		"0.25.1",
-		"0.26.1",
 		"0.27.5",
+		"0.28.1",
+		"0.29.0",
 		"latest",
 	}
 	key, err := keys.NewPrivateKeyFromHex("1dd37fba80fec4e6a6f13fd708d8dcb3b29def768017052f6c930fa1c5d90bbb")
 	require.NoError(t, err)
+
+	var ownerID user.ID
+	user.IDFromKey(&ownerID, key.PrivateKey.PublicKey)
 
 	for _, version := range versions {
 		ctx, cancel2 := context.WithCancel(rootCtx)
@@ -59,13 +61,13 @@ func TestIntegration(t *testing.T) {
 		aioContainer := createDockerContainer(ctx, t, aioImage+version)
 		cancel := runServer()
 		clientPool := getPool(ctx, t, key)
-		CID, err := createContainer(ctx, t, clientPool, version)
+		CID, err := createContainer(ctx, t, clientPool, ownerID, version)
 		require.NoError(t, err, version)
 
 		t.Run("simple put "+version, func(t *testing.T) { simplePut(ctx, t, clientPool, CID, version) })
-		t.Run("simple get "+version, func(t *testing.T) { simpleGet(ctx, t, clientPool, CID, version) })
-		t.Run("get by attribute "+version, func(t *testing.T) { getByAttr(ctx, t, clientPool, CID, version) })
-		t.Run("get zip "+version, func(t *testing.T) { getZip(ctx, t, clientPool, CID, version) })
+		t.Run("simple get "+version, func(t *testing.T) { simpleGet(ctx, t, clientPool, ownerID, CID, version) })
+		t.Run("get by attribute "+version, func(t *testing.T) { getByAttr(ctx, t, clientPool, ownerID, CID, version) })
+		t.Run("get zip "+version, func(t *testing.T) { getZip(ctx, t, clientPool, ownerID, CID, version) })
 
 		cancel()
 		err = aioContainer.Terminate(ctx)
@@ -144,14 +146,14 @@ func makePutRequestAndCheck(ctx context.Context, t *testing.T, p *pool.Pool, cnr
 	err = id.DecodeString(addr.OID)
 	require.NoError(t, err)
 
-	objectAddress := address.NewAddress()
-	objectAddress.SetContainerID(*cnrID)
-	objectAddress.SetObjectID(*id)
+	var objectAddress oid.Address
+	objectAddress.SetContainer(*cnrID)
+	objectAddress.SetObject(*id)
 
 	payload := bytes.NewBuffer(nil)
 
 	var prm pool.PrmObjectGet
-	prm.SetAddress(*objectAddress)
+	prm.SetAddress(objectAddress)
 
 	res, err := p.GetObject(ctx, prm)
 	require.NoError(t, err)
@@ -166,13 +168,13 @@ func makePutRequestAndCheck(ctx context.Context, t *testing.T, p *pool.Pool, cnr
 	}
 }
 
-func simpleGet(ctx context.Context, t *testing.T, clientPool *pool.Pool, CID *cid.ID, version string) {
+func simpleGet(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID *cid.ID, version string) {
 	content := "content of file"
 	attributes := map[string]string{
 		"some-attr": "some-get-value",
 	}
 
-	id := putObject(ctx, t, clientPool, CID, content, attributes)
+	id := putObject(ctx, t, clientPool, ownerID, CID, content, attributes)
 
 	resp, err := http.Get("http://localhost:8082/get/" + CID.String() + "/" + id.String())
 	require.NoError(t, err)
@@ -200,12 +202,27 @@ func checkGetResponse(t *testing.T, resp *http.Response, content string, attribu
 	}
 }
 
-func getByAttr(ctx context.Context, t *testing.T, clientPool *pool.Pool, CID *cid.ID, version string) {
+func checkGetByAttrResponse(t *testing.T, resp *http.Response, content string, attributes map[string]string) {
+	defer func() {
+		err := resp.Body.Close()
+		require.NoError(t, err)
+	}()
+
+	data, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, content, string(data))
+
+	for k, v := range attributes {
+		require.Equal(t, v, resp.Header.Get(k))
+	}
+}
+
+func getByAttr(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID *cid.ID, version string) {
 	keyAttr, valAttr := "some-attr", "some-get-by-attr-value"
 	content := "content of file"
 	attributes := map[string]string{keyAttr: valAttr}
 
-	id := putObject(ctx, t, clientPool, CID, content, attributes)
+	id := putObject(ctx, t, clientPool, ownerID, CID, content, attributes)
 
 	expectedAttr := map[string]string{
 		"X-Attribute-" + keyAttr: valAttr,
@@ -224,29 +241,14 @@ func getByAttr(ctx context.Context, t *testing.T, clientPool *pool.Pool, CID *ci
 	}
 }
 
-func checkGetByAttrResponse(t *testing.T, resp *http.Response, content string, attributes map[string]string) {
-	defer func() {
-		err := resp.Body.Close()
-		require.NoError(t, err)
-	}()
-
-	data, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	require.Equal(t, content, string(data))
-
-	for k, v := range attributes {
-		require.Equal(t, v, resp.Header.Get(k))
-	}
-}
-
-func getZip(ctx context.Context, t *testing.T, clientPool *pool.Pool, CID *cid.ID, version string) {
+func getZip(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID *cid.ID, version string) {
 	names := []string{"zipfolder/dir/name1.txt", "zipfolder/name2.txt"}
 	contents := []string{"content of file1", "content of file2"}
 	attributes1 := map[string]string{attributeFilePath: names[0]}
 	attributes2 := map[string]string{attributeFilePath: names[1]}
 
-	putObject(ctx, t, clientPool, CID, contents[0], attributes1)
-	putObject(ctx, t, clientPool, CID, contents[1], attributes2)
+	putObject(ctx, t, clientPool, ownerID, CID, contents[0], attributes1)
+	putObject(ctx, t, clientPool, ownerID, CID, contents[1], attributes2)
 
 	baseURL := "http://localhost:8082/zip/" + CID.String()
 	makeZipTest(t, baseURL, names, contents)
@@ -348,18 +350,23 @@ func getPool(ctx context.Context, t *testing.T, key *keys.PrivateKey) *pool.Pool
 	return clientPool
 }
 
-func createContainer(ctx context.Context, t *testing.T, clientPool *pool.Pool, version string) (*cid.ID, error) {
-	pp, err := policy.Parse("REP 1")
+func createContainer(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, version string) (*cid.ID, error) {
+	var policy netmap.PlacementPolicy
+	err := policy.DecodeString("REP 1")
 	require.NoError(t, err)
 
-	cnr := container.New(
-		container.WithPolicy(pp),
-		container.WithCustomBasicACL(0x0FFFFFFF),
-		container.WithAttribute(container.AttributeTimestamp, strconv.FormatInt(time.Now().Unix(), 10)))
-	cnr.SetOwnerID(clientPool.OwnerID())
+	var cnr container.Container
+	cnr.Init()
+	cnr.SetPlacementPolicy(policy)
+	cnr.SetBasicACL(acl.PublicRWExtended)
+	cnr.SetOwner(ownerID)
+
+	container.SetCreationTime(&cnr, time.Now())
 
 	if version >= versionWithNativeNames {
-		container.SetNativeName(cnr, testContainerName)
+		var domain container.Domain
+		domain.SetName(testContainerName)
+		container.WriteDomain(&cnr, domain)
 	}
 
 	var waitPrm pool.WaitParams
@@ -367,7 +374,7 @@ func createContainer(ctx context.Context, t *testing.T, clientPool *pool.Pool, v
 	waitPrm.SetPollInterval(3 * time.Second)
 
 	var prm pool.PrmContainerPut
-	prm.SetContainer(*cnr)
+	prm.SetContainer(cnr)
 	prm.SetWaitParams(waitPrm)
 
 	CID, err := clientPool.PutContainer(ctx, prm)
@@ -379,10 +386,10 @@ func createContainer(ctx context.Context, t *testing.T, clientPool *pool.Pool, v
 	return CID, err
 }
 
-func putObject(ctx context.Context, t *testing.T, clientPool *pool.Pool, CID *cid.ID, content string, attributes map[string]string) *oid.ID {
+func putObject(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID *cid.ID, content string, attributes map[string]string) *oid.ID {
 	obj := object.New()
 	obj.SetContainerID(*CID)
-	obj.SetOwnerID(clientPool.OwnerID())
+	obj.SetOwnerID(&ownerID)
 
 	var attrs []object.Attribute
 	for key, val := range attributes {

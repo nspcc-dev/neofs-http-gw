@@ -18,6 +18,7 @@ import (
 	"github.com/nspcc-dev/neofs-http-gw/uploader"
 	"github.com/nspcc-dev/neofs-http-gw/utils"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
+	"github.com/nspcc-dev/neofs-sdk-go/user"
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
@@ -27,6 +28,7 @@ type (
 	app struct {
 		log       *zap.Logger
 		pool      *pool.Pool
+		owner     *user.ID
 		cfg       *viper.Viper
 		webServer *fasthttp.Server
 		webDone   chan struct{}
@@ -101,6 +103,10 @@ func newApp(ctx context.Context, opt ...Option) App {
 	if err != nil {
 		a.log.Fatal("failed to get neofs credentials", zap.Error(err))
 	}
+
+	var owner user.ID
+	user.IDFromKey(&owner, key.PublicKey)
+	a.owner = &owner
 
 	var prm pool.InitParameters
 	prm.SetKey(key)
@@ -319,6 +325,7 @@ func (a *app) AppParams() *utils.AppParams {
 	return &utils.AppParams{
 		Logger:   a.log,
 		Pool:     a.pool,
+		Owner:    a.owner,
 		Resolver: a.resolver,
 	}
 }

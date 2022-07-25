@@ -4,9 +4,9 @@ go 1.17
 
 require (
 	github.com/fasthttp/router v1.4.1
-	github.com/nspcc-dev/neo-go v0.98.0
-	github.com/nspcc-dev/neofs-api-go/v2 v2.12.1
-	github.com/nspcc-dev/neofs-sdk-go v1.0.0-rc.3.0.20220421125737-6e81e13e1bff
+	github.com/nspcc-dev/neo-go v0.99.1-pre.0.20220714084516-54849ef3e58e
+	github.com/nspcc-dev/neofs-api-go/v2 v2.13.0
+	github.com/nspcc-dev/neofs-sdk-go v1.0.0-rc.5.0.20220725101411-90f1cc7a1a77
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/common v0.30.0
 	github.com/spf13/pflag v1.0.5
@@ -29,6 +29,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/containerd/cgroups v1.0.3 // indirect
 	github.com/containerd/containerd v1.6.2 // indirect
+	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
@@ -39,13 +40,11 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/holiman/uint256 v1.2.0 // indirect
 	github.com/klauspost/compress v1.15.0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
@@ -55,13 +54,13 @@ require (
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
-	github.com/nspcc-dev/go-ordered-json v0.0.0-20210915112629-e1b6cce73d02 // indirect
+	github.com/nspcc-dev/go-ordered-json v0.0.0-20220111165707-25110be27d22 // indirect
 	github.com/nspcc-dev/hrw v1.0.9 // indirect
+	github.com/nspcc-dev/neo-go/pkg/interop v0.0.0-20220713145417-4f184498bc42 // indirect
+	github.com/nspcc-dev/neofs-contract v0.15.3 // indirect
 	github.com/nspcc-dev/neofs-crypto v0.3.0 // indirect
 	github.com/nspcc-dev/rfc6979 v0.2.0 // indirect
-	github.com/nspcc-dev/tzhash v1.5.2 // indirect
-	github.com/onsi/ginkgo v1.16.4 // indirect
-	github.com/onsi/gomega v1.15.0 // indirect
+	github.com/nspcc-dev/tzhash v1.6.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/opencontainers/runc v1.1.1 // indirect
@@ -81,7 +80,6 @@ require (
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7 // indirect
 	github.com/urfave/cli v1.22.5 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	go.etcd.io/bbolt v1.3.6 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
@@ -97,5 +95,5 @@ require (
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

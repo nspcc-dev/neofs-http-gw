@@ -24,7 +24,6 @@ import (
 	"github.com/nspcc-dev/neofs-sdk-go/bearer"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
-	"github.com/nspcc-dev/neofs-sdk-go/object/address"
 	oid "github.com/nspcc-dev/neofs-sdk-go/object/id"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
 	"github.com/valyala/fasthttp"
@@ -92,7 +91,7 @@ func readContentType(maxSize uint64, rInit func(uint64) (io.Reader, error)) (str
 	return http.DetectContentType(buf), buf, err // to not lose io.EOF
 }
 
-func (r request) receiveFile(clnt *pool.Pool, objectAddress *address.Address) {
+func (r request) receiveFile(clnt *pool.Pool, objectAddress oid.Address) {
 	var (
 		err      error
 		dis      = "inline"
@@ -106,7 +105,7 @@ func (r request) receiveFile(clnt *pool.Pool, objectAddress *address.Address) {
 	}
 
 	var prm pool.PrmObjectGet
-	prm.SetAddress(*objectAddress)
+	prm.SetAddress(objectAddress)
 	if btoken := bearerToken(r.RequestCtx); btoken != nil {
 		prm.UseBearer(*btoken)
 	}
@@ -289,7 +288,7 @@ func (d *Downloader) DownloadByAddress(c *fasthttp.RequestCtx) {
 
 // byAddress is a wrapper for function (e.g. request.headObject, request.receiveFile) that
 // prepares request and object address to it.
-func (d *Downloader) byAddress(c *fasthttp.RequestCtx, f func(request, *pool.Pool, *address.Address)) {
+func (d *Downloader) byAddress(c *fasthttp.RequestCtx, f func(request, *pool.Pool, oid.Address)) {
 	var (
 		idCnr, _ = c.UserValue("cid").(string)
 		idObj, _ = c.UserValue("oid").(string)
@@ -310,9 +309,9 @@ func (d *Downloader) byAddress(c *fasthttp.RequestCtx, f func(request, *pool.Poo
 		return
 	}
 
-	addr := address.NewAddress()
-	addr.SetContainerID(*cnrID)
-	addr.SetObjectID(*objID)
+	var addr oid.Address
+	addr.SetContainer(*cnrID)
+	addr.SetObject(*objID)
 
 	f(*d.newRequest(c, log), d.pool, addr)
 }
@@ -323,7 +322,7 @@ func (d *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
 }
 
 // byAttribute is a wrapper similar to byAddress.
-func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, *pool.Pool, *address.Address)) {
+func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, *pool.Pool, oid.Address)) {
 	var (
 		scid, _ = c.UserValue("cid").(string)
 		key, _  = url.QueryUnescape(c.UserValue("attr_key").(string))
@@ -362,11 +361,11 @@ func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, *pool.P
 		return
 	}
 
-	var addrObj address.Address
-	addrObj.SetContainerID(*containerID)
-	addrObj.SetObjectID(buf[0])
+	var addrObj oid.Address
+	addrObj.SetContainer(*containerID)
+	addrObj.SetObject(buf[0])
 
-	f(*d.newRequest(c, log), d.pool, &addrObj)
+	f(*d.newRequest(c, log), d.pool, addrObj)
 }
 
 func (d *Downloader) search(c *fasthttp.RequestCtx, cid *cid.ID, key, val string, op object.SearchMatchType) (*pool.ResObjectSearch, error) {
@@ -433,12 +432,12 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 		zipWriter := zip.NewWriter(w)
 
 		var bufZip []byte
-		var addr address.Address
+		var addr oid.Address
 
 		empty := true
 		called := false
 		btoken := bearerToken(c)
-		addr.SetContainerID(*containerID)
+		addr.SetContainer(*containerID)
 
 		errIter := resSearch.Iterate(func(id oid.ID) bool {
 			called = true
@@ -448,7 +447,7 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 			}
 			empty = false
 
-			addr.SetObjectID(id)
+			addr.SetObject(id)
 			if err = d.zipObject(zipWriter, addr, btoken, bufZip); err != nil {
 				return true
 			}
@@ -477,7 +476,7 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 	})
 }
 
-func (d *Downloader) zipObject(zipWriter *zip.Writer, addr address.Address, btoken *bearer.Token, bufZip []byte) error {
+func (d *Downloader) zipObject(zipWriter *zip.Writer, addr oid.Address, btoken *bearer.Token, bufZip []byte) error {
 	var prm pool.PrmObjectGet
 	prm.SetAddress(addr)
 	if btoken != nil {
