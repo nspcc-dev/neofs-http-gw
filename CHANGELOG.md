@@ -2,6 +2,16 @@
 
 This document outlines major changes between releases.
 
+## [0.22.0] - 2022-07-25
+
+### Added
+- Default params documentation (#172)
+- Health metric (#175)
+
+### Changed
+- Version output (#169)
+- Updated SDK Version (#178)
+
 ## [0.21.0] - 2022-06-20
 
 ### Fixed
@@ -179,3 +189,4 @@ releases.
 [0.19.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.18.0...v0.19.0
 [0.20.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.19.0...v0.20.0
 [0.21.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.20.0...v0.21.0
+[0.22.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.21.0...v0.22.0
