@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/nspcc-dev/neofs-sdk-go/netmap"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
 )
 
@@ -27,20 +26,10 @@ func (x *NeoFSResolver) SystemDNS(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("read network info via client: %w", err)
 	}
 
-	var domain string
-
-	networkInfo.NetworkConfig().IterateParameters(func(parameter *netmap.NetworkParameter) bool {
-		if string(parameter.Key()) == "SystemDNS" {
-			domain = string(parameter.Value())
-			return true
-		}
-
-		return false
-	})
-
-	if domain == "" {
+	domain := networkInfo.RawNetworkParameter("SystemDNS")
+	if domain == nil {
 		return "", errors.New("system DNS parameter not found or empty")
 	}
 
-	return domain, nil
+	return string(domain), nil
 }

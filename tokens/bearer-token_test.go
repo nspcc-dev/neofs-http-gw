@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"testing"
 
+	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
 	"github.com/nspcc-dev/neofs-sdk-go/bearer"
 	"github.com/nspcc-dev/neofs-sdk-go/user"
 	"github.com/stretchr/testify/require"
@@ -59,10 +60,13 @@ func Test_fromHeader(t *testing.T) {
 }
 
 func Test_fetchBearerToken(t *testing.T) {
+	key, err := keys.NewPrivateKey()
+	require.NoError(t, err)
 	var uid user.ID
+	user.IDFromKey(&uid, key.PrivateKey.PublicKey)
 
 	tkn := new(bearer.Token)
-	tkn.SetOwnerID(uid)
+	tkn.ForUser(uid)
 
 	t64 := base64.StdEncoding.EncodeToString(tkn.Marshal())
 	require.NotEmpty(t, t64)
@@ -133,10 +137,13 @@ func makeTestRequest(cookie, header string) *fasthttp.RequestCtx {
 }
 
 func Test_checkAndPropagateBearerToken(t *testing.T) {
+	key, err := keys.NewPrivateKey()
+	require.NoError(t, err)
 	var uid user.ID
+	user.IDFromKey(&uid, key.PrivateKey.PublicKey)
 
 	tkn := new(bearer.Token)
-	tkn.SetOwnerID(uid)
+	tkn.ForUser(uid)
 
 	t64 := base64.StdEncoding.EncodeToString(tkn.Marshal())
 	require.NotEmpty(t, t64)
