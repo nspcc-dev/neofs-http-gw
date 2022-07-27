@@ -3,8 +3,13 @@ wallet:
   address: NfgHwwTi3wHAS8aFAN243C5vGbkYDpqLHP # Account address. If omitted default one will be used.
   passphrase: pwd # Passphrase to decrypt wallet. If you're using a wallet without a password, place '' here.
 
-metrics: true # Enable metrics.
-pprof: true # Enable pprof.
+pprof:
+  enabled: true # Enable pprof.
+  address: localhost:8083
+prometheus:
+  enabled: true # Enable metrics.
+  address: localhost:8084
+
 logger:
   level: debug # Log level.
 
