@@ -20,6 +20,8 @@ const (
 	defaultRequestTimeout = 15 * time.Second
 	defaultConnectTimeout = 10 * time.Second
 
+	defaultShutdownTimeout = 15 * time.Second
+
 	cfgListenAddress  = "listen_address"
 	cfgTLSCertificate = "tls_certificate"
 	cfgTLSKey         = "tls_key"
@@ -31,6 +33,12 @@ const (
 	cfgWebWriteTimeout       = "web.write_timeout"
 	cfgWebStreamRequestBody  = "web.stream_request_body"
 	cfgWebMaxRequestBodySize = "web.max_request_body_size"
+
+	// Metrics / Profiler.
+	cfgPrometheusEnabled = "prometheus.enabled"
+	cfgPrometheusAddress = "prometheus.address"
+	cfgPprofEnabled      = "pprof.enabled"
+	cfgPprofAddress      = "pprof.address"
 
 	// Timeouts.
 	cfgConTimeout = "connect_timeout"
@@ -127,6 +135,18 @@ func settings() *viper.Viper {
 
 	// zip:
 	v.SetDefault(cfgZipCompression, false)
+
+	// metrics
+	v.SetDefault(cfgPprofAddress, "localhost:8083")
+	v.SetDefault(cfgPrometheusAddress, "localhost:8084")
+
+	// Binding flags
+	if err := v.BindPFlag(cfgPprofEnabled, flags.Lookup(cmdPprof)); err != nil {
+		panic(err)
+	}
+	if err := v.BindPFlag(cfgPrometheusEnabled, flags.Lookup(cmdMetrics)); err != nil {
+		panic(err)
+	}
 
 	if err := v.BindPFlags(flags); err != nil {
 		panic(err)

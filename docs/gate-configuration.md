@@ -19,6 +19,9 @@ There are some custom types used for brevity:
 | `web`           | [Web configuration](#web-section)                     |
 | `upload-header` | [Upload header configuration](#upload-header-section) |
 | `zip`           | [ZIP configuration](#zip-section)                     |
+| `pprof`         | [Pprof configuration](#pprof-section)                 |
+| `prometheus`    | [Prometheus configuration](#prometheus-section)       |
+
 
 # General section
 
@@ -32,9 +35,6 @@ resolve_order:
   - nns
   - dns
 
-metrics: false
-pprof: false
-
 connect_timeout: 5s 
 request_timeout: 5s 
 rebalance_timer: 30s 
@@ -47,8 +47,6 @@ rebalance_timer: 30s
 | `tls_key`         | `string`   |                | Path to the TLS key.                                                               |
 | `rpc_endpoint`    | `string`   |                | The address of the RPC host to which the gateway connects to resolve bucket names. |
 | `resolve_order`   | `[]string` | `[nns, dns]`   | Order of bucket name resolvers to use.                                             |
-| `metrics`         | `bool`     | `false`        | Flag to enable and expose the prometheus metrics.                                  |
-| `pprof`           | `bool`     | `false`        | Flag to enable the profiler.                                                       |
 | `connect_timeout` | `duration` | `10s`          | Timeout to connect to a node.                                                      |
 | `request_timeout` | `duration` | `15s`          | Timeout to check node health during rebalance.                                     |
 | `rebalance_timer` | `duration` | `60s`          | Interval to check node health.                                                     |
@@ -156,3 +154,33 @@ zip:
 |---------------|--------|---------------|--------------------------------------------------------------|
 | `compression` | `bool` | `false`       | Enable zip compression when download files by common prefix. |
 
+
+# `pprof` section
+
+Contains configuration for the `pprof` profiler.
+
+```yaml
+pprof:
+  enabled: true
+  address: localhost:8083
+```
+
+| Parameter | Type     | Default value    | Description                             |
+|-----------|----------|------------------|-----------------------------------------|
+| `enabled` | `bool`   | `false`          | Flag to enable the service.             |
+| `address` | `string` | `localhost:8083` | Address that service listener binds to. |
+
+# `prometheus` section
+
+Contains configuration for the `prometheus` metrics service.
+
+```yaml
+prometheus:
+  enabled: true
+  address: localhost:8084
+```
+
+| Parameter | Type     | Default value    | Description                             |
+|-----------|----------|------------------|-----------------------------------------|
+| `enabled` | `bool`   | `false`          | Flag to enable the service.             |
+| `address` | `string` | `localhost:8084` | Address that service listener binds to. |

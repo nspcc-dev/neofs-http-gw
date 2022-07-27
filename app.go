@@ -13,6 +13,7 @@ import (
 	"github.com/nspcc-dev/neo-go/pkg/util"
 	"github.com/nspcc-dev/neo-go/pkg/wallet"
 	"github.com/nspcc-dev/neofs-http-gw/downloader"
+	"github.com/nspcc-dev/neofs-http-gw/metrics"
 	"github.com/nspcc-dev/neofs-http-gw/resolver"
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/uploader"
@@ -162,8 +163,8 @@ func newApp(ctx context.Context, opt ...Option) App {
 		a.log.Info("container resolver is disabled")
 	}
 
-	if a.cfg.GetBool(cmdMetrics) {
-		a.metrics = newGateMetrics()
+	if a.cfg.GetBool(cfgPrometheusEnabled) {
+		a.metrics = metrics.NewGateMetrics()
 	}
 
 	return a
@@ -254,11 +255,6 @@ func (a *app) Wait() {
 }
 
 func (a *app) Serve(ctx context.Context) {
-	go func() {
-		<-ctx.Done()
-		a.log.Info("shutting down web server", zap.Error(a.webServer.Shutdown()))
-		close(a.webDone)
-	}()
 	edts := a.cfg.GetBool(cfgUploaderHeaderEnableDefaultTimestamp)
 	uploadRoutes := uploader.New(ctx, a.AppParams(), edts)
 	downloadSettings := downloader.Settings{ZipCompression: a.cfg.GetBool(cfgZipCompression)}
@@ -282,32 +278,45 @@ func (a *app) Serve(ctx context.Context) {
 	a.log.Info("added path /get_by_attribute/{cid}/{attr_key}/{attr_val:*}")
 	r.GET("/zip/{cid}/{prefix:*}", a.logger(downloadRoutes.DownloadZipped))
 	a.log.Info("added path /zip/{cid}/{prefix}")
-	// enable metrics
-	if a.cfg.GetBool(cmdMetrics) {
-		a.log.Info("added path /metrics/")
-		attachMetrics(r, a.log)
-	}
-	// enable pprof
-	if a.cfg.GetBool(cmdPprof) {
-		a.log.Info("added path /debug/pprof/")
-		attachProfiler(r)
-	}
+
+	pprofConfig := metrics.Config{Enabled: a.cfg.GetBool(cfgPprofEnabled), Address: a.cfg.GetString(cfgPprofAddress)}
+	pprof := metrics.NewPprofService(a.log, pprofConfig)
+	prometheusConfig := metrics.Config{Enabled: a.cfg.GetBool(cfgPrometheusEnabled), Address: a.cfg.GetString(cfgPrometheusAddress)}
+	prometheus := metrics.NewPrometheusService(a.log, prometheusConfig)
+
 	bind := a.cfg.GetString(cfgListenAddress)
 	tlsCertPath := a.cfg.GetString(cfgTLSCertificate)
 	tlsKeyPath := a.cfg.GetString(cfgTLSKey)
 
 	a.webServer.Handler = r.Handler
-	var err error
-	if tlsCertPath == "" && tlsKeyPath == "" {
-		a.log.Info("running web server", zap.String("address", bind))
-		err = a.webServer.ListenAndServe(bind)
-	} else {
-		a.log.Info("running web server (TLS-enabled)", zap.String("address", bind))
-		err = a.webServer.ListenAndServeTLS(bind, tlsCertPath, tlsKeyPath)
-	}
-	if err != nil {
-		a.log.Fatal("could not start server", zap.Error(err))
-	}
+
+	go pprof.Start()
+	go prometheus.Start()
+
+	go func() {
+		var err error
+		if tlsCertPath == "" && tlsKeyPath == "" {
+			a.log.Info("running web server", zap.String("address", bind))
+			err = a.webServer.ListenAndServe(bind)
+		} else {
+			a.log.Info("running web server (TLS-enabled)", zap.String("address", bind))
+			err = a.webServer.ListenAndServeTLS(bind, tlsCertPath, tlsKeyPath)
+		}
+		if err != nil {
+			a.log.Fatal("could not start server", zap.Error(err))
+		}
+	}()
+
+	<-ctx.Done()
+	a.log.Info("shutting down web server", zap.Error(a.webServer.Shutdown()))
+
+	ctx, cancel := context.WithTimeout(context.Background(), defaultShutdownTimeout)
+	defer cancel()
+
+	pprof.ShutDown(ctx)
+	prometheus.ShutDown(ctx)
+
+	close(a.webDone)
 }
 
 func (a *app) logger(h fasthttp.RequestHandler) fasthttp.RequestHandler {
