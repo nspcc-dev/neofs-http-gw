@@ -165,7 +165,7 @@ func newApp(ctx context.Context, opt ...Option) App {
 	}
 
 	if a.cfg.GetBool(cfgPrometheusEnabled) {
-		a.metrics = metrics.NewGateMetrics()
+		a.metrics = metrics.NewGateMetrics(a.pool)
 	}
 
 	return a
