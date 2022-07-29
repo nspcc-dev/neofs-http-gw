@@ -114,6 +114,7 @@ func newApp(ctx context.Context, opt ...Option) App {
 	prm.SetNodeDialTimeout(a.cfg.GetDuration(cfgConTimeout))
 	prm.SetHealthcheckTimeout(a.cfg.GetDuration(cfgReqTimeout))
 	prm.SetClientRebalanceInterval(a.cfg.GetDuration(cfgRebalance))
+	prm.SetErrorThreshold(a.cfg.GetUint32(cfgPoolErrorThreshold))
 
 	for i := 0; ; i++ {
 		address := a.cfg.GetString(cfgPeers + "." + strconv.Itoa(i) + ".address")

@@ -22,6 +22,8 @@ const (
 
 	defaultShutdownTimeout = 15 * time.Second
 
+	defaultPoolErrorThreshold uint32 = 100
+
 	cfgListenAddress  = "listen_address"
 	cfgTLSCertificate = "tls_certificate"
 	cfgTLSKey         = "tls_key"
@@ -40,10 +42,11 @@ const (
 	cfgPprofEnabled      = "pprof.enabled"
 	cfgPprofAddress      = "pprof.address"
 
-	// Timeouts.
-	cfgConTimeout = "connect_timeout"
-	cfgReqTimeout = "request_timeout"
-	cfgRebalance  = "rebalance_timer"
+	// Pool config.
+	cfgConTimeout         = "connect_timeout"
+	cfgReqTimeout         = "request_timeout"
+	cfgRebalance          = "rebalance_timer"
+	cfgPoolErrorThreshold = "pool_error_threshold"
 
 	// Logger.
 	cfgLoggerLevel = "logger.level"
@@ -121,6 +124,9 @@ func settings() *viper.Viper {
 
 	// logger:
 	v.SetDefault(cfgLoggerLevel, "debug")
+
+	// pool:
+	v.SetDefault(cfgPoolErrorThreshold, defaultPoolErrorThreshold)
 
 	// web-server:
 	v.SetDefault(cfgWebReadBufferSize, 4096)

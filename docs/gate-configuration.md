@@ -37,19 +37,21 @@ resolve_order:
 
 connect_timeout: 5s 
 request_timeout: 5s 
-rebalance_timer: 30s 
+rebalance_timer: 30s
+pool_error_threshold: 100
 ```
 
-| Parameter         | Type       | Default value  | Description                                                                        |
-|-------------------|------------|----------------|------------------------------------------------------------------------------------|
-| `listen_address`  | `string`   | `0.0.0.0:8082` | The address that the gateway is listening on.                                      |
-| `tls_certificate` | `string`   |                | Path to the TLS certificate.                                                       |
-| `tls_key`         | `string`   |                | Path to the TLS key.                                                               |
-| `rpc_endpoint`    | `string`   |                | The address of the RPC host to which the gateway connects to resolve bucket names. |
-| `resolve_order`   | `[]string` | `[nns, dns]`   | Order of bucket name resolvers to use.                                             |
-| `connect_timeout` | `duration` | `10s`          | Timeout to connect to a node.                                                      |
-| `request_timeout` | `duration` | `15s`          | Timeout to check node health during rebalance.                                     |
-| `rebalance_timer` | `duration` | `60s`          | Interval to check node health.                                                     |
+| Parameter              | Type       | Default value  | Description                                                                        |
+|------------------------|------------|----------------|------------------------------------------------------------------------------------|
+| `listen_address`       | `string`   | `0.0.0.0:8082` | The address that the gateway is listening on.                                      |
+| `tls_certificate`      | `string`   |                | Path to the TLS certificate.                                                       |
+| `tls_key`              | `string`   |                | Path to the TLS key.                                                               |
+| `rpc_endpoint`         | `string`   |                | The address of the RPC host to which the gateway connects to resolve bucket names. |
+| `resolve_order`        | `[]string` | `[nns, dns]`   | Order of bucket name resolvers to use.                                             |
+| `connect_timeout`      | `duration` | `10s`          | Timeout to connect to a node.                                                      |
+| `request_timeout`      | `duration` | `15s`          | Timeout to check node health during rebalance.                                     |
+| `rebalance_timer`      | `duration` | `60s`          | Interval to check node health.                                                     |
+| `pool_error_threshold` | `uint32`   | `100`          | The number of errors on connection after which node is considered as unhealthy.    |
 
 # `wallet` section
 
