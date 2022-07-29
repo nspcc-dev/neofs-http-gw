@@ -84,6 +84,7 @@ upload_header:
 connect_timeout: 5s # Timeout to dial node.
 request_timeout: 5s # Timeout to check node health during rebalance.
 rebalance_timer: 30s # Interval to check nodes health.
+pool_error_threshold: 100 # The number of errors on connection after which node is considered as unhealthy.
 
 zip:
   compression: false # Enable zip compression to download files by common prefix.
