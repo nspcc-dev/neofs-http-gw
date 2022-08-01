@@ -181,10 +181,7 @@ func remove(list []string, element string) []string {
 }
 
 func getNeoFSKey(a *app) (*ecdsa.PrivateKey, error) {
-	walletPath := a.cfg.GetString(cmdWallet)
-	if len(walletPath) == 0 {
-		walletPath = a.cfg.GetString(cfgWalletPath)
-	}
+	walletPath := a.cfg.GetString(cfgWalletPath)
 
 	if len(walletPath) == 0 {
 		a.log.Info("no wallet path specified, creating ephemeral key automatically for this run")
@@ -205,10 +202,7 @@ func getNeoFSKey(a *app) (*ecdsa.PrivateKey, error) {
 		password = &pwd
 	}
 
-	address := a.cfg.GetString(cmdAddress)
-	if len(address) == 0 {
-		address = a.cfg.GetString(cfgWalletAddress)
-	}
+	address := a.cfg.GetString(cfgWalletAddress)
 
 	return getKeyFromWallet(w, address, password)
 }
