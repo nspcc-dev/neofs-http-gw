@@ -154,6 +154,14 @@ func settings() *viper.Viper {
 		panic(err)
 	}
 
+	if err := v.BindPFlag(cfgWalletPath, flags.Lookup(cmdWallet)); err != nil {
+		panic(err)
+	}
+
+	if err := v.BindPFlag(cfgWalletAddress, flags.Lookup(cmdAddress)); err != nil {
+		panic(err)
+	}
+
 	if err := v.BindPFlags(flags); err != nil {
 		panic(err)
 	}
