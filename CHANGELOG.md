@@ -2,6 +2,20 @@
 
 This document outlines major changes between releases.
 
+## [0.23.0] - 2022-08-02
+
+### Added
+- New param to configure pool error threshold (#184)
+
+### Changed
+- Pprof and prometheus metrics configuration (#171)
+- Drop GO111MODULES from builds (#182)
+
+### Updating from v0.22.0
+1. To enable pprof use `pprof.enabled` instead of `pprof` in config.
+   To enable prometheus metrics use `prometheus.enabled` instead of `metrics` in config.
+   If you are using the command line flags you can skip this step.
+
 ## [0.22.0] - 2022-07-25
 
 ### Added
@@ -190,3 +204,4 @@ releases.
 [0.20.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.19.0...v0.20.0
 [0.21.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.20.0...v0.21.0
 [0.22.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.21.0...v0.22.0
+[0.23.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.22.0...v0.23.0
