@@ -188,29 +188,65 @@ and upload objects with it, but deleting, searching, managing ACLs, creating
 containers and other activities are not supported and not planned to be
 supported.
 
-**Note:** in all download/upload routes you can use container name instead of it's id (`$CID`), but resolvers must be configured properly (see [configs](./config) for examples).
-
 ### Preparation
 
 Before uploading or downloading a file make sure you have a prepared container. 
 You can create it with instructions below.
 
-Also ,in case of downloading, you need to have a file inside a container.
+Also, in case of downloading, you need to have a file inside a container.
+
+### NNS
+
+In all download/upload routes you can use container name instead of its id (`$CID`).
+
+Steps to start using name resolving:
+
+1. Enable NNS resolving in config (`rpc_endpoint` must be a valid neo rpc node, see [configs](./config) for other examples):
+
+```yaml
+rpc_endpoint: http://morph-chain.neofs.devenv:30333
+resolve_order:
+  - nns
+```
+
+2. Make sure your container is registered in NNS contract. If you use [neofs-dev-env](https://github.com/nspcc-dev/neofs-dev-env) 
+you can check if your container (e.g. with `container-name` name) is registered in NNS:
+
+```shell
+$ curl -s --data '{"id":1,"jsonrpc":"2.0","method":"getcontractstate","params":[1]}' \
+    http://morph-chain.neofs.devenv:30333 | jq -r '.result.hash'
+    
+0x8e6c3cd4b976b28e84a3788f6ea9e2676c15d667
+
+$ docker exec -it morph_chain neo-go \
+    contract testinvokefunction \
+    -r http://morph-chain.neofs.devenv:30333 0x8e6c3cd4b976b28e84a3788f6ea9e2676c15d667 \
+    resolve string:container-name.container int:16 \
+    | jq -r '.stack[0].value | if type=="array" then .[0].value else . end' \
+    | base64 -d && echo
+    
+7f3vvkw4iTiS5ZZbu5BQXEmJtETWbi3uUjLNaSs29xrL
+```
+
+3. Use container name instead of its `$CID`. For example:
+
+```shell
+$ curl http://localhost:8082/get_by_attribute/container-name/FileName/object-name
+```
 
 #### Create a container
 
 You can create a container via [neofs-cli](https://github.com/nspcc-dev/neofs-node/releases):
 ```
-$ neofs-cli -r $NEOFS_NODE -k $KEY container create --policy $POLICY --basic-acl $ACL
+$ neofs-cli -r $NEOFS_NODE -w $WALLET container create --policy $POLICY --basic-acl $ACL
 ```
-where `$KEY` can be a path to a private key file (as raw bytes), a hex string or 
-a (unencrypted) WIF string,   
+where `$WALLET` is a path to user wallet,   
 `$ACL` -- hex encoded basic ACL value or keywords 'private, 'public-read', 'public-read-write' and  
 `$POLICY` -- QL-encoded or JSON-encoded placement policy or path to file with it
 
 For example:
 ```
-$ neofs-cli -r 192.168.130.72:8080 -k 6PYLKJhiSub5imt6WCVy6Quxtd9xu176omev1vWYovzkAQCTSQabAAQXii container create --policy "REP 3" --basic-acl public --await
+$ neofs-cli -r 192.168.130.72:8080 -w ./wallet.json container create --policy "REP 3" --basic-acl public --await
 ```
 
 If you have launched nodes via [neofs-dev-env](https://github.com/nspcc-dev/neofs-dev-env),
@@ -229,7 +265,7 @@ where
 
 For example:
 ```
-$ neofs-cli -r 192.168.130.72:8080 -k 6PYLKJhiSub5imt6WCVy6Quxtd9xu176omev1vWYovzkAQCTSQabAAQXii object put --file cat.png --cid DPL2tpRiuDNmoTj5KZjD1nzDuCS8tVcxa7hsvSLDWpVM --attributes img_type=cat,my_attr=cute
+$ neofs-cli -r 192.168.130.72:8080 -w ./wallet.json object put --file cat.png --cid Dxhf4PNprrJHWWTG5RGLdfLkJiSQ3AQqit1MSnEPRkDZ --attributes img_type=cat,my_attr=cute
 ```
 
 
@@ -242,13 +278,19 @@ The following requests support GET/HEAD methods.
 ##### By IDs
 
 Basic downloading involves container ID and object ID and is done via GET
-requests to `/get/$CID/$OID` path, where `$CID` is a container ID, 
+requests to `/get/$CID/$OID` path, where `$CID` is a container ID or its name if NNS is enabled, 
 `$OID` is an object's (i.e. your file's) ID. 
 
- For example:
+For example:
 
-```
+```shell
 $ wget http://localhost:8082/get/Dxhf4PNprrJHWWTG5RGLdfLkJiSQ3AQqit1MSnEPRkDZ/2m8PtaoricLouCn5zE8hAFr3gZEBDCZFe9BEgVJTSocY
+```
+
+or if container has a name:
+
+```shell
+$ wget http://localhost:8082/get/container-name/2m8PtaoricLouCn5zE8hAFr3gZEBDCZFe9BEgVJTSocY
 ```
 
 ##### By attributes
@@ -259,7 +301,7 @@ can be used as well. The generic syntax for it looks like this:
 ```/get_by_attribute/$CID/$ATTRIBUTE_NAME/$ATTRIBUTE_VALUE```
 
 where 
-`$CID` is a container ID, 
+`$CID` is a container ID or its name if NNS is enabled, 
 `$ATTRIBUTE_NAME` is the name of the attribute we want to use,
 `$ATTRIBUTE_VALUE` is the value of this attribute that the target object should have.
 
@@ -333,7 +375,7 @@ set of reply headers generated using the following rules:
 
 ### Uploading
 
-You can POST files to `/upload/$CID` path where `$CID` is a container ID. The
+You can POST files to `/upload/$CID` path where `$CID` is a container ID or its name if NNS is enabled. The
 request must contain multipart form with mandatory `filename` parameter. Only
 one part in multipart form will be processed, so to upload another file just
 issue a new POST request.
@@ -471,7 +513,7 @@ Now, we can form a Bearer token (10000 is liftetime expiration in epoch) and sav
 
 Next, sign it with the container owner key:
 ```
-$ neofs-cli util sign bearer-token --from bearer.json --to signed.json -k KxDgvEKzgSBPPfuVfw67oPQBSjidEiqTHURKSDL1R7yGaGYAeYnr
+$ neofs-cli util sign bearer-token --from bearer.json --to signed.json -w ./wallet.json
 ```
 Encoding to base64 to use via the header:
 ```
@@ -498,12 +540,12 @@ For the token to work correctly, you need to create a container with a basic ACL
 
 For example:
 ```
-$ neofs-cli --key KxDgvEKzgSBPPfuVfw67oPQBSjidEiqTHURKSDL1R7yGaGYAeYnr --basic-acl 0x0FFFCFFF -r 192.168.130.72:8080 container create --policy "REP 3"  --await
+$ neofs-cli -w ./wallet.json --basic-acl 0x0FFFCFFF -r 192.168.130.72:8080 container create --policy "REP 3"  --await
 ```
 
 To deny access to a container without a token, set the eACL rules:
 ```
-$ neofs-cli --key KxDgvEKzgSBPPfuVfw67oPQBSjidEiqTHURKSDL1R7yGaGYAeYnr -r 192.168.130.72:8080 container set-eacl --table eacl.json --await --cid BJeErH9MWmf52VsR1mLWKkgF3pRm3FkubYxM7TZkBP4K
+$ neofs-cli -w ./wallet.json -r 192.168.130.72:8080 container set-eacl --table eacl.json --await --cid BJeErH9MWmf52VsR1mLWKkgF3pRm3FkubYxM7TZkBP4K
 ```
 
 File **eacl.json**:
@@ -534,8 +576,9 @@ File **eacl.json**:
 
 ### Metrics and Pprof
 
-If enabled, Prometheus metrics are available at `/metrics/` path and Pprof at
-`/debug/pprof`.
+If enabled, Prometheus metrics are available at `localhost:8084` endpoint 
+and Pprof at `localhost:8083/debug/pprof` by default. Host and port can be configured. 
+See [configuration](./docs/gate-configuration.md).
 
 ## Credits
 
