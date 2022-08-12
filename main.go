@@ -26,9 +26,9 @@ func main() {
 // Panics on failure.
 //
 // Logger is built from zap's production logging configuration with:
-//  * parameterized level (debug by default)
-//  * console encoding
-//  * ISO8601 time encoding
+//   - parameterized level (debug by default)
+//   - console encoding
+//   - ISO8601 time encoding
 //
 // Logger records a stack trace for all messages at or above fatal level.
 //
