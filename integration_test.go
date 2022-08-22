@@ -38,6 +38,8 @@ type putResponse struct {
 const (
 	testContainerName      = "friendly"
 	versionWithNativeNames = "0.27.5"
+	testListenAddress      = "localhost:8082"
+	testHost               = "http://" + testListenAddress
 )
 
 func TestIntegration(t *testing.T) {
@@ -87,17 +89,17 @@ func runServer() context.CancelFunc {
 	return cancel
 }
 
-func simplePut(ctx context.Context, t *testing.T, p *pool.Pool, CID *cid.ID, version string) {
-	url := "http://localhost:8082/upload/" + CID.String()
+func simplePut(ctx context.Context, t *testing.T, p *pool.Pool, CID cid.ID, version string) {
+	url := testHost + "/upload/" + CID.String()
 	makePutRequestAndCheck(ctx, t, p, CID, url)
 
 	if version >= versionWithNativeNames {
-		url = "http://localhost:8082/upload/" + testContainerName
+		url = testHost + "/upload/" + testContainerName
 		makePutRequestAndCheck(ctx, t, p, CID, url)
 	}
 }
 
-func makePutRequestAndCheck(ctx context.Context, t *testing.T, p *pool.Pool, cnrID *cid.ID, url string) {
+func makePutRequestAndCheck(ctx context.Context, t *testing.T, p *pool.Pool, cnrID cid.ID, url string) {
 	content := "content of file"
 	keyAttr, valAttr := "User-Attribute", "user value"
 	attributes := map[string]string{
@@ -142,13 +144,13 @@ func makePutRequestAndCheck(ctx context.Context, t *testing.T, p *pool.Pool, cnr
 	err = cnrID.DecodeString(addr.CID)
 	require.NoError(t, err)
 
-	id := new(oid.ID)
+	var id oid.ID
 	err = id.DecodeString(addr.OID)
 	require.NoError(t, err)
 
 	var objectAddress oid.Address
-	objectAddress.SetContainer(*cnrID)
-	objectAddress.SetObject(*id)
+	objectAddress.SetContainer(cnrID)
+	objectAddress.SetObject(id)
 
 	payload := bytes.NewBuffer(nil)
 
@@ -168,7 +170,7 @@ func makePutRequestAndCheck(ctx context.Context, t *testing.T, p *pool.Pool, cnr
 	}
 }
 
-func simpleGet(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID *cid.ID, version string) {
+func simpleGet(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID cid.ID, version string) {
 	content := "content of file"
 	attributes := map[string]string{
 		"some-attr": "some-get-value",
@@ -176,12 +178,12 @@ func simpleGet(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID
 
 	id := putObject(ctx, t, clientPool, ownerID, CID, content, attributes)
 
-	resp, err := http.Get("http://localhost:8082/get/" + CID.String() + "/" + id.String())
+	resp, err := http.Get(testHost + "/get/" + CID.String() + "/" + id.String())
 	require.NoError(t, err)
 	checkGetResponse(t, resp, content, attributes)
 
 	if version >= versionWithNativeNames {
-		resp, err = http.Get("http://localhost:8082/get/" + testContainerName + "/" + id.String())
+		resp, err = http.Get(testHost + "/get/" + testContainerName + "/" + id.String())
 		require.NoError(t, err)
 		checkGetResponse(t, resp, content, attributes)
 	}
@@ -217,7 +219,7 @@ func checkGetByAttrResponse(t *testing.T, resp *http.Response, content string, a
 	}
 }
 
-func getByAttr(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID *cid.ID, version string) {
+func getByAttr(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID cid.ID, version string) {
 	keyAttr, valAttr := "some-attr", "some-get-by-attr-value"
 	content := "content of file"
 	attributes := map[string]string{keyAttr: valAttr}
@@ -230,18 +232,18 @@ func getByAttr(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID
 		"x-container-id":         CID.String(),
 	}
 
-	resp, err := http.Get("http://localhost:8082/get_by_attribute/" + CID.String() + "/" + keyAttr + "/" + valAttr)
+	resp, err := http.Get(testHost + "/get_by_attribute/" + CID.String() + "/" + keyAttr + "/" + valAttr)
 	require.NoError(t, err)
 	checkGetByAttrResponse(t, resp, content, expectedAttr)
 
 	if version >= versionWithNativeNames {
-		resp, err = http.Get("http://localhost:8082/get_by_attribute/" + testContainerName + "/" + keyAttr + "/" + valAttr)
+		resp, err = http.Get(testHost + "/get_by_attribute/" + testContainerName + "/" + keyAttr + "/" + valAttr)
 		require.NoError(t, err)
 		checkGetByAttrResponse(t, resp, content, expectedAttr)
 	}
 }
 
-func getZip(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID *cid.ID, version string) {
+func getZip(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID cid.ID, version string) {
 	names := []string{"zipfolder/dir/name1.txt", "zipfolder/name2.txt"}
 	contents := []string{"content of file1", "content of file2"}
 	attributes1 := map[string]string{attributeFilePath: names[0]}
@@ -250,11 +252,11 @@ func getZip(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID us
 	putObject(ctx, t, clientPool, ownerID, CID, contents[0], attributes1)
 	putObject(ctx, t, clientPool, ownerID, CID, contents[1], attributes2)
 
-	baseURL := "http://localhost:8082/zip/" + CID.String()
+	baseURL := testHost + "/zip/" + CID.String()
 	makeZipTest(t, baseURL, names, contents)
 
 	if version >= versionWithNativeNames {
-		baseURL = "http://localhost:8082/zip/" + testContainerName
+		baseURL = testHost + "/zip/" + testContainerName
 		makeZipTest(t, baseURL, names, contents)
 	}
 }
@@ -332,6 +334,7 @@ func getDefaultConfig() *viper.Viper {
 	v.SetDefault(cfgPeers+".0.priority", 1)
 
 	v.SetDefault(cfgRPCEndpoint, "http://localhost:30333")
+	v.SetDefault(cfgListenAddress, testListenAddress)
 
 	return v
 }
@@ -350,7 +353,7 @@ func getPool(ctx context.Context, t *testing.T, key *keys.PrivateKey) *pool.Pool
 	return clientPool
 }
 
-func createContainer(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, version string) (*cid.ID, error) {
+func createContainer(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, version string) (cid.ID, error) {
 	var policy netmap.PlacementPolicy
 	err := policy.DecodeString("REP 1")
 	require.NoError(t, err)
@@ -379,16 +382,16 @@ func createContainer(ctx context.Context, t *testing.T, clientPool *pool.Pool, o
 
 	CID, err := clientPool.PutContainer(ctx, prm)
 	if err != nil {
-		return nil, err
+		return cid.ID{}, err
 	}
 	fmt.Println(CID.String())
 
 	return CID, err
 }
 
-func putObject(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID *cid.ID, content string, attributes map[string]string) *oid.ID {
+func putObject(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID cid.ID, content string, attributes map[string]string) oid.ID {
 	obj := object.New()
-	obj.SetContainerID(*CID)
+	obj.SetContainerID(CID)
 	obj.SetOwnerID(&ownerID)
 
 	var attrs []object.Attribute
