@@ -4,11 +4,10 @@ go 1.17
 
 require (
 	github.com/fasthttp/router v1.4.1
-	github.com/nspcc-dev/neo-go v0.99.1-pre.0.20220714084516-54849ef3e58e
-	github.com/nspcc-dev/neofs-api-go/v2 v2.13.0
-	github.com/nspcc-dev/neofs-sdk-go v1.0.0-rc.5.0.20220725101411-90f1cc7a1a77
+	github.com/nspcc-dev/neo-go v0.99.1
+	github.com/nspcc-dev/neofs-api-go/v2 v2.13.2-0.20220818094951-98db3fa28419
+	github.com/nspcc-dev/neofs-sdk-go v1.0.0-rc.6.0.20220824140410-7537fa0decc5
 	github.com/prometheus/client_golang v1.11.0
-	github.com/prometheus/common v0.30.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
 	github.com/stretchr/testify v1.7.0
@@ -56,9 +55,9 @@ require (
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/nspcc-dev/go-ordered-json v0.0.0-20220111165707-25110be27d22 // indirect
 	github.com/nspcc-dev/hrw v1.0.9 // indirect
-	github.com/nspcc-dev/neo-go/pkg/interop v0.0.0-20220713145417-4f184498bc42 // indirect
+	github.com/nspcc-dev/neo-go/pkg/interop v0.0.0-20220727202624-6c7a401f776a // indirect
 	github.com/nspcc-dev/neofs-contract v0.15.3 // indirect
-	github.com/nspcc-dev/neofs-crypto v0.3.0 // indirect
+	github.com/nspcc-dev/neofs-crypto v0.4.0 // indirect
 	github.com/nspcc-dev/rfc6979 v0.2.0 // indirect
 	github.com/nspcc-dev/tzhash v1.6.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
@@ -68,6 +67,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
+	github.com/prometheus/common v0.30.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/savsgio/gotils v0.0.0-20210617111740-97865ed5a873 // indirect

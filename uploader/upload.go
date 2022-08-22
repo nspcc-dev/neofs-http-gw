@@ -59,7 +59,7 @@ func New(ctx context.Context, params *utils.AppParams, enableDefaultTimestamp bo
 func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	var (
 		file       MultipartFile
-		idObj      *oid.ID
+		idObj      oid.ID
 		addr       oid.Address
 		scid, _    = c.UserValue("cid").(string)
 		log        = u.log.With(zap.String("cid", scid))
@@ -157,7 +157,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		return
 	}
 
-	addr.SetObject(*idObj)
+	addr.SetObject(idObj)
 	addr.SetContainer(*idCnr)
 
 	// Try to return the response, otherwise, if something went wrong, throw an error.
