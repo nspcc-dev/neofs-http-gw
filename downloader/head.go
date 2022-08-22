@@ -72,7 +72,7 @@ func (r request) headObject(clnt *pool.Pool, objectAddress oid.Address) {
 		}
 	}
 
-	idsToResponse(&r.Response, obj)
+	idsToResponse(&r.Response, &obj)
 
 	if len(contentType) == 0 {
 		contentType, _, err = readContentType(obj.PayloadSize(), func(sz uint64) (io.Reader, error) {
@@ -83,7 +83,11 @@ func (r request) headObject(clnt *pool.Pool, objectAddress oid.Address) {
 				prmRange.UseBearer(*btoken)
 			}
 
-			return clnt.ObjectRange(r.appCtx, prmRange)
+			resObj, err := clnt.ObjectRange(r.appCtx, prmRange)
+			if err != nil {
+				return nil, err
+			}
+			return &resObj, nil
 		})
 		if err != nil && err != io.EOF {
 			r.handleNeoFSErr(err, start)
