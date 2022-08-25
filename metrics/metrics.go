@@ -42,9 +42,9 @@ type stateMetrics struct {
 
 type poolMetricsCollector struct {
 	pool                *pool.Pool
-	overallErrors       prometheus.Counter
-	overallNodeErrors   *prometheus.CounterVec
-	overallNodeRequests *prometheus.CounterVec
+	overallErrors       prometheus.Gauge
+	overallNodeErrors   *prometheus.GaugeVec
+	overallNodeRequests *prometheus.GaugeVec
 	currentErrors       *prometheus.GaugeVec
 	requestDuration     *prometheus.GaugeVec
 }
@@ -83,8 +83,8 @@ func (m stateMetrics) SetHealth(s int32) {
 }
 
 func newPoolMetricsCollector(p *pool.Pool) *poolMetricsCollector {
-	overallErrors := prometheus.NewCounter(
-		prometheus.CounterOpts{
+	overallErrors := prometheus.NewGauge(
+		prometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: poolSubsystem,
 			Name:      "overall_errors",
@@ -92,8 +92,8 @@ func newPoolMetricsCollector(p *pool.Pool) *poolMetricsCollector {
 		},
 	)
 
-	overallNodeErrors := prometheus.NewCounterVec(
-		prometheus.CounterOpts{
+	overallNodeErrors := prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: poolSubsystem,
 			Name:      "overall_node_errors",
@@ -104,8 +104,8 @@ func newPoolMetricsCollector(p *pool.Pool) *poolMetricsCollector {
 		},
 	)
 
-	overallNodeRequests := prometheus.NewCounterVec(
-		prometheus.CounterOpts{
+	overallNodeRequests := prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: poolSubsystem,
 			Name:      "overall_node_requests",
@@ -175,18 +175,20 @@ func (m *poolMetricsCollector) register() {
 func (m *poolMetricsCollector) updateStatistic() {
 	stat := m.pool.Statistic()
 
+	m.overallNodeErrors.Reset()
+	m.overallNodeRequests.Reset()
 	m.currentErrors.Reset()
 	m.requestDuration.Reset()
 
 	for _, node := range stat.Nodes() {
-		m.overallNodeErrors.WithLabelValues(node.Address()).Add(float64(node.OverallErrors()))
-		m.overallNodeRequests.WithLabelValues(node.Address()).Add(float64(node.Requests()))
+		m.overallNodeErrors.WithLabelValues(node.Address()).Set(float64(node.OverallErrors()))
+		m.overallNodeRequests.WithLabelValues(node.Address()).Set(float64(node.Requests()))
 
 		m.currentErrors.WithLabelValues(node.Address()).Set(float64(node.CurrentErrors()))
 		m.updateRequestsDuration(node)
 	}
 
-	m.overallErrors.Add(float64(stat.OverallErrors()))
+	m.overallErrors.Set(float64(stat.OverallErrors()))
 }
 
 func (m *poolMetricsCollector) updateRequestsDuration(node pool.NodeStatistic) {
