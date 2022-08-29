@@ -5,8 +5,8 @@ go 1.17
 require (
 	github.com/fasthttp/router v1.4.1
 	github.com/nspcc-dev/neo-go v0.99.1
-	github.com/nspcc-dev/neofs-api-go/v2 v2.13.2-0.20220818094951-98db3fa28419
-	github.com/nspcc-dev/neofs-sdk-go v1.0.0-rc.6.0.20220824140410-7537fa0decc5
+	github.com/nspcc-dev/neofs-api-go/v2 v2.13.2-0.20220827080658-9e17cdfc7647
+	github.com/nspcc-dev/neofs-sdk-go v1.0.0-rc.6.0.20220829114550-ee92df32032e
 	github.com/prometheus/client_golang v1.11.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
