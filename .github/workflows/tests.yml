@@ -34,7 +34,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.17
+          go-version: 1.19
 
       - name: Restore Go modules from cache
         uses: actions/cache@v2
@@ -60,7 +60,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        go_versions: [ '1.17', '1.18' ]
+        go_versions: [ '1.18', '1.19' ]
       fail-fast: false
     steps:
       - uses: actions/checkout@v2
