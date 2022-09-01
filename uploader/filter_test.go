@@ -1,6 +1,7 @@
 package uploader
 
 import (
+	"math"
 	"strconv"
 	"testing"
 	"time"
@@ -52,8 +53,13 @@ func TestPrepareExpirationHeader(t *testing.T) {
 		blockPerEpoch: 101,
 	}
 
-	epochPerDay := (24 * time.Hour).Milliseconds() / int64(defaultDurations.blockPerEpoch) / defaultDurations.msPerBlock
-	defaultExpEpoch := strconv.FormatInt(int64(defaultDurations.currentEpoch)+epochPerDay, 10)
+	msPerBlock := defaultDurations.blockPerEpoch * uint64(defaultDurations.msPerBlock)
+	epochPerDay := uint64((24 * time.Hour).Milliseconds()) / msPerBlock
+	if uint64((24*time.Hour).Milliseconds())%msPerBlock != 0 {
+		epochPerDay++
+	}
+
+	defaultExpEpoch := strconv.FormatUint(defaultDurations.currentEpoch+epochPerDay, 10)
 
 	for _, tc := range []struct {
 		name      string
@@ -129,6 +135,16 @@ func TestPrepareExpirationHeader(t *testing.T) {
 			headers:   map[string]string{utils.ExpirationRFC3339Attr: tomorrow.Format(time.RFC3339)},
 			durations: defaultDurations,
 			expected:  map[string]string{object.SysAttributeExpEpoch: defaultExpEpoch},
+		},
+		{
+			name:    "valid max uint 64",
+			headers: map[string]string{utils.ExpirationRFC3339Attr: tomorrow.Format(time.RFC3339)},
+			durations: &epochDurations{
+				currentEpoch:  math.MaxUint64 - 1,
+				msPerBlock:    defaultDurations.msPerBlock,
+				blockPerEpoch: defaultDurations.blockPerEpoch,
+			},
+			expected: map[string]string{object.SysAttributeExpEpoch: strconv.FormatUint(uint64(math.MaxUint64), 10)},
 		},
 		{
 			name:    "invalid timestamp sec",
