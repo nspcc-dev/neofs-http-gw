@@ -3,6 +3,7 @@ package uploader
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 
@@ -121,7 +122,18 @@ func prepareExpirationHeader(headers map[string]string, epochDurations *epochDur
 }
 
 func updateExpirationHeader(headers map[string]string, durations *epochDurations, expDuration time.Duration) {
-	epochDuration := durations.msPerBlock * int64(durations.blockPerEpoch)
-	numEpoch := expDuration.Milliseconds() / epochDuration
-	headers[object.SysAttributeExpEpoch] = strconv.FormatInt(int64(durations.currentEpoch)+numEpoch, 10)
+	epochDuration := uint64(durations.msPerBlock) * durations.blockPerEpoch
+	currentEpoch := durations.currentEpoch
+	numEpoch := uint64(expDuration.Milliseconds()) / epochDuration
+
+	if uint64(expDuration.Milliseconds())%epochDuration != 0 {
+		numEpoch++
+	}
+
+	expirationEpoch := uint64(math.MaxUint64)
+	if numEpoch < math.MaxUint64-currentEpoch {
+		expirationEpoch = currentEpoch + numEpoch
+	}
+
+	headers[object.SysAttributeExpEpoch] = strconv.FormatUint(expirationEpoch, 10)
 }
