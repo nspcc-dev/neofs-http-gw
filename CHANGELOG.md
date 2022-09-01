@@ -2,6 +2,11 @@
 
 This document outlines major changes between releases.
 
+## Unreleased
+
+### Fixed
+- Fix expiration epoch calculation (#198)
+
 ## [0.23.0] - 2022-08-02
 
 ### Added
@@ -205,3 +210,4 @@ releases.
 [0.21.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.20.0...v0.21.0
 [0.22.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.21.0...v0.22.0
 [0.23.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.22.0...v0.23.0
+[Unreleased]: https://github.com/nspcc-dev/neofs-rest-gw/compare/v0.23.0...master
