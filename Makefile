@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 
 REPO ?= $(shell go list -m)
-VERSION ?= $(shell git describe --tags --match "v*" --dirty --always 2>/dev/null || cat VERSION 2>/dev/null || echo "develop")
+VERSION ?= $(shell git describe --tags --match "v*" --dirty --always --abbrev=8 2>/dev/null || cat VERSION 2>/dev/null || echo "develop")
 GO_VERSION ?= 1.19
 LINT_VERSION ?= 1.49.0
 BUILD ?= $(shell date -u --iso=seconds)
