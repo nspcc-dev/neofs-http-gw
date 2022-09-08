@@ -13,9 +13,7 @@ func GetContainerID(ctx context.Context, containerID string, resolver *resolver.
 	cnrID := new(cid.ID)
 	err := cnrID.DecodeString(containerID)
 	if err != nil {
-		if resolver != nil {
-			cnrID, err = resolver.Resolve(ctx, containerID)
-		}
+		cnrID, err = resolver.Resolve(ctx, containerID)
 	}
 	return cnrID, err
 }

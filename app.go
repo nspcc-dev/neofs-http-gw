@@ -158,6 +158,21 @@ func newApp(ctx context.Context, opt ...Option) App {
 		a.log.Fatal("failed to dial pool", zap.Error(err))
 	}
 
+	a.initResolver()
+	a.initMetrics()
+
+	return a
+}
+
+func (a *app) initResolver() {
+	var err error
+	a.resolver, err = resolver.NewContainerResolver(a.getResolverConfig())
+	if err != nil {
+		a.log.Fatal("failed to create resolver", zap.Error(err))
+	}
+}
+
+func (a *app) getResolverConfig() ([]string, *resolver.Config) {
 	resolveCfg := &resolver.Config{
 		NeoFS:      resolver.NewNeoFSResolver(a.pool),
 		RPCAddress: a.cfg.GetString(cfgRPCEndpoint),
@@ -169,18 +184,11 @@ func newApp(ctx context.Context, opt ...Option) App {
 		a.log.Warn(fmt.Sprintf("resolver '%s' won't be used since '%s' isn't provided", resolver.NNSResolver, cfgRPCEndpoint))
 	}
 
-	if len(order) != 0 {
-		a.resolver, err = resolver.NewResolver(order, resolveCfg)
-		if err != nil {
-			a.log.Fatal("failed to create resolver", zap.Error(err))
-		}
-	} else {
-		a.log.Info("container resolver is disabled")
+	if len(order) == 0 {
+		a.log.Info("container resolver will be disabled because of resolvers 'resolver_order' is empty")
 	}
 
-	a.initMetrics()
-
-	return a
+	return order, resolveCfg
 }
 
 func (a *app) initMetrics() {
@@ -363,6 +371,10 @@ func (a *app) configReload() {
 		a.log.Warn("log level won't be updated", zap.Error(err))
 	} else {
 		a.logLevel.SetLevel(lvl)
+	}
+
+	if err := a.resolver.UpdateResolvers(a.getResolverConfig()); err != nil {
+		a.log.Warn("failed to update resolvers", zap.Error(err))
 	}
 
 	a.stopServices()
