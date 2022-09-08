@@ -82,8 +82,8 @@ func runServer() context.CancelFunc {
 	cancelCtx, cancel := context.WithCancel(context.Background())
 
 	v := getDefaultConfig()
-	l := newLogger(v)
-	application := newApp(cancelCtx, WithConfig(v), WithLogger(l))
+	l, lvl := newLogger(v)
+	application := newApp(cancelCtx, WithConfig(v), WithLogger(l, lvl))
 	go application.Serve(cancelCtx)
 
 	return cancel

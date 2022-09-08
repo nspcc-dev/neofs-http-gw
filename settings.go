@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -108,7 +110,7 @@ func settings() *viper.Viper {
 
 	flags.StringP(cmdWallet, "w", "", `path to the wallet`)
 	flags.String(cmdAddress, "", `address of wallet account`)
-	config := flags.String(cmdConfig, "", "config path")
+	flags.String(cmdConfig, "", "config path")
 	flags.Duration(cfgConTimeout, defaultConnectTimeout, "gRPC connect timeout")
 	flags.Duration(cfgReqTimeout, defaultRequestTimeout, "gRPC request timeout")
 	flags.Duration(cfgRebalance, defaultRebalanceTimer, "gRPC connection rebalance timer")
@@ -213,9 +215,7 @@ func settings() *viper.Viper {
 	}
 
 	if v.IsSet(cmdConfig) {
-		if cfgFile, err := os.Open(*config); err != nil {
-			panic(err)
-		} else if err := v.ReadConfig(cfgFile); err != nil {
+		if err := readConfig(v); err != nil {
 			panic(err)
 		}
 	}
@@ -229,4 +229,68 @@ func settings() *viper.Viper {
 	}
 
 	return v
+}
+
+func readConfig(v *viper.Viper) error {
+	cfgFileName := v.GetString(cmdConfig)
+	cfgFile, err := os.Open(cfgFileName)
+	if err != nil {
+		return err
+	}
+	if err = v.ReadConfig(cfgFile); err != nil {
+		return err
+	}
+
+	return cfgFile.Close()
+}
+
+// newLogger constructs a zap.Logger instance for current application.
+// Panics on failure.
+//
+// Logger is built from zap's production logging configuration with:
+//   - parameterized level (debug by default)
+//   - console encoding
+//   - ISO8601 time encoding
+//
+// Logger records a stack trace for all messages at or above fatal level.
+//
+// See also zapcore.Level, zap.NewProductionConfig, zap.AddStacktrace.
+func newLogger(v *viper.Viper) (*zap.Logger, zap.AtomicLevel) {
+	lvl, err := getLogLevel(v)
+	if err != nil {
+		panic(err)
+	}
+
+	c := zap.NewProductionConfig()
+	c.Level = zap.NewAtomicLevelAt(lvl)
+	c.Encoding = "console"
+	c.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+
+	l, err := c.Build(
+		zap.AddStacktrace(zap.NewAtomicLevelAt(zap.FatalLevel)),
+	)
+	if err != nil {
+		panic(fmt.Sprintf("build zap logger instance: %v", err))
+	}
+
+	return l, c.Level
+}
+
+func getLogLevel(v *viper.Viper) (zapcore.Level, error) {
+	var lvl zapcore.Level
+	lvlStr := v.GetString(cfgLoggerLevel)
+	err := lvl.UnmarshalText([]byte(lvlStr))
+	if err != nil {
+		return lvl, fmt.Errorf("incorrect logger level configuration %s (%v), "+
+			"value should be one of %v", lvlStr, err, [...]zapcore.Level{
+			zapcore.DebugLevel,
+			zapcore.InfoLevel,
+			zapcore.WarnLevel,
+			zapcore.ErrorLevel,
+			zapcore.DPanicLevel,
+			zapcore.PanicLevel,
+			zapcore.FatalLevel,
+		})
+	}
+	return lvl, nil
 }
