@@ -67,6 +67,7 @@ type (
 
 	GateMetricsProvider interface {
 		SetHealth(int32)
+		Unregister()
 	}
 )
 
@@ -243,6 +244,16 @@ func (m *gateMetrics) SetHealth(status int32) {
 	m.provider.SetHealth(status)
 }
 
+func (m *gateMetrics) Shutdown() {
+	m.mu.Lock()
+	if m.enabled {
+		m.provider.SetHealth(0)
+		m.enabled = false
+	}
+	m.provider.Unregister()
+	m.mu.Unlock()
+}
+
 func remove(list []string, element string) []string {
 	for i, item := range list {
 		if item == element {
@@ -366,6 +377,7 @@ LOOP:
 
 	a.log.Info("shutting down web server", zap.Error(a.webServer.Shutdown()))
 
+	a.metrics.Shutdown()
 	a.stopServices()
 
 	close(a.webDone)

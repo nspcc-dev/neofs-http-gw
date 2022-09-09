@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-	"sync/atomic"
 	"time"
 
 	"github.com/nspcc-dev/neofs-http-gw/resolver"
@@ -19,6 +18,7 @@ import (
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
 	"github.com/nspcc-dev/neofs-sdk-go/user"
 	"github.com/valyala/fasthttp"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
 )
 
