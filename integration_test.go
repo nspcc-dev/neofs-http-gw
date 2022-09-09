@@ -61,7 +61,7 @@ func TestIntegration(t *testing.T) {
 		ctx, cancel2 := context.WithCancel(rootCtx)
 
 		aioContainer := createDockerContainer(ctx, t, aioImage+version)
-		cancel := runServer()
+		server, cancel := runServer()
 		clientPool := getPool(ctx, t, key)
 		CID, err := createContainer(ctx, t, clientPool, ownerID, version)
 		require.NoError(t, err, version)
@@ -72,13 +72,14 @@ func TestIntegration(t *testing.T) {
 		t.Run("get zip "+version, func(t *testing.T) { getZip(ctx, t, clientPool, ownerID, CID, version) })
 
 		cancel()
+		server.Wait()
 		err = aioContainer.Terminate(ctx)
 		require.NoError(t, err)
 		cancel2()
 	}
 }
 
-func runServer() context.CancelFunc {
+func runServer() (App, context.CancelFunc) {
 	cancelCtx, cancel := context.WithCancel(context.Background())
 
 	v := getDefaultConfig()
@@ -86,7 +87,7 @@ func runServer() context.CancelFunc {
 	application := newApp(cancelCtx, WithConfig(v), WithLogger(l, lvl))
 	go application.Serve(cancelCtx)
 
-	return cancel
+	return application, cancel
 }
 
 func simplePut(ctx context.Context, t *testing.T, p *pool.Pool, CID cid.ID, version string) {
