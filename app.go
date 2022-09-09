@@ -41,6 +41,12 @@ type (
 		resolver  *resolver.ContainerResolver
 		metrics   *gateMetrics
 		services  []*metrics.Service
+		settings  *appSettings
+	}
+
+	appSettings struct {
+		Uploader   *uploader.Settings
+		Downloader *downloader.Settings
 	}
 
 	// App is an interface for the main gateway function.
@@ -158,10 +164,20 @@ func newApp(ctx context.Context, opt ...Option) App {
 		a.log.Fatal("failed to dial pool", zap.Error(err))
 	}
 
+	a.initAppSettings()
 	a.initResolver()
 	a.initMetrics()
 
 	return a
+}
+
+func (a *app) initAppSettings() {
+	a.settings = &appSettings{
+		Uploader:   &uploader.Settings{},
+		Downloader: &downloader.Settings{},
+	}
+
+	a.updateSettings()
 }
 
 func (a *app) initResolver() {
@@ -309,10 +325,8 @@ func (a *app) setHealthStatus() {
 }
 
 func (a *app) Serve(ctx context.Context) {
-	edts := a.cfg.GetBool(cfgUploaderHeaderEnableDefaultTimestamp)
-	uploadRoutes := uploader.New(ctx, a.AppParams(), edts)
-	downloadSettings := downloader.Settings{ZipCompression: a.cfg.GetBool(cfgZipCompression)}
-	downloadRoutes := downloader.New(ctx, a.AppParams(), downloadSettings)
+	uploadRoutes := uploader.New(ctx, a.AppParams(), a.settings.Uploader)
+	downloadRoutes := downloader.New(ctx, a.AppParams(), a.settings.Downloader)
 
 	// Configure router.
 	a.configureRouter(uploadRoutes, downloadRoutes)
@@ -358,7 +372,7 @@ LOOP:
 }
 
 func (a *app) configReload() {
-	a.log.Info("SIGHUP config reload")
+	a.log.Info("SIGHUP config reload started")
 	if !a.cfg.IsSet(cmdConfig) {
 		a.log.Warn("failed to reload config because it's missed")
 		return
@@ -380,8 +394,17 @@ func (a *app) configReload() {
 	a.stopServices()
 	a.startServices()
 
+	a.updateSettings()
+
 	a.metrics.SetEnabled(a.cfg.GetBool(cfgPrometheusEnabled))
 	a.setHealthStatus()
+
+	a.log.Info("SIGHUP config reload completed")
+}
+
+func (a *app) updateSettings() {
+	a.settings.Uploader.SetDefaultTimestamp(a.cfg.GetBool(cfgUploaderHeaderEnableDefaultTimestamp))
+	a.settings.Downloader.SetZipCompression(a.cfg.GetBool(cfgZipCompression))
 }
 
 func (a *app) startServices() {

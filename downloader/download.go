@@ -13,6 +13,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -255,15 +256,23 @@ type Downloader struct {
 	log               *zap.Logger
 	pool              *pool.Pool
 	containerResolver *resolver.ContainerResolver
-	settings          Settings
+	settings          *Settings
 }
 
 type Settings struct {
-	ZipCompression bool
+	zipCompression atomic.Bool
+}
+
+func (s *Settings) ZipCompression() bool {
+	return s.zipCompression.Load()
+}
+
+func (s *Settings) SetZipCompression(val bool) {
+	s.zipCompression.Store(val)
 }
 
 // New creates an instance of Downloader using specified options.
-func New(ctx context.Context, params *utils.AppParams, settings Settings) *Downloader {
+func New(ctx context.Context, params *utils.AppParams, settings *Settings) *Downloader {
 	return &Downloader{
 		appCtx:            ctx,
 		log:               params.Logger,
@@ -385,7 +394,7 @@ func (d *Downloader) search(c *fasthttp.RequestCtx, cid *cid.ID, key, val string
 
 func (d *Downloader) addObjectToZip(zw *zip.Writer, obj *object.Object) (io.Writer, error) {
 	method := zip.Store
-	if d.settings.ZipCompression {
+	if d.settings.ZipCompression() {
 		method = zip.Deflate
 	}
 

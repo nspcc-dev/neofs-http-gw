@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/nspcc-dev/neofs-http-gw/resolver"
@@ -28,12 +29,12 @@ const (
 
 // Uploader is an upload request handler.
 type Uploader struct {
-	appCtx                 context.Context
-	log                    *zap.Logger
-	pool                   *pool.Pool
-	ownerID                *user.ID
-	enableDefaultTimestamp bool
-	containerResolver      *resolver.ContainerResolver
+	appCtx            context.Context
+	log               *zap.Logger
+	pool              *pool.Pool
+	ownerID           *user.ID
+	settings          *Settings
+	containerResolver *resolver.ContainerResolver
 }
 
 type epochDurations struct {
@@ -42,16 +43,28 @@ type epochDurations struct {
 	blockPerEpoch uint64
 }
 
+type Settings struct {
+	defaultTimestamp atomic.Bool
+}
+
+func (s *Settings) DefaultTimestamp() bool {
+	return s.defaultTimestamp.Load()
+}
+
+func (s *Settings) SetDefaultTimestamp(val bool) {
+	s.defaultTimestamp.Store(val)
+}
+
 // New creates a new Uploader using specified logger, connection pool and
 // other options.
-func New(ctx context.Context, params *utils.AppParams, enableDefaultTimestamp bool) *Uploader {
+func New(ctx context.Context, params *utils.AppParams, settings *Settings) *Uploader {
 	return &Uploader{
-		appCtx:                 ctx,
-		log:                    params.Logger,
-		pool:                   params.Pool,
-		ownerID:                params.Owner,
-		enableDefaultTimestamp: enableDefaultTimestamp,
-		containerResolver:      params.Resolver,
+		appCtx:            ctx,
+		log:               params.Logger,
+		pool:              params.Pool,
+		ownerID:           params.Owner,
+		settings:          settings,
+		containerResolver: params.Resolver,
 	}
 }
 
@@ -130,7 +143,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		attributes = append(attributes, *filename)
 	}
 	// sets Timestamp attribute if it wasn't set from header and enabled by settings
-	if _, ok := filtered[object.AttributeTimestamp]; !ok && u.enableDefaultTimestamp {
+	if _, ok := filtered[object.AttributeTimestamp]; !ok && u.settings.DefaultTimestamp() {
 		timestamp := object.NewAttribute()
 		timestamp.SetKey(object.AttributeTimestamp)
 		timestamp.SetValue(strconv.FormatInt(time.Now().Unix(), 10))
