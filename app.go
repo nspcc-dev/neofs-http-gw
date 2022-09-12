@@ -401,8 +401,9 @@ func (a *app) Serve(ctx context.Context) {
 				return
 			}
 
+			var lnConf net.ListenConfig
 			var ln net.Listener
-			if ln, err = net.Listen("tcp4", bind); err != nil {
+			if ln, err = lnConf.Listen(ctx, "tcp4", bind); err != nil {
 				return
 			}
 			lnTLS := tls.NewListener(ln, &tls.Config{
