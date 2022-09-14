@@ -2,10 +2,22 @@
 
 This document outlines major changes between releases.
 
-## Unreleased
+## [Unreleased]
+
+## [0.24.0] - 2022-09-14
 
 ### Fixed
 - Fix expiration epoch calculation (#198)
+- Fix panic on go1.19 (#188)
+
+### Added
+- Exposure of pool metrics (#179, #194)
+
+## Changed
+- Help doesn't print empty parameters (#186)
+- Update version calculation (#190, #199)
+- Update neofs-sdk-go (#196)
+- Update go version in CI and docker (#197, #202)
 
 ## [0.23.0] - 2022-08-02
 
@@ -210,4 +222,5 @@ releases.
 [0.21.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.20.0...v0.21.0
 [0.22.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.21.0...v0.22.0
 [0.23.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.22.0...v0.23.0
-[Unreleased]: https://github.com/nspcc-dev/neofs-rest-gw/compare/v0.23.0...master
+[0.24.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.23.0...v0.24.0
+[Unreleased]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.24.0...master
