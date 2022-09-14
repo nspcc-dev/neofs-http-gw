@@ -13,7 +13,7 @@ This document outlines major changes between releases.
 ### Added
 - Exposure of pool metrics (#179, #194)
 
-## Changed
+### Changed
 - Help doesn't print empty parameters (#186)
 - Update version calculation (#190, #199)
 - Update neofs-sdk-go (#196)
