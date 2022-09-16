@@ -259,6 +259,7 @@ type Downloader struct {
 	settings          *Settings
 }
 
+// Settings stores reloading parameters, so it has to provide atomic getters and setters.
 type Settings struct {
 	zipCompression atomic.Bool
 }
