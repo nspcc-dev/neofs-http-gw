@@ -43,6 +43,7 @@ type epochDurations struct {
 	blockPerEpoch uint64
 }
 
+// Settings stores reloading parameters, so it has to provide atomic getters and setters.
 type Settings struct {
 	defaultTimestamp atomic.Bool
 }

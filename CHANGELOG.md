@@ -4,6 +4,9 @@ This document outlines major changes between releases.
 
 ## [Unreleased]
 
+### Added
+- Config reloading on SIGHUP (#200)
+
 ## [0.24.0] - 2022-09-14
 
 ### Fixed
