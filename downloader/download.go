@@ -22,6 +22,7 @@ import (
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/nspcc-dev/neofs-http-gw/utils"
 	"github.com/nspcc-dev/neofs-sdk-go/bearer"
+	"github.com/nspcc-dev/neofs-sdk-go/client"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
 	oid "github.com/nspcc-dev/neofs-sdk-go/object/id"
@@ -36,8 +37,6 @@ type request struct {
 	appCtx context.Context
 	log    *zap.Logger
 }
-
-var errObjectNotFound = errors.New("object not found")
 
 const attributeFilePath = "FilePath"
 
@@ -232,22 +231,14 @@ func (r *request) handleNeoFSErr(err error, start time.Time) {
 		zap.Stringer("elapsed", time.Since(start)),
 		zap.Error(err),
 	)
-	var (
-		msg   = fmt.Sprintf("could not receive object: %v", err)
-		code  = fasthttp.StatusBadRequest
-		cause = err
-	)
-	for unwrap := errors.Unwrap(err); unwrap != nil; unwrap = errors.Unwrap(cause) {
-		cause = unwrap
+
+	if client.IsErrObjectNotFound(err) || client.IsErrContainerNotFound(err) {
+		response.Error(r.RequestCtx, "Not Found", fasthttp.StatusNotFound)
+		return
 	}
 
-	if strings.Contains(cause.Error(), "not found") ||
-		strings.Contains(cause.Error(), "can't fetch container info") {
-		code = fasthttp.StatusNotFound
-		msg = errObjectNotFound.Error()
-	}
-
-	response.Error(r.RequestCtx, msg, code)
+	msg := fmt.Sprintf("could not receive object: %v", err)
+	response.Error(r.RequestCtx, msg, fasthttp.StatusBadRequest)
 }
 
 // Downloader is a download request handler.
