@@ -35,6 +35,9 @@ jobs:
       - name: Build CLI
         run: make
 
+      - name: Check version
+        run: if [[ $(make version) == *"dirty"* ]]; then exit 1; fi
+
   build_image:
     needs: build_cli
     name: Build Docker image
