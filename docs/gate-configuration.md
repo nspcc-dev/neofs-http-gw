@@ -8,6 +8,36 @@ There are some custom types used for brevity:
 * `duration` -- string consisting of a number and a suffix. Suffix examples include `s` (seconds), `m` (minutes), `ms` (
   milliseconds).
 
+
+# Reload on SIGHUP
+
+Some config values can be reloaded on SIGHUP signal.
+Such parameters have special mark in tables below.
+
+You can send SIGHUP signal to app using the following command:
+
+```shell
+$ kill -s SIGHUP <app_pid>
+```
+
+Example:
+
+```shell
+$ ./bin/neofs-http-gw --config config.yaml  &> http.log &
+[1] 998346
+
+$ cat http.log
+# ...
+2022-10-03T09:37:25.826+0300    info    neofs-http-gw/app.go:332        starting application    {"app_name": "neofs-http-gw", "version": "v0.24.0"}
+# ...
+
+$ kill -s SIGHUP 998346
+
+$ cat http.log
+# ...
+2022-10-03T09:38:16.205+0300    info    neofs-http-gw/app.go:470        SIGHUP config reload completed
+```
+
 # Structure
 
 | Section         | Description                                           |
@@ -41,17 +71,17 @@ rebalance_timer: 30s
 pool_error_threshold: 100
 ```
 
-| Parameter              | Type       | Default value  | Description                                                                        |
-|------------------------|------------|----------------|------------------------------------------------------------------------------------|
-| `listen_address`       | `string`   | `0.0.0.0:8082` | The address that the gateway is listening on.                                      |
-| `tls_certificate`      | `string`   |                | Path to the TLS certificate.                                                       |
-| `tls_key`              | `string`   |                | Path to the TLS key.                                                               |
-| `rpc_endpoint`         | `string`   |                | The address of the RPC host to which the gateway connects to resolve bucket names. |
-| `resolve_order`        | `[]string` | `[nns, dns]`   | Order of bucket name resolvers to use.                                             |
-| `connect_timeout`      | `duration` | `10s`          | Timeout to connect to a node.                                                      |
-| `request_timeout`      | `duration` | `15s`          | Timeout to check node health during rebalance.                                     |
-| `rebalance_timer`      | `duration` | `60s`          | Interval to check node health.                                                     |
-| `pool_error_threshold` | `uint32`   | `100`          | The number of errors on connection after which node is considered as unhealthy.    |
+| Parameter              | Type       | SIGHUP reload | Default value  | Description                                                                        |
+|------------------------|------------|---------------|----------------|------------------------------------------------------------------------------------|
+| `listen_address`       | `string`   |               | `0.0.0.0:8082` | The address that the gateway is listening on.                                      |
+| `tls_certificate`      | `string`   | yes           |                | Path to the TLS certificate.                                                       |
+| `tls_key`              | `string`   | yes           |                | Path to the TLS key.                                                               |
+| `rpc_endpoint`         | `string`   | yes           |                | The address of the RPC host to which the gateway connects to resolve bucket names. |
+| `resolve_order`        | `[]string` | yes           | `[nns, dns]`   | Order of bucket name resolvers to use.                                             |
+| `connect_timeout`      | `duration` |               | `10s`          | Timeout to connect to a node.                                                      |
+| `request_timeout`      | `duration` |               | `15s`          | Timeout to check node health during rebalance.                                     |
+| `rebalance_timer`      | `duration` |               | `60s`          | Interval to check node health.                                                     |
+| `pool_error_threshold` | `uint32`   |               | `100`          | The number of errors on connection after which node is considered as unhealthy.    |
 
 # `wallet` section
 
@@ -106,9 +136,9 @@ logger:
   level: debug
 ```
 
-| Parameter | Type     | Default value | Description                                                                                        |
-|-----------|----------|---------------|----------------------------------------------------------------------------------------------------|
-| `level`   | `string` | `debug`       | Logging level.<br/>Possible values:  `debug`, `info`, `warn`, `error`, `dpanic`, `panic`, `fatal`. |
+| Parameter | Type     | SIGHUP reload | Default value | Description                                                                                        |
+|-----------|----------|---------------|---------------|----------------------------------------------------------------------------------------------------|
+| `level`   | `string` | yes           | `debug`       | Logging level.<br/>Possible values:  `debug`, `info`, `warn`, `error`, `dpanic`, `panic`, `fatal`. |
 
 
 # `web` section
@@ -140,9 +170,9 @@ upload_header:
   use_default_timestamp: false
 ```
 
-| Parameter               | Type   | Default value | Description                                                 |
-|-------------------------|--------|---------------|-------------------------------------------------------------|
-| `use_default_timestamp` | `bool` | `false`       | Create timestamp for object if it isn't provided by header. |
+| Parameter               | Type   | SIGHUP reload | Default value | Description                                                 |
+|-------------------------|--------|---------------|---------------|-------------------------------------------------------------|
+| `use_default_timestamp` | `bool` | yes           | `false`       | Create timestamp for object if it isn't provided by header. |
 
 
 # `zip` section
@@ -152,9 +182,9 @@ zip:
   compression: false 
 ```
 
-| Parameter     | Type   | Default value | Description                                                  |
-|---------------|--------|---------------|--------------------------------------------------------------|
-| `compression` | `bool` | `false`       | Enable zip compression when download files by common prefix. |
+| Parameter     | Type   | SIGHUP reload | Default value | Description                                                  |
+|---------------|--------|---------------|---------------|--------------------------------------------------------------|
+| `compression` | `bool` | yes           | `false`       | Enable zip compression when download files by common prefix. |
 
 
 # `pprof` section
@@ -167,10 +197,10 @@ pprof:
   address: localhost:8083
 ```
 
-| Parameter | Type     | Default value    | Description                             |
-|-----------|----------|------------------|-----------------------------------------|
-| `enabled` | `bool`   | `false`          | Flag to enable the service.             |
-| `address` | `string` | `localhost:8083` | Address that service listener binds to. |
+| Parameter | Type     | SIGHUP reload | Default value    | Description                             |
+|-----------|----------|---------------|------------------|-----------------------------------------|
+| `enabled` | `bool`   | yes           | `false`          | Flag to enable the service.             |
+| `address` | `string` | yes           | `localhost:8083` | Address that service listener binds to. |
 
 # `prometheus` section
 
@@ -182,7 +212,7 @@ prometheus:
   address: localhost:8084
 ```
 
-| Parameter | Type     | Default value    | Description                             |
-|-----------|----------|------------------|-----------------------------------------|
-| `enabled` | `bool`   | `false`          | Flag to enable the service.             |
-| `address` | `string` | `localhost:8084` | Address that service listener binds to. |
+| Parameter | Type     | SIGHUP reload | Default value    | Description                             |
+|-----------|----------|---------------|------------------|-----------------------------------------|
+| `enabled` | `bool`   | yes           | `false`          | Flag to enable the service.             |
+| `address` | `string` | yes           | `localhost:8084` | Address that service listener binds to. |
