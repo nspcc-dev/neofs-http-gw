@@ -6,6 +6,7 @@ This document outlines major changes between releases.
 
 ### Added
 - Config reloading on SIGHUP (#200)
+- Stop pool dial on SIGINT (#212)
 
 ## [0.24.0] - 2022-09-14
 
