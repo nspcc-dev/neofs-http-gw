@@ -39,6 +39,7 @@ dep:
 	@CGO_ENABLED=0 \
 	go mod tidy -v && echo OK
 
+# Run `make %` in Golang container, for more information run `make help.docker/%`
 docker/%:
 	$(if $(filter $*,all $(BINS)), \
 		@echo "=> Running 'make $*' in clean Docker environment" && \
@@ -109,3 +110,5 @@ version:
 clean:
 	rm -rf vendor
 	rm -rf $(BINDIR)
+
+include help.mk
