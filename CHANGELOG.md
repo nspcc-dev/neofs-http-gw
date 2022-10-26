@@ -4,9 +4,17 @@ This document outlines major changes between releases.
 
 ## [Unreleased]
 
+## [0.25.0] - 2022-10-31
+
 ### Added
-- Config reloading on SIGHUP (#200)
+- Config reloading on SIGHUP (#200, #208)
 - Stop pool dial on SIGINT (#212)
+- Makefile help (#213)
+
+### Changed
+- Update NeoFS error handling (#206)
+- GitHub actions updates (#205, #209)
+- Unified system attribute format for GET and HEAD (#213)
 
 ## [0.24.0] - 2022-09-14
 
@@ -227,4 +235,5 @@ releases.
 [0.22.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.21.0...v0.22.0
 [0.23.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.22.0...v0.23.0
 [0.24.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.23.0...v0.24.0
-[Unreleased]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.24.0...master
+[0.25.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.24.0...v0.25.0
+[Unreleased]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.25.0...master
