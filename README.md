@@ -305,8 +305,9 @@ where
 `$ATTRIBUTE_NAME` is the name of the attribute we want to use,
 `$ATTRIBUTE_VALUE` is the value of this attribute that the target object should have.
 
-**NB!** The attribute key and value must be url encoded, i.e., if you want to download an object with the attribute value 
-`a cat`, the value in the request must be `a+cat`. In the same way with the attribute key.
+**NB!** The attribute key and value should be url encoded, i.e., if you want to download an object with the attribute value 
+`a cat`, the value in the request must be `a+cat`. In the same way with the attribute key. If you don't escape such values
+everything can still work (for example you can use `d@ta` without encoding) but it's HIGHLY RECOMMENDED to encode all your attributes.  
 
 If multiple objects have specified attribute with specified value, then the
 first one of them is returned (and you can't get others via this interface).
