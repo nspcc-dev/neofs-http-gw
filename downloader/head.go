@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/nspcc-dev/neofs-http-gw/response"
@@ -54,6 +55,9 @@ func (r request) headObject(clnt *pool.Pool, objectAddress oid.Address) {
 		val := attr.Value()
 		if !isValidToken(key) || !isValidValue(val) {
 			continue
+		}
+		if strings.HasPrefix(key, utils.SystemAttributePrefix) {
+			key = systemBackwardTranslator(key)
 		}
 		r.Response.Header.Set(utils.UserAttributeHeaderPrefix+key, val)
 		switch key {
