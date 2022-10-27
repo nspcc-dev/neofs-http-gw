@@ -16,6 +16,8 @@ NeoFS HTTP Gateway bridges NeoFS internal protocol and HTTP standard.
 - you can download one file per request from the NeoFS Network
 - you can upload one file per request into the NeoFS Network
 
+See available routes in [specification](./docs/api.md).
+
 ## Installation
 
 ```go install github.com/nspcc-dev/neofs-http-gw```
