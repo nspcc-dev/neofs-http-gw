@@ -16,3 +16,6 @@ testfile
 
 coverage.txt
 coverage.html
+
+# debhelpers
+**/.debhelper
