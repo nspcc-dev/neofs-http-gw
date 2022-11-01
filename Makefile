@@ -16,6 +16,13 @@ BINS = $(BINDIR)/neofs-http-gw
 
 .PHONY: all $(BINS) $(DIRS) dep docker/ test cover fmt image image-push dirty-image lint docker/lint version clean
 
+# .deb package versioning
+OS_RELEASE = $(shell lsb_release -cs)
+PKG_VERSION ?= $(shell echo $(VERSION) | sed "s/^v//" | \
+			sed -E "s/(.*)-(g[a-fA-F0-9]{6,8})(.*)/\1\3~\2/" | \
+			sed "s/-/~/")-${OS_RELEASE}
+.PHONY: debpackage debclean	
+
 # Make all binaries
 all: $(BINS)
 
@@ -110,5 +117,17 @@ version:
 clean:
 	rm -rf vendor
 	rm -rf $(BINDIR)
+
+# Package for Debian
+debpackage:
+	dch --package neofs-http-gw \
+			--controlmaint \
+			--newversion $(PKG_VERSION) \
+			--distribution $(OS_RELEASE) \
+			"Please see CHANGELOG.md for code changes for $(VERSION)"
+	dpkg-buildpackage --no-sign -b
+
+debclean:
+	dh clean
 
 include help.mk
