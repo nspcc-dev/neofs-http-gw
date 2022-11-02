@@ -23,6 +23,7 @@ import (
 	"github.com/nspcc-dev/neofs-http-gw/utils"
 	"github.com/nspcc-dev/neofs-sdk-go/bearer"
 	"github.com/nspcc-dev/neofs-sdk-go/client"
+	"github.com/nspcc-dev/neofs-sdk-go/container"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
 	oid "github.com/nspcc-dev/neofs-sdk-go/object/id"
@@ -37,8 +38,6 @@ type request struct {
 	appCtx context.Context
 	log    *zap.Logger
 }
-
-const attributeFilePath = "FilePath"
 
 func isValidToken(s string) bool {
 	for _, c := range s {
@@ -384,14 +383,26 @@ func (d *Downloader) search(c *fasthttp.RequestCtx, cid *cid.ID, key, val string
 	return d.pool.SearchObjects(d.appCtx, prm)
 }
 
+func (d *Downloader) getContainer(cnrID cid.ID) (container.Container, error) {
+	var prm pool.PrmContainerGet
+	prm.SetContainerID(cnrID)
+
+	return d.pool.GetContainer(d.appCtx, prm)
+}
+
 func (d *Downloader) addObjectToZip(zw *zip.Writer, obj *object.Object) (io.Writer, error) {
 	method := zip.Store
 	if d.settings.ZipCompression() {
 		method = zip.Deflate
 	}
 
+	filePath := getZipFilePath(obj)
+	if len(filePath) == 0 || filePath[len(filePath)-1] == '/' {
+		return nil, fmt.Errorf("invalid filepath '%s'", filePath)
+	}
+
 	return zw.CreateHeader(&zip.FileHeader{
-		Name:     getZipFilePath(obj),
+		Name:     filePath,
 		Method:   method,
 		Modified: time.Now(),
 	})
@@ -416,7 +427,20 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 		return
 	}
 
-	resSearch, err := d.search(c, containerID, attributeFilePath, prefix, object.MatchCommonPrefix)
+	// check if container exists here to be able to return 404 error,
+	// otherwise we get this error only in object iteration step
+	// and client get 200 OK.
+	if _, err = d.getContainer(*containerID); err != nil {
+		log.Error("could not check container existence", zap.Error(err))
+		if client.IsErrContainerNotFound(err) {
+			response.Error(c, "Not Found", fasthttp.StatusNotFound)
+			return
+		}
+		response.Error(c, "could not check container existence: "+err.Error(), fasthttp.StatusBadRequest)
+		return
+	}
+
+	resSearch, err := d.search(c, containerID, object.AttributeFilePath, prefix, object.MatchCommonPrefix)
 	if err != nil {
 		log.Error("could not search for objects", zap.Error(err))
 		response.Error(c, "could not search for objects: "+err.Error(), fasthttp.StatusBadRequest)
@@ -450,29 +474,19 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 
 			addr.SetObject(id)
 			if err = d.zipObject(zipWriter, addr, btoken, bufZip); err != nil {
-				return true
+				log.Error("failed to add object to archive", zap.String("oid", id.EncodeToString()), zap.Error(err))
 			}
 
 			return false
 		})
 		if errIter != nil {
 			log.Error("iterating over selected objects failed", zap.Error(errIter))
-			response.Error(c, "iterating over selected objects: "+errIter.Error(), fasthttp.StatusBadRequest)
-			return
 		} else if !called {
 			log.Error("objects not found")
-			response.Error(c, "objects not found", fasthttp.StatusNotFound)
-			return
 		}
 
-		if err == nil {
-			err = zipWriter.Close()
-		}
-
-		if err != nil {
-			log.Error("file streaming failure", zap.Error(err))
-			response.Error(c, "file streaming failure: "+err.Error(), fasthttp.StatusInternalServerError)
-			return
+		if err = zipWriter.Close(); err != nil {
+			log.Error("close zip writer", zap.Error(err))
 		}
 	})
 }
@@ -511,7 +525,7 @@ func (d *Downloader) zipObject(zipWriter *zip.Writer, addr oid.Address, btoken *
 
 func getZipFilePath(obj *object.Object) string {
 	for _, attr := range obj.Attributes() {
-		if attr.Key() == attributeFilePath {
+		if attr.Key() == object.AttributeFilePath {
 			return attr.Value()
 		}
 	}
