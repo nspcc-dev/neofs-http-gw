@@ -4,6 +4,9 @@ This document outlines major changes between releases.
 
 ## [Unreleased]
 
+### Fixed
+- Download zip archive when `FilePath` is invalid (#222)
+
 ## [0.25.0] - 2022-10-31
 
 ### Added
