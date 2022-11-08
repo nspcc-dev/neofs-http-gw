@@ -4,17 +4,17 @@ go 1.17
 
 require (
 	github.com/fasthttp/router v1.4.1
-	github.com/nspcc-dev/neo-go v0.99.2
-	github.com/nspcc-dev/neofs-api-go/v2 v2.13.2-0.20221005093543-3a91383f24a9
-	github.com/nspcc-dev/neofs-sdk-go v1.0.0-rc.6.0.20221007102402-8c682641bfd2
+	github.com/nspcc-dev/neo-go v0.99.4
+	github.com/nspcc-dev/neofs-api-go/v2 v2.14.0
+	github.com/nspcc-dev/neofs-sdk-go v1.0.0-rc.7.0.20221114144617-d047289182a1
 	github.com/prometheus/client_golang v1.13.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.8.0
 	github.com/testcontainers/testcontainers-go v0.13.0
 	github.com/valyala/fasthttp v1.34.0
-	go.uber.org/atomic v1.9.0
-	go.uber.org/zap v1.18.1
+	go.uber.org/atomic v1.10.0
+	go.uber.org/zap v1.23.0
 )
 
 require (
@@ -56,8 +56,8 @@ require (
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/nspcc-dev/go-ordered-json v0.0.0-20220111165707-25110be27d22 // indirect
 	github.com/nspcc-dev/hrw v1.0.9 // indirect
-	github.com/nspcc-dev/neo-go/pkg/interop v0.0.0-20220809123759-3094d3e0c14b // indirect
-	github.com/nspcc-dev/neofs-contract v0.15.3 // indirect
+	github.com/nspcc-dev/neo-go/pkg/interop v0.0.0-20220927123257-24c107e3a262 // indirect
+	github.com/nspcc-dev/neofs-contract v0.16.0 // indirect
 	github.com/nspcc-dev/neofs-crypto v0.4.0 // indirect
 	github.com/nspcc-dev/rfc6979 v0.2.0 // indirect
 	github.com/nspcc-dev/tzhash v1.6.1 // indirect
@@ -82,7 +82,7 @@ require (
 	github.com/urfave/cli v1.22.5 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	go.opencensus.io v0.23.0 // indirect
-	go.uber.org/multierr v1.7.0 // indirect
+	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
 	golang.org/x/net v0.0.0-20220412020605-290c469a71a5 // indirect
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f // indirect
