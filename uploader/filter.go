@@ -70,7 +70,7 @@ func filterHeaders(l *zap.Logger, header *fasthttp.RequestHeader) map[string]str
 	return result
 }
 
-func prepareExpirationHeader(headers map[string]string, epochDurations *epochDurations) error {
+func prepareExpirationHeader(headers map[string]string, epochDurations *epochDurations, now time.Time) error {
 	expirationInEpoch := headers[object.SysAttributeExpEpoch]
 
 	if timeRFC3339, ok := headers[utils.ExpirationRFC3339Attr]; ok {
@@ -79,7 +79,6 @@ func prepareExpirationHeader(headers map[string]string, epochDurations *epochDur
 			return fmt.Errorf("couldn't parse value %s of header %s", timeRFC3339, utils.ExpirationRFC3339Attr)
 		}
 
-		now := time.Now().UTC()
 		if expTime.Before(now) {
 			return fmt.Errorf("value %s of header %s must be in the future", timeRFC3339, utils.ExpirationRFC3339Attr)
 		}
@@ -94,7 +93,6 @@ func prepareExpirationHeader(headers map[string]string, epochDurations *epochDur
 		}
 		expTime := time.Unix(value, 0)
 
-		now := time.Now()
 		if expTime.Before(now) {
 			return fmt.Errorf("value %s of header %s must be in the future", timestamp, utils.ExpirationTimestampAttr)
 		}
