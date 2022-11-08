@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -121,7 +122,17 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 			response.Error(c, "could not get epoch durations from network info: "+err.Error(), fasthttp.StatusBadRequest)
 			return
 		}
-		if err = prepareExpirationHeader(filtered, epochDuration); err != nil {
+
+		now := time.Now()
+		if rawHeader := c.Request.Header.Peek(fasthttp.HeaderDate); rawHeader != nil {
+			if parsed, err := time.Parse(http.TimeFormat, string(rawHeader)); err != nil {
+				log.Warn("could not parse client time", zap.String("Date header", string(rawHeader)), zap.Error(err))
+			} else {
+				now = parsed
+			}
+		}
+
+		if err = prepareExpirationHeader(filtered, epochDuration, now); err != nil {
 			log.Error("could not parse expiration header", zap.Error(err))
 			response.Error(c, "could not parse expiration header: "+err.Error(), fasthttp.StatusBadRequest)
 			return

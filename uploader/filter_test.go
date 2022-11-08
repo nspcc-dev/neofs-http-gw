@@ -178,7 +178,7 @@ func TestPrepareExpirationHeader(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			err := prepareExpirationHeader(tc.headers, tc.durations)
+			err := prepareExpirationHeader(tc.headers, tc.durations, time.Now())
 			if tc.err {
 				require.Error(t, err)
 			} else {
