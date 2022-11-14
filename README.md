@@ -376,6 +376,11 @@ set of reply headers generated using the following rules:
    if they can be safely represented in HTTP header), for example `FileName`
    attribute becomes `X-Attribute-FileName` header
 
+##### Caching strategy
+
+HTTP Gateway doesn't control caching (doesn't anything with the `Cache-Control` header). Caching strategy strictly 
+depends on application use case. So it should be carefully done by proxy server.
+
 ### Uploading
 
 You can POST files to `/upload/$CID` path where `$CID` is a container ID or its name if NNS is enabled. The
