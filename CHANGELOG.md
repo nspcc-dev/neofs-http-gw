@@ -10,6 +10,7 @@ This document outlines major changes between releases.
 
 ### Added
 - Support the `Date` header on upload (#214)
+- Timeout for individual operations in streaming RPC (#234)
 
 ## [0.25.0] - 2022-10-31
 

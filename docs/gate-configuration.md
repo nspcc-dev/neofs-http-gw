@@ -66,6 +66,7 @@ resolve_order:
   - dns
 
 connect_timeout: 5s 
+stream_timeout: 10s
 request_timeout: 5s 
 rebalance_timer: 30s
 pool_error_threshold: 100
@@ -79,6 +80,7 @@ pool_error_threshold: 100
 | `rpc_endpoint`         | `string`   | yes           |                | The address of the RPC host to which the gateway connects to resolve bucket names. |
 | `resolve_order`        | `[]string` | yes           | `[nns, dns]`   | Order of bucket name resolvers to use.                                             |
 | `connect_timeout`      | `duration` |               | `10s`          | Timeout to connect to a node.                                                      |
+| `stream_timeout`       | `duration` |               | `10s`          | Timeout for individual operations in streaming RPC.                                |
 | `request_timeout`      | `duration` |               | `15s`          | Timeout to check node health during rebalance.                                     |
 | `rebalance_timer`      | `duration` |               | `60s`          | Interval to check node health.                                                     |
 | `pool_error_threshold` | `uint32`   |               | `100`          | The number of errors on connection after which node is considered as unhealthy.    |

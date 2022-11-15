@@ -21,6 +21,7 @@ const (
 	defaultRebalanceTimer = 60 * time.Second
 	defaultRequestTimeout = 15 * time.Second
 	defaultConnectTimeout = 10 * time.Second
+	defaultStreamTimeout  = 10 * time.Second
 
 	defaultShutdownTimeout = 15 * time.Second
 
@@ -46,6 +47,7 @@ const (
 
 	// Pool config.
 	cfgConTimeout         = "connect_timeout"
+	cfgStreamTimeout      = "stream_timeout"
 	cfgReqTimeout         = "request_timeout"
 	cfgRebalance          = "rebalance_timer"
 	cfgPoolErrorThreshold = "pool_error_threshold"
@@ -112,6 +114,7 @@ func settings() *viper.Viper {
 	flags.String(cmdAddress, "", `address of wallet account`)
 	flags.String(cmdConfig, "", "config path")
 	flags.Duration(cfgConTimeout, defaultConnectTimeout, "gRPC connect timeout")
+	flags.Duration(cfgStreamTimeout, defaultStreamTimeout, "gRPC individual message timeout")
 	flags.Duration(cfgReqTimeout, defaultRequestTimeout, "gRPC request timeout")
 	flags.Duration(cfgRebalance, defaultRebalanceTimer, "gRPC connection rebalance timer")
 

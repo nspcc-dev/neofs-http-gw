@@ -82,6 +82,7 @@ upload_header:
   use_default_timestamp: false # Create timestamp for object if it isn't provided by header.
 
 connect_timeout: 5s # Timeout to dial node.
+stream_timeout: 10s # Timeout for individual operations in streaming RPC.
 request_timeout: 5s # Timeout to check node health during rebalance.
 rebalance_timer: 30s # Interval to check nodes health.
 pool_error_threshold: 100 # The number of errors on connection after which node is considered as unhealthy.
