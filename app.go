@@ -137,6 +137,7 @@ func newApp(ctx context.Context, opt ...Option) App {
 	var prm pool.InitParameters
 	prm.SetKey(key)
 	prm.SetNodeDialTimeout(a.cfg.GetDuration(cfgConTimeout))
+	prm.SetNodeStreamTimeout(a.cfg.GetDuration(cfgStreamTimeout))
 	prm.SetHealthcheckTimeout(a.cfg.GetDuration(cfgReqTimeout))
 	prm.SetClientRebalanceInterval(a.cfg.GetDuration(cfgRebalance))
 	prm.SetErrorThreshold(a.cfg.GetUint32(cfgPoolErrorThreshold))
