@@ -6,7 +6,7 @@ require (
 	github.com/fasthttp/router v1.4.1
 	github.com/nspcc-dev/neo-go v0.99.4
 	github.com/nspcc-dev/neofs-api-go/v2 v2.14.0
-	github.com/nspcc-dev/neofs-sdk-go v1.0.0-rc.7.0.20221114144617-d047289182a1
+	github.com/nspcc-dev/neofs-sdk-go v1.0.0-rc.7.0.20221115140820-b4b07a3c4e11
 	github.com/prometheus/client_golang v1.13.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1

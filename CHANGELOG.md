@@ -8,6 +8,9 @@ This document outlines major changes between releases.
 - Download zip archive when `FilePath` is invalid (#222)
 - Only one peer must be healthy to init pool (#233)
 
+### Added
+- Timeout for individual operations in streaming RPC (#234)
+
 ## [0.25.0] - 2022-10-31
 
 ### Added
