@@ -114,7 +114,12 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		response.Error(c, "could not receive multipart/form: "+err.Error(), fasthttp.StatusBadRequest)
 		return
 	}
-	filtered := filterHeaders(u.log, &c.Request.Header)
+	filtered, err := filterHeaders(u.log, &c.Request.Header)
+	if err != nil {
+		log.Error("could not process headers", zap.Error(err))
+		response.Error(c, err.Error(), fasthttp.StatusBadRequest)
+		return
+	}
 	if needParseExpiration(filtered) {
 		epochDuration, err := getEpochDurations(c, u.pool)
 		if err != nil {

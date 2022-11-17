@@ -26,7 +26,8 @@ func systemTranslator(key, prefix []byte) []byte {
 	return bytes.ToUpper(key)
 }
 
-func filterHeaders(l *zap.Logger, header *fasthttp.RequestHeader) map[string]string {
+func filterHeaders(l *zap.Logger, header *fasthttp.RequestHeader) (map[string]string, error) {
+	var err error
 	result := make(map[string]string)
 	prefix := []byte(utils.UserAttributeHeaderPrefix)
 
@@ -42,23 +43,30 @@ func filterHeaders(l *zap.Logger, header *fasthttp.RequestHeader) map[string]str
 		}
 
 		// removing attribute prefix
-		key = bytes.TrimPrefix(key, prefix)
+		clearKey := bytes.TrimPrefix(key, prefix)
 
 		// checks that it's a system NeoFS header
 		for _, system := range neofsAttributeHeaderPrefixes {
-			if bytes.HasPrefix(key, system) {
-				key = systemTranslator(key, system)
+			if bytes.HasPrefix(clearKey, system) {
+				clearKey = systemTranslator(clearKey, system)
 				break
 			}
 		}
 
 		// checks that the attribute key is not empty
-		if len(key) == 0 {
+		if len(clearKey) == 0 {
+			return
+		}
+
+		// check if key gets duplicated
+		// return error containing full key name (with prefix)
+		if _, ok := result[string(clearKey)]; ok {
+			err = fmt.Errorf("key duplication error: %s", string(key))
 			return
 		}
 
 		// make string representation of key / val
-		k, v := string(key), string(val)
+		k, v := string(clearKey), string(val)
 
 		result[k] = v
 
@@ -67,7 +75,7 @@ func filterHeaders(l *zap.Logger, header *fasthttp.RequestHeader) map[string]str
 			zap.String("val", v))
 	})
 
-	return result
+	return result, err
 }
 
 func prepareExpirationHeader(headers map[string]string, epochDurations *epochDurations, now time.Time) error {

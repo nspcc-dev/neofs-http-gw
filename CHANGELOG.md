@@ -26,6 +26,7 @@ If you configure application using `.yaml` file change:
 
 ### Added
 - Support the `Date` header on upload (#214)
+- Add error response on attribute duplicates (#221)
 - Timeout for individual operations in streaming RPC (#234)
 
 ## [0.25.0] - 2022-10-31
