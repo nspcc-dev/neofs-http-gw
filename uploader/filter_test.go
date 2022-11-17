@@ -16,8 +16,27 @@ import (
 func TestFilter(t *testing.T) {
 	log := zap.NewNop()
 
+	t.Run("duplicate keys error", func(t *testing.T) {
+		req := &fasthttp.RequestHeader{}
+		req.DisableNormalizing()
+		req.Add("X-Attribute-DupKey", "first-value")
+		req.Add("X-Attribute-DupKey", "second-value")
+		_, err := filterHeaders(log, req)
+		require.Error(t, err)
+	})
+
+	t.Run("duplicate system keys error", func(t *testing.T) {
+		req := &fasthttp.RequestHeader{}
+		req.DisableNormalizing()
+		req.Add("X-Attribute-Neofs-DupKey", "first-value")
+		req.Add("X-Attribute-Neofs-DupKey", "second-value")
+		_, err := filterHeaders(log, req)
+		require.Error(t, err)
+	})
+
 	req := &fasthttp.RequestHeader{}
 	req.DisableNormalizing()
+
 	req.Set("X-Attribute-Neofs-Expiration-Epoch1", "101")
 	req.Set("X-Attribute-NEOFS-Expiration-Epoch2", "102")
 	req.Set("X-Attribute-neofs-Expiration-Epoch3", "103")
@@ -30,7 +49,8 @@ func TestFilter(t *testing.T) {
 		"__NEOFS__EXPIRATION_EPOCH2": "102",
 	}
 
-	result := filterHeaders(log, req)
+	result, err := filterHeaders(log, req)
+	require.NoError(t, err)
 
 	require.Equal(t, expected, result)
 }

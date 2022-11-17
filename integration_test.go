@@ -67,6 +67,7 @@ func TestIntegration(t *testing.T) {
 		require.NoError(t, err, version)
 
 		t.Run("simple put "+version, func(t *testing.T) { simplePut(ctx, t, clientPool, CID, version) })
+		t.Run("put with duplicate keys "+version, func(t *testing.T) { putWithDuplicateKeys(t, CID) })
 		t.Run("simple get "+version, func(t *testing.T) { simpleGet(ctx, t, clientPool, ownerID, CID, version) })
 		t.Run("get by attribute "+version, func(t *testing.T) { getByAttr(ctx, t, clientPool, ownerID, CID, version) })
 		t.Run("get zip "+version, func(t *testing.T) { getZip(ctx, t, clientPool, ownerID, CID, version) })
@@ -169,6 +170,43 @@ func makePutRequestAndCheck(ctx context.Context, t *testing.T, p *pool.Pool, cnr
 	for _, attribute := range res.Header.Attributes() {
 		require.Equal(t, attributes[attribute.Key()], attribute.Value())
 	}
+}
+
+func putWithDuplicateKeys(t *testing.T, CID cid.ID) {
+	url := testHost + "/upload/" + CID.String()
+
+	attr := "X-Attribute-User-Attribute"
+	content := "content of file"
+	valOne, valTwo := "first_value", "second_value"
+	fileName := "newFile.txt"
+
+	var buff bytes.Buffer
+	w := multipart.NewWriter(&buff)
+	fw, err := w.CreateFormFile("file", fileName)
+	require.NoError(t, err)
+	_, err = io.Copy(fw, bytes.NewBufferString(content))
+	require.NoError(t, err)
+	err = w.Close()
+	require.NoError(t, err)
+
+	request, err := http.NewRequest(http.MethodPost, url, &buff)
+	require.NoError(t, err)
+	request.Header.Set("Content-Type", w.FormDataContentType())
+	request.Header.Add(attr, valOne)
+	request.Header.Add(attr, valTwo)
+
+	resp, err := http.DefaultClient.Do(request)
+	require.NoError(t, err)
+
+	defer func() {
+		err := resp.Body.Close()
+		require.NoError(t, err)
+	}()
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, "key duplication error: "+attr+"\n", string(body))
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
 func simpleGet(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID cid.ID, version string) {
