@@ -3,10 +3,8 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
-	"crypto/tls"
-	"errors"
 	"fmt"
-	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -45,12 +43,12 @@ type (
 		metrics   *gateMetrics
 		services  []*metrics.Service
 		settings  *appSettings
+		servers   []Server
 	}
 
 	appSettings struct {
-		Uploader    *uploader.Settings
-		Downloader  *downloader.Settings
-		TLSProvider *certProvider
+		Uploader   *uploader.Settings
+		Downloader *downloader.Settings
 	}
 
 	// App is an interface for the main gateway function.
@@ -179,9 +177,8 @@ func newApp(ctx context.Context, opt ...Option) App {
 
 func (a *app) initAppSettings() {
 	a.settings = &appSettings{
-		Uploader:    &uploader.Settings{},
-		Downloader:  &downloader.Settings{},
-		TLSProvider: &certProvider{Enabled: a.cfg.IsSet(cfgTLSCertificate) || a.cfg.IsSet(cfgTLSKey)},
+		Uploader:   &uploader.Settings{},
+		Downloader: &downloader.Settings{},
 	}
 
 	a.updateSettings()
@@ -341,43 +338,6 @@ func (a *app) setHealthStatus() {
 	a.metrics.SetHealth(1)
 }
 
-type certProvider struct {
-	Enabled bool
-
-	mu       sync.RWMutex
-	certPath string
-	keyPath  string
-	cert     *tls.Certificate
-}
-
-func (p *certProvider) GetCertificate(*tls.ClientHelloInfo) (*tls.Certificate, error) {
-	if !p.Enabled {
-		return nil, errors.New("cert provider: disabled")
-	}
-
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-	return p.cert, nil
-}
-
-func (p *certProvider) UpdateCert(certPath, keyPath string) error {
-	if !p.Enabled {
-		return fmt.Errorf("tls disabled")
-	}
-
-	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
-	if err != nil {
-		return fmt.Errorf("cannot load TLS key pair from certFile '%s' and keyFile '%s': %w", certPath, keyPath, err)
-	}
-
-	p.mu.Lock()
-	p.certPath = certPath
-	p.keyPath = keyPath
-	p.cert = &cert
-	p.mu.Unlock()
-	return nil
-}
-
 func (a *app) Serve(ctx context.Context) {
 	uploadRoutes := uploader.New(ctx, a.AppParams(), a.settings.Uploader)
 	downloadRoutes := downloader.New(ctx, a.AppParams(), a.settings.Downloader)
@@ -386,38 +346,16 @@ func (a *app) Serve(ctx context.Context) {
 	a.configureRouter(uploadRoutes, downloadRoutes)
 
 	a.startServices()
+	a.initServers(ctx)
 
-	go func() {
-		var err error
-		defer func() {
-			if err != nil {
-				a.log.Fatal("could not start server", zap.Error(err))
+	for i := range a.servers {
+		go func(i int) {
+			a.log.Info("starting server", zap.String("address", a.servers[i].Address()))
+			if err := a.webServer.Serve(a.servers[i].Listener()); err != nil && err != http.ErrServerClosed {
+				a.log.Fatal("listen and serve", zap.Error(err))
 			}
-		}()
-
-		bind := a.cfg.GetString(cfgListenAddress)
-
-		if a.settings.TLSProvider.Enabled {
-			if err = a.settings.TLSProvider.UpdateCert(a.cfg.GetString(cfgTLSCertificate), a.cfg.GetString(cfgTLSKey)); err != nil {
-				return
-			}
-
-			var lnConf net.ListenConfig
-			var ln net.Listener
-			if ln, err = lnConf.Listen(ctx, "tcp4", bind); err != nil {
-				return
-			}
-			lnTLS := tls.NewListener(ln, &tls.Config{
-				GetCertificate: a.settings.TLSProvider.GetCertificate,
-			})
-
-			a.log.Info("running web server (TLS-enabled)", zap.String("address", bind))
-			err = a.webServer.Serve(lnTLS)
-		} else {
-			a.log.Info("running web server", zap.String("address", bind))
-			err = a.webServer.ListenAndServe(bind)
-		}
-	}()
+		}(i)
+	}
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGHUP)
@@ -460,6 +398,10 @@ func (a *app) configReload() {
 		a.log.Warn("failed to update resolvers", zap.Error(err))
 	}
 
+	if err := a.updateServers(); err != nil {
+		a.log.Warn("failed to reload server parameters", zap.Error(err))
+	}
+
 	a.stopServices()
 	a.startServices()
 
@@ -474,10 +416,6 @@ func (a *app) configReload() {
 func (a *app) updateSettings() {
 	a.settings.Uploader.SetDefaultTimestamp(a.cfg.GetBool(cfgUploaderHeaderEnableDefaultTimestamp))
 	a.settings.Downloader.SetZipCompression(a.cfg.GetBool(cfgZipCompression))
-
-	if err := a.settings.TLSProvider.UpdateCert(a.cfg.GetString(cfgTLSCertificate), a.cfg.GetString(cfgTLSKey)); err != nil {
-		a.log.Warn("failed to reload TLS certs", zap.Error(err))
-	}
 }
 
 func (a *app) startServices() {
@@ -542,4 +480,38 @@ func (a *app) AppParams() *utils.AppParams {
 		Owner:    a.owner,
 		Resolver: a.resolver,
 	}
+}
+
+func (a *app) initServers(ctx context.Context) {
+	serversInfo := fetchServers(a.cfg)
+
+	a.servers = make([]Server, len(serversInfo))
+	for i, serverInfo := range serversInfo {
+		a.log.Info("added server",
+			zap.String("address", serverInfo.Address), zap.Bool("tls enabled", serverInfo.TLS.Enabled),
+			zap.String("tls cert", serverInfo.TLS.CertFile), zap.String("tls key", serverInfo.TLS.KeyFile))
+		a.servers[i] = newServer(ctx, serverInfo, a.log)
+	}
+}
+
+func (a *app) updateServers() error {
+	serversInfo := fetchServers(a.cfg)
+
+	if len(serversInfo) != len(a.servers) {
+		return fmt.Errorf("invalid servers configuration: length mismatch: old '%d', new '%d", len(a.servers), len(serversInfo))
+	}
+
+	for i, serverInfo := range serversInfo {
+		if serverInfo.Address != a.servers[i].Address() {
+			return fmt.Errorf("invalid servers configuration: addresses mismatch: old '%s', new '%s", a.servers[i].Address(), serverInfo.Address)
+		}
+
+		if serverInfo.TLS.Enabled {
+			if err := a.servers[i].UpdateCert(serverInfo.TLS.CertFile, serverInfo.TLS.KeyFile); err != nil {
+				return fmt.Errorf("failed to update tls certs: %w", err)
+			}
+		}
+	}
+
+	return nil
 }

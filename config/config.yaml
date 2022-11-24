@@ -13,9 +13,17 @@ prometheus:
 logger:
   level: debug # Log level.
 
-listen_address: 0.0.0.0:443 # Address to bind.
-tls_certificate: /path/to/tls/cert # Provide cert to enable TLS.
-tls_key: /path/to/tls/key # Provide key to enable TLS.
+server:
+  - address: 0.0.0.0:8080
+    tls:
+      enabled: false
+      cert_file: /path/to/cert
+      key_file: /path/to/key
+  - address: 0.0.0.0:8081
+    tls:
+      enabled: false
+      cert_file: /path/to/cert
+      key_file: /path/to/key
 
 # Nodes configuration.
 # This configuration make the gateway use the first node (grpc://s01.neofs.devenv:8080)
