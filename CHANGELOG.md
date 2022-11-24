@@ -4,8 +4,18 @@ This document outlines major changes between releases.
 
 ## [Unreleased]
 
+### Fixed
+- Download zip archive when `FilePath` is invalid (#222)
+- Only one peer must be healthy to init pool (#233)
+
 ### Added
+- Support the `Date` header on upload (#214)
+- Add error response on attribute duplicates (#221)
+- Timeout for individual operations in streaming RPC (#234)
 - Multiple server listeners (#228)
+
+### Removed
+- Deprecated linters (#239)
 
 ### Updating from v0.25.0
 Make sure your configuration is valid:
@@ -19,15 +29,6 @@ If you configure application using `.yaml` file change:
 * `listen_address` -> `server.0.address`
 * `tls.cert_file` -> `server.0.tls.cert_file` (and set `server.0.tls.enabled: true`)
 * `tls.key_file` -> `server.0.tls.key_file` (and set `server.0.tls.enabled: true`)
-
-### Fixed
-- Download zip archive when `FilePath` is invalid (#222)
-- Only one peer must be healthy to init pool (#233)
-
-### Added
-- Support the `Date` header on upload (#214)
-- Add error response on attribute duplicates (#221)
-- Timeout for individual operations in streaming RPC (#234)
 
 ## [0.25.0] - 2022-10-31
 
