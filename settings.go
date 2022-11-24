@@ -27,9 +27,10 @@ const (
 
 	defaultPoolErrorThreshold uint32 = 100
 
-	cfgListenAddress  = "listen_address"
-	cfgTLSCertificate = "tls_certificate"
-	cfgTLSKey         = "tls_key"
+	cfgServer      = "server"
+	cfgTLSEnabled  = "tls.enabled"
+	cfgTLSCertFile = "tls.cert_file"
+	cfgTLSKeyFile  = "tls.key_file"
 
 	// Web.
 	cfgWebReadBufferSize     = "web.read_buffer_size"
@@ -76,13 +77,14 @@ const (
 	cfgZipCompression = "zip.compression"
 
 	// Command line args.
-	cmdHelp    = "help"
-	cmdVersion = "version"
-	cmdPprof   = "pprof"
-	cmdMetrics = "metrics"
-	cmdWallet  = "wallet"
-	cmdAddress = "address"
-	cmdConfig  = "config"
+	cmdHelp          = "help"
+	cmdVersion       = "version"
+	cmdPprof         = "pprof"
+	cmdMetrics       = "metrics"
+	cmdWallet        = "wallet"
+	cmdAddress       = "address"
+	cmdConfig        = "config"
+	cmdListenAddress = "listen_address"
 )
 
 var ignore = map[string]struct{}{
@@ -118,9 +120,9 @@ func settings() *viper.Viper {
 	flags.Duration(cfgReqTimeout, defaultRequestTimeout, "gRPC request timeout")
 	flags.Duration(cfgRebalance, defaultRebalanceTimer, "gRPC connection rebalance timer")
 
-	flags.String(cfgListenAddress, "0.0.0.0:8082", "address to listen")
-	flags.String(cfgTLSCertificate, "", "TLS certificate path")
-	flags.String(cfgTLSKey, "", "TLS key path")
+	flags.String(cmdListenAddress, "0.0.0.0:8080", "addresses to listen")
+	flags.String(cfgTLSCertFile, "", "TLS certificate path")
+	flags.String(cfgTLSKeyFile, "", "TLS key path")
 	peers := flags.StringArrayP(cfgPeers, "p", nil, "NeoFS nodes")
 
 	resolveMethods := flags.StringSlice(cfgResolveOrder, []string{resolver.NNSResolver, resolver.DNSResolver}, "set container name resolve order")
@@ -171,8 +173,22 @@ func settings() *viper.Viper {
 		panic(err)
 	}
 
+	if err := v.BindPFlag(cfgServer+".0.address", flags.Lookup(cmdListenAddress)); err != nil {
+		panic(err)
+	}
+	if err := v.BindPFlag(cfgServer+".0."+cfgTLSKeyFile, flags.Lookup(cfgTLSKeyFile)); err != nil {
+		panic(err)
+	}
+	if err := v.BindPFlag(cfgServer+".0."+cfgTLSCertFile, flags.Lookup(cfgTLSCertFile)); err != nil {
+		panic(err)
+	}
+
 	if err := flags.Parse(os.Args); err != nil {
 		panic(err)
+	}
+
+	if v.IsSet(cfgServer+".0."+cfgTLSKeyFile) && v.IsSet(cfgServer+".0."+cfgTLSCertFile) {
+		v.Set(cfgServer+".0."+cfgTLSEnabled, true)
 	}
 
 	if resolveMethods != nil {
@@ -296,4 +312,26 @@ func getLogLevel(v *viper.Viper) (zapcore.Level, error) {
 		})
 	}
 	return lvl, nil
+}
+
+func fetchServers(v *viper.Viper) []ServerInfo {
+	var servers []ServerInfo
+
+	for i := 0; ; i++ {
+		key := cfgServer + "." + strconv.Itoa(i) + "."
+
+		var serverInfo ServerInfo
+		serverInfo.Address = v.GetString(key + "address")
+		serverInfo.TLS.Enabled = v.GetBool(key + cfgTLSEnabled)
+		serverInfo.TLS.KeyFile = v.GetString(key + cfgTLSKeyFile)
+		serverInfo.TLS.CertFile = v.GetString(key + cfgTLSCertFile)
+
+		if serverInfo.Address == "" {
+			break
+		}
+
+		servers = append(servers, serverInfo)
+	}
+
+	return servers
 }

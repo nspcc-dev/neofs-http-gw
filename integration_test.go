@@ -335,7 +335,7 @@ func getDefaultConfig() *viper.Viper {
 	v.SetDefault(cfgPeers+".0.priority", 1)
 
 	v.SetDefault(cfgRPCEndpoint, "http://localhost:30333")
-	v.SetDefault(cfgListenAddress, testListenAddress)
+	v.SetDefault("server.0.address", testListenAddress)
 
 	return v
 }
