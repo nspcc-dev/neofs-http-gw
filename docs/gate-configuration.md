@@ -47,6 +47,7 @@ $ cat http.log
 | `peers`         | [Nodes configuration](#peers-section)                 |
 | `logger`        | [Logger configuration](#logger-section)               |
 | `web`           | [Web configuration](#web-section)                     |
+| `server`        | [Server configuration](#server-section)               |
 | `upload-header` | [Upload header configuration](#upload-header-section) |
 | `zip`           | [ZIP configuration](#zip-section)                     |
 | `pprof`         | [Pprof configuration](#pprof-section)                 |
@@ -56,10 +57,6 @@ $ cat http.log
 # General section
 
 ```yaml
-listen_address: 0.0.0.0:8082
-tls_certificate: /path/to/tls/cert 
-tls_key: /path/to/tls/key 
-
 rpc_endpoint: http://morph-chain.neofs.devenv:30333
 resolve_order:
   - nns
@@ -74,9 +71,6 @@ pool_error_threshold: 100
 
 | Parameter              | Type       | SIGHUP reload | Default value  | Description                                                                        |
 |------------------------|------------|---------------|----------------|------------------------------------------------------------------------------------|
-| `listen_address`       | `string`   |               | `0.0.0.0:8082` | The address that the gateway is listening on.                                      |
-| `tls_certificate`      | `string`   | yes           |                | Path to the TLS certificate.                                                       |
-| `tls_key`              | `string`   | yes           |                | Path to the TLS key.                                                               |
 | `rpc_endpoint`         | `string`   | yes           |                | The address of the RPC host to which the gateway connects to resolve bucket names. |
 | `resolve_order`        | `[]string` | yes           | `[nns, dns]`   | Order of bucket name resolvers to use.                                             |
 | `connect_timeout`      | `duration` |               | `10s`          | Timeout to connect to a node.                                                      |
@@ -130,6 +124,32 @@ peers:
 | `address`  | `string` |               | Address of storage node.                                                                                                                                |
 | `priority` | `int`    | `1`           | It allows to group nodes and don't switch group until all nodes with the same priority will be unhealthy. The lower the value, the higher the priority. |
 | `weight`   | `float`  | `1`           | Weight of node in the group with the same priority. Distribute requests to nodes proportionally to these values.                                        |
+
+# `server` section
+
+You can specify several listeners for server. For example, for `http` and `https`.
+
+```yaml
+server:
+  - address: 0.0.0.0:8080
+    tls:
+      enabled: false
+      cert_file: /path/to/cert
+      key_file: /path/to/key
+  - address: 0.0.0.0:8081
+    tls:
+      enabled: true
+      cert_file: /path/to/another/cert
+      key_file: /path/to/another/key
+```
+
+| Parameter       | Type     | SIGHUP reload | Default value  | Description                                   |
+|-----------------|----------|---------------|----------------|-----------------------------------------------|
+| `address`       | `string` |               | `0.0.0.0:8080` | The address that the gateway is listening on. |
+| `tls.enabled`   | `bool`   |               | false          | Enable TLS or not.                            |
+| `tls.cert_file` | `string` | yes           |                | Path to the TLS certificate.                  |
+| `tls.key_file`  | `string` | yes           |                | Path to the key.                              |
+
 
 # `logger` section
 

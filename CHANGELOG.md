@@ -4,6 +4,22 @@ This document outlines major changes between releases.
 
 ## [Unreleased]
 
+### Added
+- Multiple server listeners (#228)
+
+### Updating from v0.25.0
+Make sure your configuration is valid:
+
+If you configure application using environment variables change:
+* `HTTP_GW_LISTEN_ADDRESS` -> `HTTP_GW_SERVER_0_ADDRESS`
+* `HTTP_GW_TLS_CERT_FILE` -> `HTTP_GW_SERVER_0_TLS_CERT_FILE` (and set `HTTP_GW_SERVER_0_TLS_ENABLED=true`)
+* `HTTP_GW_TLS_KEY_FILE` -> `HTTP_GW_SERVER_0_TLS_KEY_FILE` (and set `HTTP_GW_SERVER_0_TLS_ENABLED=true`)
+
+If you configure application using `.yaml` file change:
+* `listen_address` -> `server.0.address`
+* `tls.cert_file` -> `server.0.tls.cert_file` (and set `server.0.tls.enabled: true`)
+* `tls.key_file` -> `server.0.tls.key_file` (and set `server.0.tls.enabled: true`)
+
 ### Fixed
 - Download zip archive when `FilePath` is invalid (#222)
 - Only one peer must be healthy to init pool (#233)
