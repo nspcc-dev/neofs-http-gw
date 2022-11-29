@@ -4,11 +4,14 @@ This document outlines major changes between releases.
 
 ## [Unreleased]
 
+## [0.25.1] - 2022-11-30
+
 ### Fixed
 - Download zip archive when `FilePath` is invalid (#222)
 - Only one peer must be healthy to init pool (#233)
 
 ### Added
+- Debian packaging (#223)
 - Timeout for individual operations in streaming RPC (#234)
 
 ## [0.25.0] - 2022-10-31
@@ -243,4 +246,5 @@ releases.
 [0.23.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.22.0...v0.23.0
 [0.24.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.23.0...v0.24.0
 [0.25.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.24.0...v0.25.0
-[Unreleased]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.25.0...master
+[0.25.1]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.25.0...v0.25.1
+[Unreleased]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.25.1...master
