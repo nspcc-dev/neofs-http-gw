@@ -218,6 +218,7 @@ func (a *app) getResolverConfig() ([]string, *resolver.Config) {
 
 func (a *app) initMetrics() {
 	gateMetricsProvider := metrics.NewGateMetrics(a.pool)
+	gateMetricsProvider.SetGWVersion(Version)
 	a.metrics = newGateMetrics(a.log, gateMetricsProvider, a.cfg.GetBool(cfgPrometheusEnabled))
 }
 
