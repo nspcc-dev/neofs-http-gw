@@ -17,6 +17,8 @@ import (
 	"github.com/nspcc-dev/neofs-sdk-go/container"
 	"github.com/nspcc-dev/neofs-sdk-go/container/acl"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
+	neofscrypto "github.com/nspcc-dev/neofs-sdk-go/crypto"
+	neofsecdsa "github.com/nspcc-dev/neofs-sdk-go/crypto/ecdsa"
 	"github.com/nspcc-dev/neofs-sdk-go/netmap"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
 	oid "github.com/nspcc-dev/neofs-sdk-go/object/id"
@@ -53,15 +55,17 @@ func TestIntegration(t *testing.T) {
 	key, err := keys.NewPrivateKeyFromHex("1dd37fba80fec4e6a6f13fd708d8dcb3b29def768017052f6c930fa1c5d90bbb")
 	require.NoError(t, err)
 
+	signer := neofsecdsa.SignerRFC6979(key.PrivateKey)
+
 	var ownerID user.ID
-	user.IDFromKey(&ownerID, key.PrivateKey.PublicKey)
+	require.NoError(t, user.IDFromSigner(&ownerID, signer))
 
 	for _, version := range versions {
 		ctx, cancel2 := context.WithCancel(rootCtx)
 
 		aioContainer := createDockerContainer(ctx, t, aioImage+version)
 		server, cancel := runServer()
-		clientPool := getPool(ctx, t, key)
+		clientPool := getPool(ctx, t, signer)
 		CID, err := createContainer(ctx, t, clientPool, ownerID, version)
 		require.NoError(t, err, version)
 
@@ -377,9 +381,9 @@ func getDefaultConfig() *viper.Viper {
 	return v
 }
 
-func getPool(ctx context.Context, t *testing.T, key *keys.PrivateKey) *pool.Pool {
+func getPool(ctx context.Context, t *testing.T, signer neofscrypto.Signer) *pool.Pool {
 	var prm pool.InitParameters
-	prm.SetKey(&key.PrivateKey)
+	prm.SetSigner(signer)
 	prm.SetNodeDialTimeout(5 * time.Second)
 	prm.AddNode(pool.NewNodeParam(1, "localhost:8080", 1))
 
