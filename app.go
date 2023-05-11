@@ -23,6 +23,7 @@ import (
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/uploader"
 	"github.com/nspcc-dev/neofs-http-gw/utils"
+	neofsecdsa "github.com/nspcc-dev/neofs-sdk-go/crypto/ecdsa"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
 	"github.com/nspcc-dev/neofs-sdk-go/user"
 	"github.com/spf13/viper"
@@ -128,12 +129,16 @@ func newApp(ctx context.Context, opt ...Option) App {
 		a.log.Fatal("failed to get neofs credentials", zap.Error(err))
 	}
 
+	signer := neofsecdsa.SignerRFC6979(*key)
+
 	var owner user.ID
-	user.IDFromKey(&owner, key.PublicKey)
+	if err = user.IDFromSigner(&owner, signer); err != nil {
+		a.log.Fatal("failed to get user id", zap.Error(err))
+	}
 	a.owner = &owner
 
 	var prm pool.InitParameters
-	prm.SetKey(key)
+	prm.SetSigner(signer)
 	prm.SetNodeDialTimeout(a.cfg.GetDuration(cfgConTimeout))
 	prm.SetNodeStreamTimeout(a.cfg.GetDuration(cfgStreamTimeout))
 	prm.SetHealthcheckTimeout(a.cfg.GetDuration(cfgReqTimeout))
