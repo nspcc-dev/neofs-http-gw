@@ -4,6 +4,16 @@ This document outlines major changes between releases.
 
 ## [Unreleased]
 
+## [0.27.0] - 2022-05-19
+
+### Added
+- Version metric (#251)
+
+### Changed
+- Go 1.17 support was removed, 1.20 is used by default for builds (#249)
+- SDK dependency updated to 1.0.0-rc.8 (#250)
+- github.com/testcontainers/testcontainers-go dependency update to 0.20.1 (#250)
+
 ## [0.26.0] - 2022-12-28
 
 ### Fixed
@@ -276,4 +286,5 @@ releases.
 [0.25.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.24.0...v0.25.0
 [0.25.1]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.25.0...v0.25.1
 [0.26.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.25.1...v0.26.0
-[Unreleased]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.26.0...master
+[0.27.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.26.0...v0.27.0
+[Unreleased]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.0...master
