@@ -22,7 +22,7 @@ import (
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/nspcc-dev/neofs-http-gw/utils"
 	"github.com/nspcc-dev/neofs-sdk-go/bearer"
-	"github.com/nspcc-dev/neofs-sdk-go/client"
+	apistatus "github.com/nspcc-dev/neofs-sdk-go/client/status"
 	"github.com/nspcc-dev/neofs-sdk-go/container"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
@@ -104,12 +104,11 @@ func (r request) receiveFile(clnt *pool.Pool, objectAddress oid.Address) {
 	}
 
 	var prm pool.PrmObjectGet
-	prm.SetAddress(objectAddress)
 	if btoken := bearerToken(r.RequestCtx); btoken != nil {
 		prm.UseBearer(*btoken)
 	}
 
-	rObj, err := clnt.GetObject(r.appCtx, prm)
+	rObj, err := clnt.GetObject(r.appCtx, objectAddress.Container(), objectAddress.Object(), prm)
 	if err != nil {
 		r.handleNeoFSErr(err, start)
 		return
@@ -231,7 +230,9 @@ func (r *request) handleNeoFSErr(err error, start time.Time) {
 		zap.Error(err),
 	)
 
-	if client.IsErrObjectNotFound(err) || client.IsErrContainerNotFound(err) {
+	if errors.Is(err, apistatus.ErrObjectNotFound) ||
+		errors.Is(err, apistatus.ErrContainerNotFound) ||
+		errors.Is(err, apistatus.ErrObjectAlreadyRemoved) {
 		response.Error(r.RequestCtx, "Not Found", fasthttp.StatusNotFound)
 		return
 	}
@@ -374,20 +375,16 @@ func (d *Downloader) search(c *fasthttp.RequestCtx, cid *cid.ID, key, val string
 	filters.AddFilter(key, val, op)
 
 	var prm pool.PrmObjectSearch
-	prm.SetContainerID(*cid)
 	prm.SetFilters(filters)
 	if btoken := bearerToken(c); btoken != nil {
 		prm.UseBearer(*btoken)
 	}
 
-	return d.pool.SearchObjects(d.appCtx, prm)
+	return d.pool.SearchObjects(d.appCtx, *cid, prm)
 }
 
 func (d *Downloader) getContainer(cnrID cid.ID) (container.Container, error) {
-	var prm pool.PrmContainerGet
-	prm.SetContainerID(cnrID)
-
-	return d.pool.GetContainer(d.appCtx, prm)
+	return d.pool.GetContainer(d.appCtx, cnrID)
 }
 
 func (d *Downloader) addObjectToZip(zw *zip.Writer, obj *object.Object) (io.Writer, error) {
@@ -432,7 +429,7 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 	// and client get 200 OK.
 	if _, err = d.getContainer(*containerID); err != nil {
 		log.Error("could not check container existence", zap.Error(err))
-		if client.IsErrContainerNotFound(err) {
+		if errors.Is(err, apistatus.ErrContainerNotFound) {
 			response.Error(c, "Not Found", fasthttp.StatusNotFound)
 			return
 		}
@@ -493,12 +490,11 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 
 func (d *Downloader) zipObject(zipWriter *zip.Writer, addr oid.Address, btoken *bearer.Token, bufZip []byte) error {
 	var prm pool.PrmObjectGet
-	prm.SetAddress(addr)
 	if btoken != nil {
 		prm.UseBearer(*btoken)
 	}
 
-	resGet, err := d.pool.GetObject(d.appCtx, prm)
+	resGet, err := d.pool.GetObject(d.appCtx, addr.Container(), addr.Object(), prm)
 	if err != nil {
 		return fmt.Errorf("get NeoFS object: %v", err)
 	}

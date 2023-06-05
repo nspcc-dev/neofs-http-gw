@@ -160,9 +160,8 @@ func makePutRequestAndCheck(ctx context.Context, t *testing.T, p *pool.Pool, cnr
 	payload := bytes.NewBuffer(nil)
 
 	var prm pool.PrmObjectGet
-	prm.SetAddress(objectAddress)
 
-	res, err := p.GetObject(ctx, prm)
+	res, err := p.GetObject(ctx, objectAddress.Container(), objectAddress.Object(), prm)
 	require.NoError(t, err)
 
 	_, err = io.Copy(payload, res.Payload)
@@ -419,10 +418,9 @@ func createContainer(ctx context.Context, t *testing.T, clientPool *pool.Pool, o
 	waitPrm.SetPollInterval(3 * time.Second)
 
 	var prm pool.PrmContainerPut
-	prm.SetContainer(cnr)
 	prm.SetWaitParams(waitPrm)
 
-	CID, err := clientPool.PutContainer(ctx, prm)
+	CID, err := clientPool.PutContainer(ctx, cnr, prm)
 	if err != nil {
 		return cid.ID{}, err
 	}

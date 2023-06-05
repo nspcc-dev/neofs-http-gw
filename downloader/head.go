@@ -37,12 +37,11 @@ func (r request) headObject(clnt *pool.Pool, objectAddress oid.Address) {
 	btoken := bearerToken(r.RequestCtx)
 
 	var prm pool.PrmObjectHead
-	prm.SetAddress(objectAddress)
 	if btoken != nil {
 		prm.UseBearer(*btoken)
 	}
 
-	obj, err := clnt.HeadObject(r.appCtx, prm)
+	obj, err := clnt.HeadObject(r.appCtx, objectAddress.Container(), objectAddress.Object(), prm)
 	if err != nil {
 		r.handleNeoFSErr(err, start)
 		return
@@ -81,13 +80,11 @@ func (r request) headObject(clnt *pool.Pool, objectAddress oid.Address) {
 	if len(contentType) == 0 {
 		contentType, _, err = readContentType(obj.PayloadSize(), func(sz uint64) (io.Reader, error) {
 			var prmRange pool.PrmObjectRange
-			prmRange.SetAddress(objectAddress)
-			prmRange.SetLength(sz)
 			if btoken != nil {
 				prmRange.UseBearer(*btoken)
 			}
 
-			resObj, err := clnt.ObjectRange(r.appCtx, prmRange)
+			resObj, err := clnt.ObjectRange(r.appCtx, objectAddress.Container(), objectAddress.Object(), 0, sz, prmRange)
 			if err != nil {
 				return nil, err
 			}
