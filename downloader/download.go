@@ -230,7 +230,9 @@ func (r *request) handleNeoFSErr(err error, start time.Time) {
 		zap.Error(err),
 	)
 
-	if errors.Is(err, apistatus.ErrObjectNotFound) || errors.Is(err, apistatus.ErrContainerNotFound) {
+	if errors.Is(err, apistatus.ErrObjectNotFound) ||
+		errors.Is(err, apistatus.ErrContainerNotFound) ||
+		errors.Is(err, apistatus.ErrObjectAlreadyRemoved) {
 		response.Error(r.RequestCtx, "Not Found", fasthttp.StatusNotFound)
 		return
 	}
