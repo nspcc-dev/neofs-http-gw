@@ -4,6 +4,14 @@ This document outlines major changes between releases.
 
 ## [Unreleased]
 
+## [0.27.1] - 2022-06-15
+
+### Fixed
+- "Bad Request" returned for removed objects instead of "Not Found" (#258)
+
+### Changed
+- SDK dependency updated to 1.0.0-rc.9 (#258)
+
 ## [0.27.0] - 2022-05-19
 
 ### Added
@@ -287,4 +295,5 @@ releases.
 [0.25.1]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.25.0...v0.25.1
 [0.26.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.25.1...v0.26.0
 [0.27.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.26.0...v0.27.0
-[Unreleased]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.0...master
+[0.27.1]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.0...v0.27.1
+[Unreleased]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.1...master
