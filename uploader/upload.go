@@ -14,6 +14,7 @@ import (
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/nspcc-dev/neofs-http-gw/utils"
 	"github.com/nspcc-dev/neofs-sdk-go/bearer"
+	"github.com/nspcc-dev/neofs-sdk-go/client"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
 	oid "github.com/nspcc-dev/neofs-sdk-go/object/id"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
@@ -216,7 +217,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 
 func (u *Uploader) fetchOwnerAndBearerToken(ctx context.Context) (*user.ID, *bearer.Token) {
 	if tkn, err := tokens.LoadBearerToken(ctx); err == nil && tkn != nil {
-		issuer := bearer.ResolveIssuer(*tkn)
+		issuer := tkn.ResolveIssuer()
 		return &issuer, tkn
 	}
 	return u.ownerID, nil
@@ -241,7 +242,7 @@ func (pr *putResponse) encode(w io.Writer) error {
 }
 
 func getEpochDurations(ctx context.Context, p *pool.Pool) (*epochDurations, error) {
-	networkInfo, err := p.NetworkInfo(ctx)
+	networkInfo, err := p.NetworkInfo(ctx, client.PrmNetworkInfo{})
 	if err != nil {
 		return nil, err
 	}

@@ -18,8 +18,6 @@ import (
 	"github.com/nspcc-dev/neofs-sdk-go/container"
 	"github.com/nspcc-dev/neofs-sdk-go/container/acl"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
-	neofscrypto "github.com/nspcc-dev/neofs-sdk-go/crypto"
-	neofsecdsa "github.com/nspcc-dev/neofs-sdk-go/crypto/ecdsa"
 	"github.com/nspcc-dev/neofs-sdk-go/netmap"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
 	oid "github.com/nspcc-dev/neofs-sdk-go/object/id"
@@ -65,10 +63,8 @@ func TestIntegration(t *testing.T) {
 	key, err := keys.NewPrivateKeyFromHex("1dd37fba80fec4e6a6f13fd708d8dcb3b29def768017052f6c930fa1c5d90bbb")
 	require.NoError(t, err)
 
-	signer := neofsecdsa.SignerRFC6979(key.PrivateKey)
-
-	var ownerID user.ID
-	require.NoError(t, user.IDFromSigner(&ownerID, signer))
+	signer := user.NewAutoIDSignerRFC6979(key.PrivateKey)
+	ownerID := signer.UserID()
 
 	for _, version := range versions {
 		image := fmt.Sprintf("%s:%s", version.image, version.version)
@@ -78,7 +74,7 @@ func TestIntegration(t *testing.T) {
 		aioContainer := createDockerContainer(ctx, t, image)
 		server, cancel := runServer()
 		clientPool := getPool(ctx, t, signer)
-		CID, err := createContainer(ctx, t, clientPool, ownerID)
+		CID, err := createContainer(ctx, t, clientPool, ownerID, signer)
 		require.NoError(t, err, version)
 
 		t.Run("simple put "+image, func(t *testing.T) { simplePut(ctx, t, clientPool, CID) })
@@ -381,7 +377,7 @@ func getDefaultConfig() *viper.Viper {
 	return v
 }
 
-func getPool(ctx context.Context, t *testing.T, signer neofscrypto.Signer) *pool.Pool {
+func getPool(ctx context.Context, t *testing.T, signer user.Signer) *pool.Pool {
 	var prm pool.InitParameters
 	prm.SetSigner(signer)
 	prm.SetNodeDialTimeout(5 * time.Second)
@@ -395,7 +391,7 @@ func getPool(ctx context.Context, t *testing.T, signer neofscrypto.Signer) *pool
 	return clientPool
 }
 
-func createContainer(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID) (cid.ID, error) {
+func createContainer(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, signer user.Signer) (cid.ID, error) {
 	var policy netmap.PlacementPolicy
 	err := policy.DecodeString("REP 1")
 	require.NoError(t, err)
@@ -406,11 +402,11 @@ func createContainer(ctx context.Context, t *testing.T, clientPool *pool.Pool, o
 	cnr.SetBasicACL(acl.PublicRWExtended)
 	cnr.SetOwner(ownerID)
 
-	container.SetCreationTime(&cnr, time.Now())
+	cnr.SetCreationTime(time.Now())
 
 	var domain container.Domain
 	domain.SetName(testContainerName)
-	container.WriteDomain(&cnr, domain)
+	cnr.WriteDomain(domain)
 
 	var waitPrm pool.WaitParams
 	waitPrm.SetTimeout(15 * time.Second)
@@ -419,7 +415,7 @@ func createContainer(ctx context.Context, t *testing.T, clientPool *pool.Pool, o
 	var prm pool.PrmContainerPut
 	prm.SetWaitParams(waitPrm)
 
-	CID, err := clientPool.PutContainer(ctx, cnr, prm)
+	CID, err := clientPool.PutContainer(ctx, cnr, signer, prm)
 	if err != nil {
 		return cid.ID{}, err
 	}

@@ -23,8 +23,8 @@ import (
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/uploader"
 	"github.com/nspcc-dev/neofs-http-gw/utils"
-	neofsecdsa "github.com/nspcc-dev/neofs-sdk-go/crypto/ecdsa"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
+	"github.com/nspcc-dev/neofs-sdk-go/stat"
 	"github.com/nspcc-dev/neofs-sdk-go/user"
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
@@ -36,6 +36,7 @@ type (
 		log               *zap.Logger
 		logLevel          zap.AtomicLevel
 		pool              *pool.Pool
+		poolStat          *stat.PoolStat
 		owner             *user.ID
 		cfg               *viper.Viper
 		webServer         *fasthttp.Server
@@ -129,12 +130,9 @@ func newApp(ctx context.Context, opt ...Option) App {
 		a.log.Fatal("failed to get neofs credentials", zap.Error(err))
 	}
 
-	signer := neofsecdsa.SignerRFC6979(*key)
+	signer := user.NewAutoIDSignerRFC6979(*key)
 
-	var owner user.ID
-	if err = user.IDFromSigner(&owner, signer); err != nil {
-		a.log.Fatal("failed to get user id", zap.Error(err))
-	}
+	owner := signer.UserID()
 	a.owner = &owner
 
 	var prm pool.InitParameters
@@ -162,6 +160,9 @@ func newApp(ctx context.Context, opt ...Option) App {
 		a.log.Info("add connection", zap.String("address", address),
 			zap.Float64("weight", weight), zap.Int("priority", priority))
 	}
+
+	a.poolStat = stat.NewPoolStatistic()
+	prm.SetStatisticCallback(a.poolStat.OperationCallback)
 
 	a.pool, err = pool.NewPool(prm)
 	if err != nil {
@@ -203,7 +204,7 @@ func (a *app) initResolver(ctx context.Context) {
 }
 
 func (a *app) initMetrics() {
-	gateMetricsProvider := metrics.NewGateMetrics(a.pool)
+	gateMetricsProvider := metrics.NewGateMetrics(a.pool, a.poolStat)
 	gateMetricsProvider.SetGWVersion(Version)
 	a.metrics = newGateMetrics(a.log, gateMetricsProvider, a.cfg.GetBool(cfgPrometheusEnabled))
 }

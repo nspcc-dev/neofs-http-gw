@@ -6,7 +6,6 @@ import (
 
 	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
 	"github.com/nspcc-dev/neofs-sdk-go/bearer"
-	neofsecdsa "github.com/nspcc-dev/neofs-sdk-go/crypto/ecdsa"
 	"github.com/nspcc-dev/neofs-sdk-go/user"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
@@ -64,8 +63,8 @@ func Test_fetchBearerToken(t *testing.T) {
 	key, err := keys.NewPrivateKey()
 	require.NoError(t, err)
 	var uid user.ID
-	signer := neofsecdsa.SignerRFC6979(key.PrivateKey)
-	require.NoError(t, user.IDFromSigner(&uid, signer))
+	signer := user.NewAutoIDSignerRFC6979(key.PrivateKey)
+	uid = signer.UserID()
 
 	tkn := new(bearer.Token)
 	tkn.ForUser(uid)
@@ -142,8 +141,8 @@ func Test_checkAndPropagateBearerToken(t *testing.T) {
 	key, err := keys.NewPrivateKey()
 	require.NoError(t, err)
 	var uid user.ID
-	signer := neofsecdsa.SignerRFC6979(key.PrivateKey)
-	require.NoError(t, user.IDFromSigner(&uid, signer))
+	signer := user.NewAutoIDSignerRFC6979(key.PrivateKey)
+	uid = signer.UserID()
 
 	tkn := new(bearer.Token)
 	tkn.ForUser(uid)
