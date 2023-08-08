@@ -3,6 +3,7 @@ package uploader
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -227,7 +228,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	// pipelined header. Thus we need to drain the body buffer.
 	for {
 		_, err = bodyStream.Read(drainBuf)
-		if err == io.EOF || err == io.ErrUnexpectedEOF {
+		if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
 			break
 		}
 	}
