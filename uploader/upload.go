@@ -37,6 +37,7 @@ type Uploader struct {
 	ownerID           *user.ID
 	settings          *Settings
 	containerResolver resolver.Resolver
+	signer            user.Signer
 }
 
 type epochDurations struct {
@@ -60,7 +61,7 @@ func (s *Settings) SetDefaultTimestamp(val bool) {
 
 // New creates a new Uploader using specified logger, connection pool and
 // other options.
-func New(ctx context.Context, params *utils.AppParams, settings *Settings) *Uploader {
+func New(ctx context.Context, params *utils.AppParams, settings *Settings, signer user.Signer) *Uploader {
 	return &Uploader{
 		appCtx:            ctx,
 		log:               params.Logger,
@@ -68,6 +69,7 @@ func New(ctx context.Context, params *utils.AppParams, settings *Settings) *Uplo
 		ownerID:           params.Owner,
 		settings:          settings,
 		containerResolver: params.Resolver,
+		signer:            signer,
 	}
 }
 
@@ -169,24 +171,46 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	}
 	id, bt := u.fetchOwnerAndBearerToken(c)
 
-	obj := object.New()
+	var obj object.Object
 	obj.SetContainerID(*idCnr)
 	obj.SetOwnerID(id)
 	obj.SetAttributes(attributes...)
 
-	var prm pool.PrmObjectPut
-	prm.SetHeader(*obj)
-	prm.SetPayload(file)
-
+	var prm client.PrmObjectPutInit
 	if bt != nil {
-		prm.UseBearer(*bt)
+		prm.WithBearerToken(*bt)
 	}
 
-	if idObj, err = u.pool.PutObject(u.appCtx, prm); err != nil {
-		log.Error("could not store file in neofs", zap.Error(err))
-		response.Error(c, "could not store file in neofs: "+err.Error(), fasthttp.StatusBadRequest)
+	ni, err := u.pool.NetworkInfo(u.appCtx, client.PrmNetworkInfo{})
+	if err != nil {
+		log.Error("network info", zap.Error(err))
+		response.Error(c, "network info: "+err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
+
+	writer, err := u.pool.ObjectPutInit(u.appCtx, obj, u.signer, prm)
+	if err != nil {
+		log.Error("writer init", zap.Error(err))
+		response.Error(c, "writer init: "+err.Error(), fasthttp.StatusInternalServerError)
+		return
+	}
+
+	maxObjSize := int64(ni.MaxObjectSize())
+	chunk := make([]byte, maxObjSize)
+	_, err = io.CopyBuffer(writer, file, chunk)
+	if err != nil {
+		log.Error("write", zap.Error(err))
+		response.Error(c, "write: "+err.Error(), fasthttp.StatusInternalServerError)
+		return
+	}
+
+	if err = writer.Close(); err != nil {
+		log.Error("close writer", zap.Error(err))
+		response.Error(c, "close writer: "+err.Error(), fasthttp.StatusInternalServerError)
+		return
+	}
+
+	idObj = writer.GetResult().StoredObjectID()
 
 	addr.SetObject(idObj)
 	addr.SetContainer(*idCnr)

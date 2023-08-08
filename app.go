@@ -46,6 +46,7 @@ type (
 		services          []*metrics.Service
 		settings          *appSettings
 		servers           []Server
+		signer            user.Signer
 	}
 
 	appSettings struct {
@@ -131,7 +132,7 @@ func newApp(ctx context.Context, opt ...Option) App {
 	}
 
 	signer := user.NewAutoIDSignerRFC6979(*key)
-
+	a.signer = signer
 	owner := signer.UserID()
 	a.owner = &owner
 
@@ -323,8 +324,8 @@ func (a *app) setHealthStatus() {
 }
 
 func (a *app) Serve(ctx context.Context) {
-	uploadRoutes := uploader.New(ctx, a.AppParams(), a.settings.Uploader)
-	downloadRoutes := downloader.New(ctx, a.AppParams(), a.settings.Downloader)
+	uploadRoutes := uploader.New(ctx, a.AppParams(), a.settings.Uploader, a.signer)
+	downloadRoutes := downloader.New(ctx, a.AppParams(), a.settings.Downloader, a.signer)
 
 	// Configure router.
 	a.configureRouter(uploadRoutes, downloadRoutes)
