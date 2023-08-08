@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nspcc-dev/neofs-http-gw/resolver"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
@@ -70,9 +69,6 @@ const (
 	// NeoGo.
 	cfgRPCEndpoint = "rpc_endpoint"
 
-	// Resolving.
-	cfgResolveOrder = "resolve_order"
-
 	// Zip compression.
 	cfgZipCompression = "zip.compression"
 
@@ -124,8 +120,6 @@ func settings() *viper.Viper {
 	flags.String(cfgTLSCertFile, "", "TLS certificate path")
 	flags.String(cfgTLSKeyFile, "", "TLS key path")
 	peers := flags.StringArrayP(cfgPeers, "p", nil, "NeoFS nodes")
-
-	resolveMethods := flags.StringSlice(cfgResolveOrder, []string{resolver.NNSResolver, resolver.DNSResolver}, "set container name resolve order")
 
 	// set defaults:
 
@@ -189,10 +183,6 @@ func settings() *viper.Viper {
 
 	if v.IsSet(cfgServer+".0."+cfgTLSKeyFile) && v.IsSet(cfgServer+".0."+cfgTLSCertFile) {
 		v.Set(cfgServer+".0."+cfgTLSEnabled, true)
-	}
-
-	if resolveMethods != nil {
-		v.SetDefault(cfgResolveOrder, *resolveMethods)
 	}
 
 	switch {

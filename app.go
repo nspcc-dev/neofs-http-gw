@@ -33,18 +33,18 @@ import (
 
 type (
 	app struct {
-		log       *zap.Logger
-		logLevel  zap.AtomicLevel
-		pool      *pool.Pool
-		owner     *user.ID
-		cfg       *viper.Viper
-		webServer *fasthttp.Server
-		webDone   chan struct{}
-		resolver  *resolver.ContainerResolver
-		metrics   *gateMetrics
-		services  []*metrics.Service
-		settings  *appSettings
-		servers   []Server
+		log               *zap.Logger
+		logLevel          zap.AtomicLevel
+		pool              *pool.Pool
+		owner             *user.ID
+		cfg               *viper.Viper
+		webServer         *fasthttp.Server
+		webDone           chan struct{}
+		resolverContainer *resolver.Container
+		metrics           *gateMetrics
+		services          []*metrics.Service
+		settings          *appSettings
+		servers           []Server
 	}
 
 	appSettings struct {
@@ -174,7 +174,7 @@ func newApp(ctx context.Context, opt ...Option) App {
 	}
 
 	a.initAppSettings()
-	a.initResolver()
+	a.initResolver(ctx)
 	a.initMetrics()
 
 	return a
@@ -189,31 +189,17 @@ func (a *app) initAppSettings() {
 	a.updateSettings()
 }
 
-func (a *app) initResolver() {
-	var err error
-	a.resolver, err = resolver.NewContainerResolver(a.getResolverConfig())
+func (a *app) initResolver(ctx context.Context) {
+	endpoint := a.cfg.GetString(cfgRPCEndpoint)
+
+	a.log.Info("rpc endpoint", zap.String("address", endpoint))
+
+	res, err := resolver.NewContainer(ctx, endpoint)
 	if err != nil {
 		a.log.Fatal("failed to create resolver", zap.Error(err))
 	}
-}
 
-func (a *app) getResolverConfig() ([]string, *resolver.Config) {
-	resolveCfg := &resolver.Config{
-		NeoFS:      resolver.NewNeoFSResolver(a.pool),
-		RPCAddress: a.cfg.GetString(cfgRPCEndpoint),
-	}
-
-	order := a.cfg.GetStringSlice(cfgResolveOrder)
-	if resolveCfg.RPCAddress == "" {
-		order = remove(order, resolver.NNSResolver)
-		a.log.Warn(fmt.Sprintf("resolver '%s' won't be used since '%s' isn't provided", resolver.NNSResolver, cfgRPCEndpoint))
-	}
-
-	if len(order) == 0 {
-		a.log.Info("container resolver will be disabled because of resolvers 'resolver_order' is empty")
-	}
-
-	return order, resolveCfg
+	a.resolverContainer = res
 }
 
 func (a *app) initMetrics() {
@@ -261,15 +247,6 @@ func (m *gateMetrics) Shutdown() {
 	}
 	m.provider.Unregister()
 	m.mu.Unlock()
-}
-
-func remove(list []string, element string) []string {
-	for i, item := range list {
-		if item == element {
-			return append(list[:i], list[i+1:]...)
-		}
-	}
-	return list
 }
 
 func getNeoFSKey(a *app) (*ecdsa.PrivateKey, error) {
@@ -372,7 +349,7 @@ LOOP:
 		case <-ctx.Done():
 			break LOOP
 		case <-sigs:
-			a.configReload()
+			a.configReload(ctx)
 		}
 	}
 
@@ -384,7 +361,7 @@ LOOP:
 	close(a.webDone)
 }
 
-func (a *app) configReload() {
+func (a *app) configReload(ctx context.Context) {
 	a.log.Info("SIGHUP config reload started")
 	if !a.cfg.IsSet(cmdConfig) {
 		a.log.Warn("failed to reload config because it's missed")
@@ -400,7 +377,7 @@ func (a *app) configReload() {
 		a.logLevel.SetLevel(lvl)
 	}
 
-	if err := a.resolver.UpdateResolvers(a.getResolverConfig()); err != nil {
+	if err := a.resolverContainer.UpdateResolvers(ctx, a.cfg.GetString(cfgRPCEndpoint)); err != nil {
 		a.log.Warn("failed to update resolvers", zap.Error(err))
 	}
 
@@ -484,7 +461,7 @@ func (a *app) AppParams() *utils.AppParams {
 		Logger:   a.log,
 		Pool:     a.pool,
 		Owner:    a.owner,
-		Resolver: a.resolver,
+		Resolver: a.resolverContainer,
 	}
 }
 

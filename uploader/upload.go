@@ -35,7 +35,7 @@ type Uploader struct {
 	pool              *pool.Pool
 	ownerID           *user.ID
 	settings          *Settings
-	containerResolver *resolver.ContainerResolver
+	containerResolver resolver.Resolver
 }
 
 type epochDurations struct {

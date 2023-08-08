@@ -3,9 +3,11 @@ module github.com/nspcc-dev/neofs-http-gw
 go 1.18
 
 require (
+	github.com/docker/docker v23.0.5+incompatible
 	github.com/fasthttp/router v1.4.1
-	github.com/nspcc-dev/neo-go v0.100.1
+	github.com/nspcc-dev/neo-go v0.101.0
 	github.com/nspcc-dev/neofs-api-go/v2 v2.14.0
+	github.com/nspcc-dev/neofs-contract v0.17.1-0.20230804121740-84ff5d244f69
 	github.com/nspcc-dev/neofs-sdk-go v1.0.0-rc.9
 	github.com/prometheus/client_golang v1.13.0
 	github.com/spf13/pflag v1.0.5
@@ -31,7 +33,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
-	github.com/docker/docker v23.0.5+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
@@ -53,8 +54,6 @@ require (
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/nspcc-dev/go-ordered-json v0.0.0-20220111165707-25110be27d22 // indirect
 	github.com/nspcc-dev/hrw v1.0.9 // indirect
-	github.com/nspcc-dev/neo-go/pkg/interop v0.0.0-20221202075445-cb5c18dc73eb // indirect
-	github.com/nspcc-dev/neofs-contract v0.16.0 // indirect
 	github.com/nspcc-dev/neofs-crypto v0.4.0 // indirect
 	github.com/nspcc-dev/rfc6979 v0.2.0 // indirect
 	github.com/nspcc-dev/tzhash v1.7.0 // indirect

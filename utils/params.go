@@ -11,5 +11,5 @@ type AppParams struct {
 	Logger   *zap.Logger
 	Pool     *pool.Pool
 	Owner    *user.ID
-	Resolver *resolver.ContainerResolver
+	Resolver resolver.Resolver
 }

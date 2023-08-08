@@ -246,7 +246,7 @@ type Downloader struct {
 	appCtx            context.Context
 	log               *zap.Logger
 	pool              *pool.Pool
-	containerResolver *resolver.ContainerResolver
+	containerResolver resolver.Resolver
 	settings          *Settings
 }
 
