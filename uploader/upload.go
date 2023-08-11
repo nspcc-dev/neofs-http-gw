@@ -49,6 +49,7 @@ type epochDurations struct {
 // Settings stores reloading parameters, so it has to provide atomic getters and setters.
 type Settings struct {
 	defaultTimestamp atomic.Bool
+	maxObjectSize    atomic.Int64
 }
 
 func (s *Settings) DefaultTimestamp() bool {
@@ -57,6 +58,10 @@ func (s *Settings) DefaultTimestamp() bool {
 
 func (s *Settings) SetDefaultTimestamp(val bool) {
 	s.defaultTimestamp.Store(val)
+}
+
+func (s *Settings) SetMaxObjectSize(val int64) {
+	s.maxObjectSize.Store(val)
 }
 
 // New creates a new Uploader using specified logger, connection pool and
@@ -181,13 +186,6 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		prm.WithBearerToken(*bt)
 	}
 
-	ni, err := u.pool.NetworkInfo(u.appCtx, client.PrmNetworkInfo{})
-	if err != nil {
-		log.Error("network info", zap.Error(err))
-		response.Error(c, "network info: "+err.Error(), fasthttp.StatusInternalServerError)
-		return
-	}
-
 	writer, err := u.pool.ObjectPutInit(u.appCtx, obj, u.signer, prm)
 	if err != nil {
 		log.Error("writer init", zap.Error(err))
@@ -195,8 +193,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		return
 	}
 
-	maxObjSize := int64(ni.MaxObjectSize())
-	chunk := make([]byte, maxObjSize)
+	chunk := make([]byte, u.settings.maxObjectSize.Load())
 	_, err = io.CopyBuffer(writer, file, chunk)
 	if err != nil {
 		log.Error("write", zap.Error(err))

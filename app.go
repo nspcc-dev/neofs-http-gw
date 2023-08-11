@@ -23,12 +23,17 @@ import (
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/uploader"
 	"github.com/nspcc-dev/neofs-http-gw/utils"
+	"github.com/nspcc-dev/neofs-sdk-go/client"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
 	"github.com/nspcc-dev/neofs-sdk-go/stat"
 	"github.com/nspcc-dev/neofs-sdk-go/user"
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
+)
+
+const (
+	defaultObjectSize = int64(1 << 21) // 2MB
 )
 
 type (
@@ -175,20 +180,20 @@ func newApp(ctx context.Context, opt ...Option) App {
 		a.log.Fatal("failed to dial pool", zap.Error(err))
 	}
 
-	a.initAppSettings()
+	a.initAppSettings(ctx)
 	a.initResolver(ctx)
 	a.initMetrics()
 
 	return a
 }
 
-func (a *app) initAppSettings() {
+func (a *app) initAppSettings(ctx context.Context) {
 	a.settings = &appSettings{
 		Uploader:   &uploader.Settings{},
 		Downloader: &downloader.Settings{},
 	}
 
-	a.updateSettings()
+	a.updateSettings(ctx)
 }
 
 func (a *app) initResolver(ctx context.Context) {
@@ -390,7 +395,7 @@ func (a *app) configReload(ctx context.Context) {
 	a.stopServices()
 	a.startServices()
 
-	a.updateSettings()
+	a.updateSettings(ctx)
 
 	a.metrics.SetEnabled(a.cfg.GetBool(cfgPrometheusEnabled))
 	a.setHealthStatus()
@@ -398,9 +403,19 @@ func (a *app) configReload(ctx context.Context) {
 	a.log.Info("SIGHUP config reload completed")
 }
 
-func (a *app) updateSettings() {
+func (a *app) updateSettings(ctx context.Context) {
 	a.settings.Uploader.SetDefaultTimestamp(a.cfg.GetBool(cfgUploaderHeaderEnableDefaultTimestamp))
 	a.settings.Downloader.SetZipCompression(a.cfg.GetBool(cfgZipCompression))
+	maxObjectSize := defaultObjectSize
+
+	ni, err := a.pool.NetworkInfo(ctx, client.PrmNetworkInfo{})
+	if err != nil {
+		a.log.Error("get network info", zap.Error(err))
+	} else {
+		maxObjectSize = int64(ni.MaxObjectSize())
+	}
+
+	a.settings.Uploader.SetMaxObjectSize(maxObjectSize)
 }
 
 func (a *app) startServices() {
