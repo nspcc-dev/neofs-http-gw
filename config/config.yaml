@@ -81,10 +81,6 @@ web:
 
 # RPC endpoint to be able to use nns container resolving.
 rpc_endpoint: http://morph-chain.neofs.devenv:30333
-# The order in which resolvers are used to find an container id by name.
-resolve_order:
-  - nns
-  - dns
 
 upload_header:
   use_default_timestamp: false # Create timestamp for object if it isn't provided by header.

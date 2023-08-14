@@ -22,12 +22,14 @@ import (
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/nspcc-dev/neofs-http-gw/utils"
 	"github.com/nspcc-dev/neofs-sdk-go/bearer"
+	"github.com/nspcc-dev/neofs-sdk-go/client"
 	apistatus "github.com/nspcc-dev/neofs-sdk-go/client/status"
 	"github.com/nspcc-dev/neofs-sdk-go/container"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
 	oid "github.com/nspcc-dev/neofs-sdk-go/object/id"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
+	"github.com/nspcc-dev/neofs-sdk-go/user"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
@@ -90,7 +92,7 @@ func readContentType(maxSize uint64, rInit func(uint64) (io.Reader, error)) (str
 	return http.DetectContentType(buf), buf, err // to not lose io.EOF
 }
 
-func (r request) receiveFile(clnt *pool.Pool, objectAddress oid.Address) {
+func (r request) receiveFile(clnt *pool.Pool, objectAddress oid.Address, signer user.Signer) {
 	var (
 		err      error
 		dis      = "inline"
@@ -103,16 +105,17 @@ func (r request) receiveFile(clnt *pool.Pool, objectAddress oid.Address) {
 		return
 	}
 
-	var prm pool.PrmObjectGet
+	var prm client.PrmObjectGet
 	if btoken := bearerToken(r.RequestCtx); btoken != nil {
-		prm.UseBearer(*btoken)
+		prm.WithBearerToken(*btoken)
 	}
 
-	rObj, err := clnt.GetObject(r.appCtx, objectAddress.Container(), objectAddress.Object(), prm)
+	hdr, payloadReader, err := clnt.ObjectGetInit(r.appCtx, objectAddress.Container(), objectAddress.Object(), signer, prm)
 	if err != nil {
 		r.handleNeoFSErr(err, start)
 		return
 	}
+	var payload io.ReadCloser = payloadReader
 
 	// we can't close reader in this function, so how to do it?
 
@@ -120,11 +123,11 @@ func (r request) receiveFile(clnt *pool.Pool, objectAddress oid.Address) {
 		dis = "attachment"
 	}
 
-	payloadSize := rObj.Header.PayloadSize()
+	payloadSize := hdr.PayloadSize()
 
 	r.Response.Header.Set(fasthttp.HeaderContentLength, strconv.FormatUint(payloadSize, 10))
 	var contentType string
-	for _, attr := range rObj.Header.Attributes() {
+	for _, attr := range hdr.Attributes() {
 		key := attr.Key()
 		val := attr.Value()
 		if !isValidToken(key) || !isValidValue(val) {
@@ -153,14 +156,14 @@ func (r request) receiveFile(clnt *pool.Pool, objectAddress oid.Address) {
 		}
 	}
 
-	idsToResponse(&r.Response, &rObj.Header)
+	idsToResponse(&r.Response, &hdr)
 
 	if len(contentType) == 0 {
 		// determine the Content-Type from the payload head
 		var payloadHead []byte
 
 		contentType, payloadHead, err = readContentType(payloadSize, func(uint64) (io.Reader, error) {
-			return rObj.Payload, nil
+			return payload, nil
 		})
 		if err != nil && err != io.EOF {
 			r.log.Error("could not detect Content-Type from payload", zap.Error(err))
@@ -172,18 +175,18 @@ func (r request) receiveFile(clnt *pool.Pool, objectAddress oid.Address) {
 		var headReader io.Reader = bytes.NewReader(payloadHead)
 
 		if err != io.EOF { // otherwise, we've already read full payload
-			headReader = io.MultiReader(headReader, rObj.Payload)
+			headReader = io.MultiReader(headReader, payload)
 		}
 
 		// note: we could do with io.Reader, but SetBodyStream below closes body stream
 		// if it implements io.Closer and that's useful for us.
-		rObj.Payload = readCloser{headReader, rObj.Payload}
+		payload = readCloser{headReader, payload}
 	}
 	r.SetContentType(contentType)
 
 	r.Response.Header.Set(fasthttp.HeaderContentDisposition, dis+"; filename="+path.Base(filename))
 
-	r.Response.SetBodyStream(rObj.Payload, int(payloadSize))
+	r.Response.SetBodyStream(payload, int(payloadSize))
 }
 
 // systemBackwardTranslator is used to convert headers looking like '__NEOFS__ATTR_NAME' to 'Neofs-Attr-Name'.
@@ -246,8 +249,9 @@ type Downloader struct {
 	appCtx            context.Context
 	log               *zap.Logger
 	pool              *pool.Pool
-	containerResolver *resolver.ContainerResolver
+	containerResolver resolver.Resolver
 	settings          *Settings
+	signer            user.Signer
 }
 
 // Settings stores reloading parameters, so it has to provide atomic getters and setters.
@@ -264,13 +268,14 @@ func (s *Settings) SetZipCompression(val bool) {
 }
 
 // New creates an instance of Downloader using specified options.
-func New(ctx context.Context, params *utils.AppParams, settings *Settings) *Downloader {
+func New(ctx context.Context, params *utils.AppParams, settings *Settings, signer user.Signer) *Downloader {
 	return &Downloader{
 		appCtx:            ctx,
 		log:               params.Logger,
 		pool:              params.Pool,
 		settings:          settings,
 		containerResolver: params.Resolver,
+		signer:            signer,
 	}
 }
 
@@ -289,7 +294,7 @@ func (d *Downloader) DownloadByAddress(c *fasthttp.RequestCtx) {
 
 // byAddress is a wrapper for function (e.g. request.headObject, request.receiveFile) that
 // prepares request and object address to it.
-func (d *Downloader) byAddress(c *fasthttp.RequestCtx, f func(request, *pool.Pool, oid.Address)) {
+func (d *Downloader) byAddress(c *fasthttp.RequestCtx, f func(request, *pool.Pool, oid.Address, user.Signer)) {
 	var (
 		idCnr, _ = c.UserValue("cid").(string)
 		idObj, _ = c.UserValue("oid").(string)
@@ -314,7 +319,7 @@ func (d *Downloader) byAddress(c *fasthttp.RequestCtx, f func(request, *pool.Poo
 	addr.SetContainer(*cnrID)
 	addr.SetObject(*objID)
 
-	f(*d.newRequest(c, log), d.pool, addr)
+	f(*d.newRequest(c, log), d.pool, addr, d.signer)
 }
 
 // DownloadByAttribute handles attribute-based download requests.
@@ -323,7 +328,7 @@ func (d *Downloader) DownloadByAttribute(c *fasthttp.RequestCtx) {
 }
 
 // byAttribute is a wrapper similar to byAddress.
-func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, *pool.Pool, oid.Address)) {
+func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, *pool.Pool, oid.Address, user.Signer)) {
 	var (
 		scid, _ = c.UserValue("cid").(string)
 		key, _  = url.QueryUnescape(c.UserValue("attr_key").(string))
@@ -349,8 +354,10 @@ func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, *pool.P
 
 	buf := make([]oid.ID, 1)
 
-	n, err := res.Read(buf)
+	n, _ := res.Read(buf)
 	if n == 0 {
+		err = res.Close()
+
 		if errors.Is(err, io.EOF) {
 			log.Error("object not found", zap.Error(err))
 			response.Error(c, "object not found", fasthttp.StatusNotFound)
@@ -366,25 +373,25 @@ func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, *pool.P
 	addrObj.SetContainer(*containerID)
 	addrObj.SetObject(buf[0])
 
-	f(*d.newRequest(c, log), d.pool, addrObj)
+	f(*d.newRequest(c, log), d.pool, addrObj, d.signer)
 }
 
-func (d *Downloader) search(c *fasthttp.RequestCtx, cid *cid.ID, key, val string, op object.SearchMatchType) (pool.ResObjectSearch, error) {
+func (d *Downloader) search(c *fasthttp.RequestCtx, cid *cid.ID, key, val string, op object.SearchMatchType) (*client.ObjectListReader, error) {
 	filters := object.NewSearchFilters()
 	filters.AddRootFilter()
 	filters.AddFilter(key, val, op)
 
-	var prm pool.PrmObjectSearch
+	var prm client.PrmObjectSearch
 	prm.SetFilters(filters)
 	if btoken := bearerToken(c); btoken != nil {
-		prm.UseBearer(*btoken)
+		prm.WithBearerToken(*btoken)
 	}
 
-	return d.pool.SearchObjects(d.appCtx, *cid, prm)
+	return d.pool.ObjectSearchInit(d.appCtx, *cid, d.signer, prm)
 }
 
 func (d *Downloader) getContainer(cnrID cid.ID) (container.Container, error) {
-	return d.pool.GetContainer(d.appCtx, cnrID)
+	return d.pool.ContainerGet(d.appCtx, cnrID, client.PrmContainerGet{})
 }
 
 func (d *Downloader) addObjectToZip(zw *zip.Writer, obj *object.Object) (io.Writer, error) {
@@ -489,26 +496,26 @@ func (d *Downloader) DownloadZipped(c *fasthttp.RequestCtx) {
 }
 
 func (d *Downloader) zipObject(zipWriter *zip.Writer, addr oid.Address, btoken *bearer.Token, bufZip []byte) error {
-	var prm pool.PrmObjectGet
+	var prm client.PrmObjectGet
 	if btoken != nil {
-		prm.UseBearer(*btoken)
+		prm.WithBearerToken(*btoken)
 	}
 
-	resGet, err := d.pool.GetObject(d.appCtx, addr.Container(), addr.Object(), prm)
+	resGet, payloadReader, err := d.pool.ObjectGetInit(d.appCtx, addr.Container(), addr.Object(), d.signer, prm)
 	if err != nil {
 		return fmt.Errorf("get NeoFS object: %v", err)
 	}
 
-	objWriter, err := d.addObjectToZip(zipWriter, &resGet.Header)
+	objWriter, err := d.addObjectToZip(zipWriter, &resGet)
 	if err != nil {
 		return fmt.Errorf("zip create header: %v", err)
 	}
 
-	if _, err = io.CopyBuffer(objWriter, resGet.Payload, bufZip); err != nil {
+	if _, err = io.CopyBuffer(objWriter, payloadReader, bufZip); err != nil {
 		return fmt.Errorf("copy object payload to zip file: %v", err)
 	}
 
-	if err = resGet.Payload.Close(); err != nil {
+	if err = payloadReader.Close(); err != nil {
 		return fmt.Errorf("object body close error: %w", err)
 	}
 

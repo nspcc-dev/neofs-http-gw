@@ -3,6 +3,7 @@ package uploader
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/nspcc-dev/neofs-http-gw/utils"
 	"github.com/nspcc-dev/neofs-sdk-go/bearer"
+	"github.com/nspcc-dev/neofs-sdk-go/client"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
 	oid "github.com/nspcc-dev/neofs-sdk-go/object/id"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
@@ -35,7 +37,8 @@ type Uploader struct {
 	pool              *pool.Pool
 	ownerID           *user.ID
 	settings          *Settings
-	containerResolver *resolver.ContainerResolver
+	containerResolver resolver.Resolver
+	signer            user.Signer
 }
 
 type epochDurations struct {
@@ -47,6 +50,7 @@ type epochDurations struct {
 // Settings stores reloading parameters, so it has to provide atomic getters and setters.
 type Settings struct {
 	defaultTimestamp atomic.Bool
+	maxObjectSize    atomic.Int64
 }
 
 func (s *Settings) DefaultTimestamp() bool {
@@ -57,9 +61,13 @@ func (s *Settings) SetDefaultTimestamp(val bool) {
 	s.defaultTimestamp.Store(val)
 }
 
+func (s *Settings) SetMaxObjectSize(val int64) {
+	s.maxObjectSize.Store(val)
+}
+
 // New creates a new Uploader using specified logger, connection pool and
 // other options.
-func New(ctx context.Context, params *utils.AppParams, settings *Settings) *Uploader {
+func New(ctx context.Context, params *utils.AppParams, settings *Settings, signer user.Signer) *Uploader {
 	return &Uploader{
 		appCtx:            ctx,
 		log:               params.Logger,
@@ -67,6 +75,7 @@ func New(ctx context.Context, params *utils.AppParams, settings *Settings) *Uplo
 		ownerID:           params.Owner,
 		settings:          settings,
 		containerResolver: params.Resolver,
+		signer:            signer,
 	}
 }
 
@@ -168,24 +177,38 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	}
 	id, bt := u.fetchOwnerAndBearerToken(c)
 
-	obj := object.New()
+	var obj object.Object
 	obj.SetContainerID(*idCnr)
 	obj.SetOwnerID(id)
 	obj.SetAttributes(attributes...)
 
-	var prm pool.PrmObjectPut
-	prm.SetHeader(*obj)
-	prm.SetPayload(file)
-
+	var prm client.PrmObjectPutInit
 	if bt != nil {
-		prm.UseBearer(*bt)
+		prm.WithBearerToken(*bt)
 	}
 
-	if idObj, err = u.pool.PutObject(u.appCtx, prm); err != nil {
-		log.Error("could not store file in neofs", zap.Error(err))
-		response.Error(c, "could not store file in neofs: "+err.Error(), fasthttp.StatusBadRequest)
+	writer, err := u.pool.ObjectPutInit(u.appCtx, obj, u.signer, prm)
+	if err != nil {
+		log.Error("writer init", zap.Error(err))
+		response.Error(c, "writer init: "+err.Error(), fasthttp.StatusInternalServerError)
 		return
 	}
+
+	chunk := make([]byte, u.settings.maxObjectSize.Load())
+	_, err = io.CopyBuffer(writer, file, chunk)
+	if err != nil {
+		log.Error("write", zap.Error(err))
+		response.Error(c, "write: "+err.Error(), fasthttp.StatusInternalServerError)
+		return
+	}
+
+	if err = writer.Close(); err != nil {
+		log.Error("close writer", zap.Error(err))
+		response.Error(c, "close writer: "+err.Error(), fasthttp.StatusInternalServerError)
+		return
+	}
+
+	idObj = writer.GetResult().StoredObjectID()
 
 	addr.SetObject(idObj)
 	addr.SetContainer(*idCnr)
@@ -205,7 +228,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 	// pipelined header. Thus we need to drain the body buffer.
 	for {
 		_, err = bodyStream.Read(drainBuf)
-		if err == io.EOF || err == io.ErrUnexpectedEOF {
+		if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
 			break
 		}
 	}
@@ -216,7 +239,7 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 
 func (u *Uploader) fetchOwnerAndBearerToken(ctx context.Context) (*user.ID, *bearer.Token) {
 	if tkn, err := tokens.LoadBearerToken(ctx); err == nil && tkn != nil {
-		issuer := bearer.ResolveIssuer(*tkn)
+		issuer := tkn.ResolveIssuer()
 		return &issuer, tkn
 	}
 	return u.ownerID, nil
@@ -241,7 +264,7 @@ func (pr *putResponse) encode(w io.Writer) error {
 }
 
 func getEpochDurations(ctx context.Context, p *pool.Pool) (*epochDurations, error) {
-	networkInfo, err := p.NetworkInfo(ctx)
+	networkInfo, err := p.NetworkInfo(ctx, client.PrmNetworkInfo{})
 	if err != nil {
 		return nil, err
 	}

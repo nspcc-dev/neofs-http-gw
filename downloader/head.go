@@ -1,6 +1,7 @@
 package downloader
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"strconv"
@@ -10,9 +11,11 @@ import (
 	"github.com/nspcc-dev/neofs-http-gw/response"
 	"github.com/nspcc-dev/neofs-http-gw/tokens"
 	"github.com/nspcc-dev/neofs-http-gw/utils"
+	"github.com/nspcc-dev/neofs-sdk-go/client"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
 	oid "github.com/nspcc-dev/neofs-sdk-go/object/id"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
+	"github.com/nspcc-dev/neofs-sdk-go/user"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
@@ -26,7 +29,7 @@ const (
 	hdrContainerID = "X-Container-Id"
 )
 
-func (r request) headObject(clnt *pool.Pool, objectAddress oid.Address) {
+func (r request) headObject(clnt *pool.Pool, objectAddress oid.Address, signer user.Signer) {
 	var start = time.Now()
 	if err := tokens.StoreBearerToken(r.RequestCtx); err != nil {
 		r.log.Error("could not fetch and store bearer token", zap.Error(err))
@@ -36,15 +39,20 @@ func (r request) headObject(clnt *pool.Pool, objectAddress oid.Address) {
 
 	btoken := bearerToken(r.RequestCtx)
 
-	var prm pool.PrmObjectHead
+	var prm client.PrmObjectHead
 	if btoken != nil {
-		prm.UseBearer(*btoken)
+		prm.WithBearerToken(*btoken)
 	}
 
-	obj, err := clnt.HeadObject(r.appCtx, objectAddress.Container(), objectAddress.Object(), prm)
+	headResult, err := clnt.ObjectHead(r.appCtx, objectAddress.Container(), objectAddress.Object(), signer, prm)
 	if err != nil {
 		r.handleNeoFSErr(err, start)
 		return
+	}
+
+	var obj object.Object
+	if !headResult.ReadHeader(&obj) {
+		r.handleNeoFSErr(errors.New("header failed"), start)
 	}
 
 	r.Response.Header.Set(fasthttp.HeaderContentLength, strconv.FormatUint(obj.PayloadSize(), 10))
@@ -79,16 +87,16 @@ func (r request) headObject(clnt *pool.Pool, objectAddress oid.Address) {
 
 	if len(contentType) == 0 {
 		contentType, _, err = readContentType(obj.PayloadSize(), func(sz uint64) (io.Reader, error) {
-			var prmRange pool.PrmObjectRange
+			var prmRange client.PrmObjectRange
 			if btoken != nil {
-				prmRange.UseBearer(*btoken)
+				prmRange.WithBearerToken(*btoken)
 			}
 
-			resObj, err := clnt.ObjectRange(r.appCtx, objectAddress.Container(), objectAddress.Object(), 0, sz, prmRange)
+			resObj, err := clnt.ObjectRangeInit(r.appCtx, objectAddress.Container(), objectAddress.Object(), 0, sz, signer, prmRange)
 			if err != nil {
 				return nil, err
 			}
-			return &resObj, nil
+			return resObj, nil
 		})
 		if err != nil && err != io.EOF {
 			r.handleNeoFSErr(err, start)

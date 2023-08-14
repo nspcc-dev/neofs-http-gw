@@ -10,20 +10,22 @@ import (
 	"mime/multipart"
 	"net/http"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
+	dockerContainer "github.com/docker/docker/api/types/container"
 	"github.com/nspcc-dev/neo-go/pkg/crypto/keys"
+	"github.com/nspcc-dev/neofs-sdk-go/client"
 	"github.com/nspcc-dev/neofs-sdk-go/container"
 	"github.com/nspcc-dev/neofs-sdk-go/container/acl"
 	cid "github.com/nspcc-dev/neofs-sdk-go/container/id"
-	neofscrypto "github.com/nspcc-dev/neofs-sdk-go/crypto"
-	neofsecdsa "github.com/nspcc-dev/neofs-sdk-go/crypto/ecdsa"
 	"github.com/nspcc-dev/neofs-sdk-go/netmap"
 	"github.com/nspcc-dev/neofs-sdk-go/object"
 	oid "github.com/nspcc-dev/neofs-sdk-go/object/id"
 	"github.com/nspcc-dev/neofs-sdk-go/pool"
 	"github.com/nspcc-dev/neofs-sdk-go/user"
+	"github.com/nspcc-dev/neofs-sdk-go/waiter"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -35,45 +37,54 @@ type putResponse struct {
 	OID string `json:"object_id"`
 }
 
+type dockerImage struct {
+	image   string
+	version string
+}
+
 const (
-	testContainerName      = "friendly"
-	versionWithNativeNames = "0.27.5"
-	testListenAddress      = "localhost:8082"
-	testHost               = "http://" + testListenAddress
+	testContainerName = "friendly"
+	testListenAddress = "localhost:8082"
+	testHost          = "http://" + testListenAddress
+)
+
+var (
+	tickEpoch = []string{
+		"neo-go", "contract", "invokefunction", "--wallet-config", "/config/node-config.yaml",
+		"-a", "NfgHwwTi3wHAS8aFAN243C5vGbkYDpqLHP", "--force", "-r", "http://localhost:30333",
+		"707516630852f4179af43366917a36b9a78b93a5", "newEpoch", "int:10",
+		"--", "NfgHwwTi3wHAS8aFAN243C5vGbkYDpqLHP:Global",
+	}
 )
 
 func TestIntegration(t *testing.T) {
-	rootCtx := context.Background()
-	aioImage := "nspccdev/neofs-aio-testcontainer:"
-	versions := []string{
-		"0.29.0",
-		"0.30.0",
-		"0.32.0",
-		"0.34.0",
-		"latest",
+	versions := []dockerImage{
+		{image: "nspccdev/neofs-aio-testcontainer", version: "0.34.0"},
+		{image: "nspccdev/neofs-aio", version: "0.37.0"}, // 0.37.0 is the latest
 	}
+
 	key, err := keys.NewPrivateKeyFromHex("1dd37fba80fec4e6a6f13fd708d8dcb3b29def768017052f6c930fa1c5d90bbb")
 	require.NoError(t, err)
 
-	signer := neofsecdsa.SignerRFC6979(key.PrivateKey)
-
-	var ownerID user.ID
-	require.NoError(t, user.IDFromSigner(&ownerID, signer))
+	signer := user.NewAutoIDSignerRFC6979(key.PrivateKey)
+	ownerID := signer.UserID()
 
 	for _, version := range versions {
-		ctx, cancel2 := context.WithCancel(rootCtx)
+		image := fmt.Sprintf("%s:%s", version.image, version.version)
 
-		aioContainer := createDockerContainer(ctx, t, aioImage+version)
+		ctx, cancel2 := context.WithCancel(context.Background())
+
+		aioContainer := createDockerContainer(ctx, t, image)
 		server, cancel := runServer()
 		clientPool := getPool(ctx, t, signer)
-		CID, err := createContainer(ctx, t, clientPool, ownerID, version)
+		CID, err := createContainer(ctx, t, clientPool, ownerID, signer)
 		require.NoError(t, err, version)
 
-		t.Run("simple put "+version, func(t *testing.T) { simplePut(ctx, t, clientPool, CID, version) })
-		t.Run("put with duplicate keys "+version, func(t *testing.T) { putWithDuplicateKeys(t, CID) })
-		t.Run("simple get "+version, func(t *testing.T) { simpleGet(ctx, t, clientPool, ownerID, CID, version) })
-		t.Run("get by attribute "+version, func(t *testing.T) { getByAttr(ctx, t, clientPool, ownerID, CID, version) })
-		t.Run("get zip "+version, func(t *testing.T) { getZip(ctx, t, clientPool, ownerID, CID, version) })
+		t.Run("simple put "+image, func(t *testing.T) { simplePut(ctx, t, clientPool, CID, signer) })
+		t.Run("put with duplicate keys "+image, func(t *testing.T) { putWithDuplicateKeys(t, CID) })
+		t.Run("simple get "+image, func(t *testing.T) { simpleGet(ctx, t, clientPool, ownerID, CID, signer) })
+		t.Run("get by attribute "+image, func(t *testing.T) { getByAttr(ctx, t, clientPool, ownerID, CID, signer) })
+		t.Run("get zip "+image, func(t *testing.T) { getZip(ctx, t, clientPool, ownerID, CID, signer) })
 
 		cancel()
 		server.Wait()
@@ -94,17 +105,12 @@ func runServer() (App, context.CancelFunc) {
 	return application, cancel
 }
 
-func simplePut(ctx context.Context, t *testing.T, p *pool.Pool, CID cid.ID, version string) {
-	url := testHost + "/upload/" + CID.String()
-	makePutRequestAndCheck(ctx, t, p, CID, url)
-
-	if version >= versionWithNativeNames {
-		url = testHost + "/upload/" + testContainerName
-		makePutRequestAndCheck(ctx, t, p, CID, url)
-	}
+func simplePut(ctx context.Context, t *testing.T, p *pool.Pool, CID cid.ID, signer user.Signer) {
+	url := testHost + "/upload/" + testContainerName
+	makePutRequestAndCheck(ctx, t, p, CID, url, signer)
 }
 
-func makePutRequestAndCheck(ctx context.Context, t *testing.T, p *pool.Pool, cnrID cid.ID, url string) {
+func makePutRequestAndCheck(ctx context.Context, t *testing.T, p *pool.Pool, cnrID cid.ID, url string, signer user.Signer) {
 	content := "content of file"
 	keyAttr, valAttr := "User-Attribute", "user value"
 	attributes := map[string]string{
@@ -153,23 +159,19 @@ func makePutRequestAndCheck(ctx context.Context, t *testing.T, p *pool.Pool, cnr
 	err = id.DecodeString(addr.OID)
 	require.NoError(t, err)
 
-	var objectAddress oid.Address
-	objectAddress.SetContainer(cnrID)
-	objectAddress.SetObject(id)
-
 	payload := bytes.NewBuffer(nil)
 
-	var prm pool.PrmObjectGet
+	var prm client.PrmObjectGet
 
-	res, err := p.GetObject(ctx, objectAddress.Container(), objectAddress.Object(), prm)
+	header, payloadReader, err := p.ObjectGetInit(ctx, cnrID, id, signer, prm)
 	require.NoError(t, err)
 
-	_, err = io.Copy(payload, res.Payload)
+	_, err = io.Copy(payload, payloadReader)
 	require.NoError(t, err)
 
 	require.Equal(t, content, payload.String())
 
-	for _, attribute := range res.Header.Attributes() {
+	for _, attribute := range header.Attributes() {
 		require.Equal(t, attributes[attribute.Key()], attribute.Value())
 	}
 }
@@ -211,23 +213,17 @@ func putWithDuplicateKeys(t *testing.T, CID cid.ID) {
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
-func simpleGet(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID cid.ID, version string) {
+func simpleGet(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID cid.ID, signer user.Signer) {
 	content := "content of file"
 	attributes := map[string]string{
 		"some-attr": "some-get-value",
 	}
 
-	id := putObject(ctx, t, clientPool, ownerID, CID, content, attributes)
+	id := putObject(ctx, t, clientPool, ownerID, CID, content, attributes, signer)
 
-	resp, err := http.Get(testHost + "/get/" + CID.String() + "/" + id.String())
+	resp, err := http.Get(testHost + "/get/" + testContainerName + "/" + id.String())
 	require.NoError(t, err)
 	checkGetResponse(t, resp, content, attributes)
-
-	if version >= versionWithNativeNames {
-		resp, err = http.Get(testHost + "/get/" + testContainerName + "/" + id.String())
-		require.NoError(t, err)
-		checkGetResponse(t, resp, content, attributes)
-	}
 }
 
 func checkGetResponse(t *testing.T, resp *http.Response, content string, attributes map[string]string) {
@@ -260,12 +256,12 @@ func checkGetByAttrResponse(t *testing.T, resp *http.Response, content string, a
 	}
 }
 
-func getByAttr(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID cid.ID, version string) {
+func getByAttr(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID cid.ID, signer user.Signer) {
 	keyAttr, valAttr := "some-attr", "some-get-by-attr-value"
 	content := "content of file"
 	attributes := map[string]string{keyAttr: valAttr}
 
-	id := putObject(ctx, t, clientPool, ownerID, CID, content, attributes)
+	id := putObject(ctx, t, clientPool, ownerID, CID, content, attributes, signer)
 
 	expectedAttr := map[string]string{
 		"X-Attribute-" + keyAttr: valAttr,
@@ -273,33 +269,22 @@ func getByAttr(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID
 		"x-container-id":         CID.String(),
 	}
 
-	resp, err := http.Get(testHost + "/get_by_attribute/" + CID.String() + "/" + keyAttr + "/" + valAttr)
+	resp, err := http.Get(testHost + "/get_by_attribute/" + testContainerName + "/" + keyAttr + "/" + valAttr)
 	require.NoError(t, err)
 	checkGetByAttrResponse(t, resp, content, expectedAttr)
-
-	if version >= versionWithNativeNames {
-		resp, err = http.Get(testHost + "/get_by_attribute/" + testContainerName + "/" + keyAttr + "/" + valAttr)
-		require.NoError(t, err)
-		checkGetByAttrResponse(t, resp, content, expectedAttr)
-	}
 }
 
-func getZip(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID cid.ID, version string) {
+func getZip(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID cid.ID, signer user.Signer) {
 	names := []string{"zipfolder/dir/name1.txt", "zipfolder/name2.txt"}
 	contents := []string{"content of file1", "content of file2"}
 	attributes1 := map[string]string{object.AttributeFilePath: names[0]}
 	attributes2 := map[string]string{object.AttributeFilePath: names[1]}
 
-	putObject(ctx, t, clientPool, ownerID, CID, contents[0], attributes1)
-	putObject(ctx, t, clientPool, ownerID, CID, contents[1], attributes2)
+	putObject(ctx, t, clientPool, ownerID, CID, contents[0], attributes1, signer)
+	putObject(ctx, t, clientPool, ownerID, CID, contents[1], attributes2, signer)
 
-	baseURL := testHost + "/zip/" + CID.String()
+	baseURL := testHost + "/zip/" + testContainerName
 	makeZipTest(t, baseURL, names, contents)
-
-	if version >= versionWithNativeNames {
-		baseURL = testHost + "/zip/" + testContainerName
-		makeZipTest(t, baseURL, names, contents)
-	}
 }
 
 func makeZipTest(t *testing.T, baseURL string, names, contents []string) {
@@ -353,17 +338,28 @@ func checkZip(t *testing.T, data []byte, length int64, names, contents []string)
 
 func createDockerContainer(ctx context.Context, t *testing.T, image string) testcontainers.Container {
 	req := testcontainers.ContainerRequest{
-		Image:       image,
-		WaitingFor:  wait.NewLogStrategy("aio container started").WithStartupTimeout(30 * time.Second),
-		Name:        "aio",
-		Hostname:    "aio",
-		NetworkMode: "host",
+		Image:      image,
+		WaitingFor: wait.NewLogStrategy("aio container started").WithStartupTimeout(30 * time.Second),
+		Name:       "http-gate-tests-aio",
+		Hostname:   "http-gate-tests-aio",
+		HostConfigModifier: func(hostConfig *dockerContainer.HostConfig) {
+			hostConfig.NetworkMode = "host"
+		},
 	}
 	aioC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
 		Started:          true,
 	})
 	require.NoError(t, err)
+
+	// Have to wait this time. Required for new tick event processing.
+	// Should be removed after fix epochs in AIO start.
+	<-time.After(3 * time.Second)
+
+	_, _, err = aioC.Exec(ctx, tickEpoch)
+	require.NoError(t, err)
+
+	<-time.After(3 * time.Second)
 
 	return aioC
 }
@@ -380,7 +376,7 @@ func getDefaultConfig() *viper.Viper {
 	return v
 }
 
-func getPool(ctx context.Context, t *testing.T, signer neofscrypto.Signer) *pool.Pool {
+func getPool(ctx context.Context, t *testing.T, signer user.Signer) *pool.Pool {
 	var prm pool.InitParameters
 	prm.SetSigner(signer)
 	prm.SetNodeDialTimeout(5 * time.Second)
@@ -394,7 +390,7 @@ func getPool(ctx context.Context, t *testing.T, signer neofscrypto.Signer) *pool
 	return clientPool
 }
 
-func createContainer(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, version string) (cid.ID, error) {
+func createContainer(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, signer user.Signer) (cid.ID, error) {
 	var policy netmap.PlacementPolicy
 	err := policy.DecodeString("REP 1")
 	require.NoError(t, err)
@@ -405,22 +401,16 @@ func createContainer(ctx context.Context, t *testing.T, clientPool *pool.Pool, o
 	cnr.SetBasicACL(acl.PublicRWExtended)
 	cnr.SetOwner(ownerID)
 
-	container.SetCreationTime(&cnr, time.Now())
+	cnr.SetCreationTime(time.Now())
 
-	if version >= versionWithNativeNames {
-		var domain container.Domain
-		domain.SetName(testContainerName)
-		container.WriteDomain(&cnr, domain)
-	}
+	var domain container.Domain
+	domain.SetName(testContainerName)
+	cnr.WriteDomain(domain)
 
-	var waitPrm pool.WaitParams
-	waitPrm.SetTimeout(15 * time.Second)
-	waitPrm.SetPollInterval(3 * time.Second)
+	w := waiter.NewContainerPutWaiter(clientPool, waiter.DefaultPollInterval)
 
-	var prm pool.PrmContainerPut
-	prm.SetWaitParams(waitPrm)
-
-	CID, err := clientPool.PutContainer(ctx, cnr, prm)
+	var prm client.PrmContainerPut
+	CID, err := w.ContainerPut(ctx, cnr, signer, prm)
 	if err != nil {
 		return cid.ID{}, err
 	}
@@ -429,8 +419,8 @@ func createContainer(ctx context.Context, t *testing.T, clientPool *pool.Pool, o
 	return CID, err
 }
 
-func putObject(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID cid.ID, content string, attributes map[string]string) oid.ID {
-	obj := object.New()
+func putObject(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID cid.ID, content string, attributes map[string]string, signer user.Signer) oid.ID {
+	var obj object.Object
 	obj.SetContainerID(CID)
 	obj.SetOwnerID(&ownerID)
 
@@ -443,12 +433,17 @@ func putObject(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID
 	}
 	obj.SetAttributes(attrs...)
 
-	var prm pool.PrmObjectPut
-	prm.SetHeader(*obj)
-	prm.SetPayload(bytes.NewBufferString(content))
-
-	id, err := clientPool.PutObject(ctx, prm)
+	var prm client.PrmObjectPutInit
+	writer, err := clientPool.ObjectPutInit(ctx, obj, signer, prm)
 	require.NoError(t, err)
 
-	return id
+	data := strings.NewReader(content)
+	chunk := make([]byte, 2048)
+	_, err = io.CopyBuffer(writer, data, chunk)
+	require.NoError(t, err)
+
+	err = writer.Close()
+	require.NoError(t, err)
+
+	return writer.GetResult().StoredObjectID()
 }
