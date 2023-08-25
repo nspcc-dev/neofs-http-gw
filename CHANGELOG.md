@@ -4,6 +4,15 @@ This document outlines major changes between releases.
 
 ## [Unreleased]
 
+## [0.27.2] - 2022-08-25
+
+### Fixed
+- gateway stopped resolving container names after RPC connection failure (#256)
+
+### Changed
+- SDK dependency updated to 1.0.0-rc.10 (#261)
+- optimized buffering (#261)
+
 ## [0.27.1] - 2022-06-15
 
 ### Fixed
@@ -296,4 +305,5 @@ releases.
 [0.26.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.25.1...v0.26.0
 [0.27.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.26.0...v0.27.0
 [0.27.1]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.0...v0.27.1
-[Unreleased]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.1...master
+[0.27.2]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.1...v0.27.2
+[Unreleased]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.2...master
