@@ -358,7 +358,7 @@ func (d *Downloader) byAttribute(c *fasthttp.RequestCtx, f func(request, *pool.P
 	if n == 0 {
 		err = res.Close()
 
-		if errors.Is(err, io.EOF) {
+		if err == nil || errors.Is(err, io.EOF) {
 			log.Error("object not found", zap.Error(err))
 			response.Error(c, "object not found", fasthttp.StatusNotFound)
 			return
