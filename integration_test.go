@@ -83,6 +83,7 @@ func TestIntegration(t *testing.T) {
 		t.Run("put with duplicate keys "+image, func(t *testing.T) { putWithDuplicateKeys(t, CID) })
 		t.Run("simple get "+image, func(t *testing.T) { simpleGet(ctx, t, clientPool, ownerID, CID, signer) })
 		t.Run("get by attribute "+image, func(t *testing.T) { getByAttr(ctx, t, clientPool, ownerID, CID, signer) })
+		t.Run("get by attribute, not found "+image, func(t *testing.T) { getByAttrNotFound(t) })
 		t.Run("get zip "+image, func(t *testing.T) { getZip(ctx, t, clientPool, ownerID, CID, signer) })
 
 		cancel()
@@ -271,6 +272,15 @@ func getByAttr(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID
 	resp, err := http.Get(testHost + "/get_by_attribute/" + testContainerName + "/" + keyAttr + "/" + valAttr)
 	require.NoError(t, err)
 	checkGetByAttrResponse(t, resp, content, expectedAttr)
+}
+
+func getByAttrNotFound(t *testing.T) {
+	keyAttr, valAttr := "some-attr-no", "some-get-by-attr-value-no"
+
+	resp, err := http.Get(testHost + "/get_by_attribute/" + testContainerName + "/" + keyAttr + "/" + valAttr)
+
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+	require.NoError(t, err)
 }
 
 func getZip(ctx context.Context, t *testing.T, clientPool *pool.Pool, ownerID user.ID, CID cid.ID, signer user.Signer) {
