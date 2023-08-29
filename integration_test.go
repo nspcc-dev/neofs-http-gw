@@ -59,7 +59,6 @@ var (
 
 func TestIntegration(t *testing.T) {
 	versions := []dockerImage{
-		{image: "nspccdev/neofs-aio-testcontainer", version: "0.34.0"},
 		{image: "nspccdev/neofs-aio", version: "0.37.0"}, // 0.37.0 is the latest
 	}
 
