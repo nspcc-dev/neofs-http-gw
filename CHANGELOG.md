@@ -4,6 +4,11 @@ This document outlines major changes between releases.
 
 ## [Unreleased]
 
+## [0.27.3] - 2022-08-29
+
+### Fixed
+- segfault on get_by_attribute request with zero returned results (#265)
+
 ## [0.27.2] - 2022-08-25
 
 ### Fixed
@@ -306,4 +311,5 @@ releases.
 [0.27.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.26.0...v0.27.0
 [0.27.1]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.0...v0.27.1
 [0.27.2]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.1...v0.27.2
-[Unreleased]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.2...master
+[0.27.3]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.2...v0.27.3
+[Unreleased]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.3...master
