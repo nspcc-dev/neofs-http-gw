@@ -92,6 +92,7 @@ func newStateMetrics() *stateMetrics {
 
 func (m stateMetrics) register() {
 	prometheus.MustRegister(m.healthCheck)
+	prometheus.MustRegister(m.gwVersion)
 }
 
 func (m stateMetrics) unregister() {
