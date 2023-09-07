@@ -8,7 +8,7 @@ require (
 	github.com/nspcc-dev/neo-go v0.101.0
 	github.com/nspcc-dev/neofs-api-go/v2 v2.14.0
 	github.com/nspcc-dev/neofs-contract v0.17.1-0.20230804121740-84ff5d244f69
-	github.com/nspcc-dev/neofs-sdk-go v1.0.0-rc.10.0.20230808103753-5988a0b0c25d
+	github.com/nspcc-dev/neofs-sdk-go v1.0.0-rc.11
 	github.com/prometheus/client_golang v1.14.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
