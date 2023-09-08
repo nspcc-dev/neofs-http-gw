@@ -12,12 +12,12 @@ This document outlines major changes between releases.
 ### Changed
 - SDK dependency updated to 1.0.0-rc.11 (#270)
 
-## [0.27.3] - 2022-08-29
+## [0.27.3] - 2023-08-29
 
 ### Fixed
 - segfault on get_by_attribute request with zero returned results (#265)
 
-## [0.27.2] - 2022-08-25
+## [0.27.2] - 2023-08-25
 
 ### Fixed
 - gateway stopped resolving container names after RPC connection failure (#256)
@@ -26,7 +26,7 @@ This document outlines major changes between releases.
 - SDK dependency updated to 1.0.0-rc.10 (#261)
 - optimized buffering (#261)
 
-## [0.27.1] - 2022-06-15
+## [0.27.1] - 2023-06-15
 
 ### Fixed
 - "Bad Request" returned for removed objects instead of "Not Found" (#258)
@@ -34,7 +34,7 @@ This document outlines major changes between releases.
 ### Changed
 - SDK dependency updated to 1.0.0-rc.9 (#258)
 
-## [0.27.0] - 2022-05-19
+## [0.27.0] - 2023-05-19
 
 ### Added
 - Version metric (#251)
