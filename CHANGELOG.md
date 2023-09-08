@@ -4,6 +4,14 @@ This document outlines major changes between releases.
 
 ## [Unreleased]
 
+## [0.27.4] - 2023-09-08
+
+### Fixed
+- missing version Prometheus metric (#269)
+
+### Changed
+- SDK dependency updated to 1.0.0-rc.11 (#270)
+
 ## [0.27.3] - 2022-08-29
 
 ### Fixed
@@ -312,4 +320,5 @@ releases.
 [0.27.1]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.0...v0.27.1
 [0.27.2]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.1...v0.27.2
 [0.27.3]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.2...v0.27.3
-[Unreleased]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.3...master
+[0.27.4]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.3...v0.27.4
+[Unreleased]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.4...master
