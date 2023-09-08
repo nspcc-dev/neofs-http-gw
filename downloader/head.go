@@ -1,7 +1,6 @@
 package downloader
 
 import (
-	"errors"
 	"io"
 	"net/http"
 	"strconv"
@@ -44,15 +43,10 @@ func (r request) headObject(clnt *pool.Pool, objectAddress oid.Address, signer u
 		prm.WithBearerToken(*btoken)
 	}
 
-	headResult, err := clnt.ObjectHead(r.appCtx, objectAddress.Container(), objectAddress.Object(), signer, prm)
+	obj, err := clnt.ObjectHead(r.appCtx, objectAddress.Container(), objectAddress.Object(), signer, prm)
 	if err != nil {
 		r.handleNeoFSErr(err, start)
 		return
-	}
-
-	var obj object.Object
-	if !headResult.ReadHeader(&obj) {
-		r.handleNeoFSErr(errors.New("header failed"), start)
 	}
 
 	r.Response.Header.Set(fasthttp.HeaderContentLength, strconv.FormatUint(obj.PayloadSize(), 10))
@@ -83,7 +77,7 @@ func (r request) headObject(clnt *pool.Pool, objectAddress oid.Address, signer u
 		}
 	}
 
-	idsToResponse(&r.Response, &obj)
+	idsToResponse(&r.Response, obj)
 
 	if len(contentType) == 0 {
 		contentType, _, err = readContentType(obj.PayloadSize(), func(sz uint64) (io.Reader, error) {

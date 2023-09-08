@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/nspcc-dev/neofs-api-go/v2/object"
 	"github.com/nspcc-dev/neofs-http-gw/utils"
+	"github.com/nspcc-dev/neofs-sdk-go/object"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
@@ -79,7 +79,7 @@ func filterHeaders(l *zap.Logger, header *fasthttp.RequestHeader) (map[string]st
 }
 
 func prepareExpirationHeader(headers map[string]string, epochDurations *epochDurations, now time.Time) error {
-	expirationInEpoch := headers[object.SysAttributeExpEpoch]
+	expirationInEpoch := headers[object.AttributeExpirationEpoch]
 
 	if timeRFC3339, ok := headers[utils.ExpirationRFC3339Attr]; ok {
 		expTime, err := time.Parse(time.RFC3339, timeRFC3339)
@@ -121,7 +121,7 @@ func prepareExpirationHeader(headers map[string]string, epochDurations *epochDur
 	}
 
 	if expirationInEpoch != "" {
-		headers[object.SysAttributeExpEpoch] = expirationInEpoch
+		headers[object.AttributeExpirationEpoch] = expirationInEpoch
 	}
 
 	return nil
@@ -141,5 +141,5 @@ func updateExpirationHeader(headers map[string]string, durations *epochDurations
 		expirationEpoch = currentEpoch + numEpoch
 	}
 
-	headers[object.SysAttributeExpEpoch] = strconv.FormatUint(expirationEpoch, 10)
+	headers[object.AttributeExpirationEpoch] = strconv.FormatUint(expirationEpoch, 10)
 }
