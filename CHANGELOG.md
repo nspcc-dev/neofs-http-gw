@@ -4,6 +4,11 @@ This document outlines major changes between releases.
 
 ## [Unreleased]
 
+## [0.27.5] - 2023-09-13
+
+### Fixed
+- SDK updated to fix node health management issues and count statistics more appropriately (#273)
+
 ## [0.27.4] - 2023-09-08
 
 ### Fixed
@@ -321,4 +326,5 @@ releases.
 [0.27.2]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.1...v0.27.2
 [0.27.3]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.2...v0.27.3
 [0.27.4]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.3...v0.27.4
-[Unreleased]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.4...master
+[0.27.5]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.4...v0.27.5
+[Unreleased]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.5...master
