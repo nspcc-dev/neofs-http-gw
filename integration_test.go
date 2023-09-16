@@ -114,8 +114,9 @@ func makePutRequestAndCheck(ctx context.Context, t *testing.T, p *pool.Pool, cnr
 	content := "content of file"
 	keyAttr, valAttr := "User-Attribute", "user value"
 	attributes := map[string]string{
-		object.AttributeFileName: "newFile.txt",
-		keyAttr:                  valAttr,
+		object.AttributeFileName:    "newFile.txt",
+		object.AttributeContentType: "application/octet-stream",
+		keyAttr:                     valAttr,
 	}
 
 	var buff bytes.Buffer

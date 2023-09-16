@@ -417,6 +417,8 @@ You can also add some attributes to your file using the following rules:
    `__NEOFS__EXPIRATION_EPOCH` attribute
  * `FileName` attribute is set from multipart's `filename` if not set
    explicitly via `X-Attribute-FileName` header
+ * `Content-Type` attribute is set from multipart's `Content-Type` header if
+   not set via `X-Attribute-Content-Type` header
  * `Timestamp` attribute can be set using gateway local time if using
    HTTP_GW_UPLOAD_HEADER_USE_DEFAULT_TIMESTAMP option and if request doesn't
    provide `X-Attribute-Timestamp` header of its own

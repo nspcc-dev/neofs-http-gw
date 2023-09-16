@@ -11,6 +11,7 @@ import (
 // get file name, it's used for multipart uploads.
 type MultipartFile interface {
 	io.ReadCloser
+	ContentType() string
 	FileName() string
 }
 

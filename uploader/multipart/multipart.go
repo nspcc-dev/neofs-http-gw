@@ -77,6 +77,10 @@ func (p *Part) FileName() string {
 	return p.dispositionParams["filename"]
 }
 
+func (p *Part) ContentType() string {
+	return p.Header.Get("Content-Type")
+}
+
 func (p *Part) parseContentDisposition() {
 	v := p.Header.Get("Content-Disposition")
 	var err error
