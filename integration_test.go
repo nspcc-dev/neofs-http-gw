@@ -59,7 +59,8 @@ var (
 
 func TestIntegration(t *testing.T) {
 	versions := []dockerImage{
-		{image: "nspccdev/neofs-aio", version: "0.37.0"}, // 0.37.0 is the latest
+		{image: "nspccdev/neofs-aio", version: "0.37.0"},
+		{image: "nspccdev/neofs-aio", version: "0.38.0"},
 	}
 
 	key, err := keys.NewPrivateKeyFromHex("1dd37fba80fec4e6a6f13fd708d8dcb3b29def768017052f6c930fa1c5d90bbb")
