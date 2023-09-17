@@ -37,11 +37,6 @@ type putResponse struct {
 	OID string `json:"object_id"`
 }
 
-type dockerImage struct {
-	image   string
-	version string
-}
-
 const (
 	testContainerName = "friendly"
 	testListenAddress = "localhost:8082"
@@ -58,10 +53,7 @@ var (
 )
 
 func TestIntegration(t *testing.T) {
-	versions := []dockerImage{
-		{image: "nspccdev/neofs-aio", version: "0.37.0"},
-		{image: "nspccdev/neofs-aio", version: "0.38.0"},
-	}
+	versions := []string{"0.37.0", "0.38.0"}
 
 	key, err := keys.NewPrivateKeyFromHex("1dd37fba80fec4e6a6f13fd708d8dcb3b29def768017052f6c930fa1c5d90bbb")
 	require.NoError(t, err)
@@ -70,7 +62,7 @@ func TestIntegration(t *testing.T) {
 	ownerID := signer.UserID()
 
 	for _, version := range versions {
-		image := fmt.Sprintf("%s:%s", version.image, version.version)
+		image := fmt.Sprintf("nspccdev/neofs-aio:%s", version)
 
 		ctx, cancel2 := context.WithCancel(context.Background())
 
