@@ -363,7 +363,8 @@ $ curl -F 'file=@cat.jpeg;filename=cat.jpeg' -H 'X-Attribute-FilePath: common/pr
 You get object contents in the reply body (if GET method was used), but at the same time you also get a
 set of reply headers generated using the following rules:
  * `Content-Length` is set to the length of the object
- * `Content-Type` is autodetected dynamically by gateway
+ * `Content-Type` is taken from the object's `Content-Type` attribute or
+   autodetected dynamically by the gateway if missing
  * `Content-Disposition` is `inline` for regular requests and `attachment` for
    requests with `download=true` argument, `filename` is also added if there
    is `FileName` attribute set for this object
