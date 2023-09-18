@@ -98,6 +98,14 @@ func customMultipart(filename string) error {
 	return err
 }
 
+type multiFile struct {
+	*multipart.Part
+}
+
+func (*multiFile) ContentType() string {
+	return "text/plain"
+}
+
 func fetchMultipartFileDefault(l *zap.Logger, r io.Reader, boundary string) (MultipartFile, error) {
 	reader := multipart.NewReader(r, boundary)
 
@@ -122,7 +130,7 @@ func fetchMultipartFileDefault(l *zap.Logger, r io.Reader, boundary string) (Mul
 			continue
 		}
 
-		return part, nil
+		return &multiFile{part}, nil
 	}
 }
 

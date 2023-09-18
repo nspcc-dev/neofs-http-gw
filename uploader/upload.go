@@ -168,6 +168,13 @@ func (u *Uploader) Upload(c *fasthttp.RequestCtx) {
 		filename.SetValue(file.FileName())
 		attributes = append(attributes, *filename)
 	}
+	// sets Content-Type attribute if it wasn't set from header
+	if _, ok := filtered[object.AttributeContentType]; !ok && file.ContentType() != "" {
+		cType := object.NewAttribute()
+		cType.SetKey(object.AttributeContentType)
+		cType.SetValue(file.ContentType())
+		attributes = append(attributes, *cType)
+	}
 	// sets Timestamp attribute if it wasn't set from header and enabled by settings
 	if _, ok := filtered[object.AttributeTimestamp]; !ok && u.settings.DefaultTimestamp() {
 		timestamp := object.NewAttribute()
