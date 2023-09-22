@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/docker/docker v24.0.5+incompatible
 	github.com/fasthttp/router v1.4.1
-	github.com/nspcc-dev/neo-go v0.101.0
+	github.com/nspcc-dev/neo-go v0.102.0
 	github.com/nspcc-dev/neofs-contract v0.17.1-0.20230804121740-84ff5d244f69
 	github.com/nspcc-dev/neofs-sdk-go v1.0.0-rc.11.0.20230912200451-c0eefd5bd81c
 	github.com/prometheus/client_golang v1.14.0
