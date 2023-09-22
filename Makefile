@@ -2,7 +2,7 @@
 
 REPO ?= $(shell go list -m)
 VERSION ?= $(shell git describe --tags --match "v*" --dirty --always --abbrev=8 2>/dev/null || cat VERSION 2>/dev/null || echo "develop")
-GO_VERSION ?= 1.20
+GO_VERSION ?= 1.21
 LINT_VERSION ?= 1.49.0
 BUILD ?= $(shell date -u --iso=seconds)
 

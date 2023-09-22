@@ -1,11 +1,11 @@
 module github.com/nspcc-dev/neofs-http-gw
 
-go 1.18
+go 1.19
 
 require (
 	github.com/docker/docker v24.0.5+incompatible
 	github.com/fasthttp/router v1.4.1
-	github.com/nspcc-dev/neo-go v0.101.0
+	github.com/nspcc-dev/neo-go v0.102.0
 	github.com/nspcc-dev/neofs-contract v0.17.1-0.20230804121740-84ff5d244f69
 	github.com/nspcc-dev/neofs-sdk-go v1.0.0-rc.11.0.20230912200451-c0eefd5bd81c
 	github.com/prometheus/client_golang v1.14.0
@@ -14,7 +14,6 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/testcontainers/testcontainers-go v0.22.0
 	github.com/valyala/fasthttp v1.34.0
-	go.uber.org/atomic v1.10.0
 	go.uber.org/zap v1.24.0
 )
 
@@ -77,6 +76,7 @@ require (
 	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7 // indirect
 	github.com/urfave/cli v1.22.12 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
+	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/goleak v1.1.12 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	golang.org/x/crypto v0.12.0 // indirect
