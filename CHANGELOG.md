@@ -4,6 +4,18 @@ This document outlines major changes between releases.
 
 ## [Unreleased]
 
+## [0.28.0] - 2023-09-22
+
+### Added
+- Handling of MIME part Content-Type header (#276)
+
+### Fixed
+- Documentation for Content-Type in the reply header (#276)
+
+### Changed
+- Minimal supported Go version is 1.19 now (#277)
+- NeoGo dependency updated to 0.102.0 (#277)
+
 ## [0.27.5] - 2023-09-13
 
 ### Fixed
@@ -327,4 +339,5 @@ releases.
 [0.27.3]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.2...v0.27.3
 [0.27.4]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.3...v0.27.4
 [0.27.5]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.4...v0.27.5
-[Unreleased]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.5...master
+[0.28.0]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.27.5...v0.28.0
+[Unreleased]: https://github.com/nspcc-dev/neofs-http-gw/compare/v0.28.0...master
