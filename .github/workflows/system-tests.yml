@@ -144,12 +144,6 @@ jobs:
           sudo chmod -R a+x vendor
         working-directory: neofs-dev-env
 
-      - name: Modify venv patch
-        run: |
-          sed -i "/# Unset exported dev-env variables/,/popd/d" build_assets/activate.patch
-          sed -i "s/30\,15/30\,11/" build_assets/activate.patch
-        working-directory: neofs-testcases
-
       - name: Prepare venv
         timeout-minutes: 30
         run: |
