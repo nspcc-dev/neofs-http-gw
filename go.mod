@@ -3,7 +3,7 @@ module github.com/nspcc-dev/neofs-http-gw
 go 1.19
 
 require (
-	github.com/docker/docker v24.0.5+incompatible
+	github.com/docker/docker v24.0.7+incompatible
 	github.com/fasthttp/router v1.4.1
 	github.com/nspcc-dev/neo-go v0.102.0
 	github.com/nspcc-dev/neofs-contract v0.17.1-0.20230804121740-84ff5d244f69
