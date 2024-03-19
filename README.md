@@ -12,6 +12,9 @@
 
 # NeoFS HTTP Gateway
 
+**This gateway is deprecated, archived and no longer maintained.**
+Please switch to the REST gateway (see [migration guide](https://github.com/nspcc-dev/neofs-rest-gw/blob/fba9e19f160afddb973b600d35581c230b9812b0/docs/migration-from-http.md) as well).
+
 NeoFS HTTP Gateway bridges NeoFS internal protocol and HTTP standard.
 - you can download one file per request from the NeoFS Network
 - you can upload one file per request into the NeoFS Network
